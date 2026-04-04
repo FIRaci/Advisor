@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(npx tsc:*)",
+      "Bash(ls src/*.tsx)",
+      "Bash(npm install:*)",
+      "Bash(firebase:*)",
+      "Bash(where gcloud:*)",
+      "Bash(ls:*)",
+      "Bash(docker:*)",
+      "Bash(find . -name .env* -o -name *.env)",
+      "Bash(npm outdated:*)",
+      "Bash(find:*)",
+      "Bash(curl -s http://localhost:3000/)",
+      "Bash(curl -X POST http://localhost:3000/api/campaigns/onboard -H \"Content-Type: application/json\" -d '{\"\"\"\"answers\"\"\"\":{\"\"\"\"budget\"\"\"\":\"\"\"\"0\"\"\"\"},\"\"\"\"sessionId\"\"\"\":\"\"\"\"test_123\"\"\"\"}')",
+      "Bash(docker-compose up:*)",
+      "Bash(npx prisma:*)",
+      "Bash(find frontend/src -type f \\\\\\(-name *.js -o -name *.jsx -o -name *.ts -o -name *.tsx \\\\\\))",
+      "Bash(xargs wc:*)",
+      "Bash(grep:*)"
+    ]
+  }
+}
