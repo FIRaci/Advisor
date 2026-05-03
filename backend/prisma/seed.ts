@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding database...');
+  console.log('Seeding database...');
 
   // Create demo user
   const demoEmail = 'demo@advisor.ai';
@@ -26,7 +26,7 @@ async function main() {
     }
   });
 
-  console.log('✅ Created demo user:', demoUser.email);
+  console.log('Created demo user:', demoUser.email);
 
   // Create sample campaign
   const campaign = await prisma.campaign.upsert({
@@ -60,7 +60,7 @@ async function main() {
     }
   });
 
-  console.log('✅ Created sample campaign:', campaign.name);
+  console.log('Created sample campaign:', campaign.name);
 
   // Keep sample chat deterministic across multiple seed runs
   await prisma.chat.upsert({
@@ -131,18 +131,18 @@ Would you like me to create a detailed content calendar for you?`,
     }
   });
 
-  console.log('✅ Created sample chat messages');
+  console.log('Created sample chat messages');
   console.log('');
-  console.log('🎉 Seed complete!');
+  console.log('Seed complete!');
   console.log('');
-  console.log('📝 Demo credentials:');
+  console.log('Demo credentials:');
   console.log(`   Email: ${demoEmail}`);
   console.log(`   Password: ${demoPassword}`);
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seed error:', e);
+    console.error('Seed error:', e);
     process.exit(1);
   })
   .finally(async () => {

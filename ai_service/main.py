@@ -52,7 +52,7 @@ class GeminiService:
     def _initialize(self) -> None:
         """Initialize Gemini client"""
         if not settings.is_api_key_valid:
-            logger.warning("⚠️  No valid API key - using mock mode")
+            logger.warning("No valid API key - using mock mode")
             return
         
         try:
@@ -63,10 +63,10 @@ class GeminiService:
                 contents="Hello"
             )
             self.use_mock = False
-            logger.info("✅ Gemini AI connected successfully")
+            logger.info("Gemini AI connected successfully")
         except Exception as e:
-            logger.error(f"❌ Gemini initialization failed: {e}")
-            logger.info("📝 Falling back to mock mode")
+            logger.error(f"Gemini initialization failed: {e}")
+            logger.info("Falling back to mock mode")
     
     async def generate(self, prompt: str) -> str:
         """Generate AI response with fallback"""
@@ -88,49 +88,49 @@ class GeminiService:
         """Smart mock responses for demo mode"""
         msg_lower = message.lower()
         
-        if any(word in msg_lower for word in ['strategy', 'chiến lược', 'quiz', 'business']):
-            return """# 📊 Your Personalized Marketing Strategy
+          if any(word in msg_lower for word in ['strategy', 'chiến lược', 'quiz', 'business']):
+                return """# Your Personalized Marketing Strategy
 
-## 🎯 Target Audience Analysis
+## Target Audience Analysis
 Based on your profile, your ideal customers are:
 - **Demographics**: Age 25-45, mid to high income
 - **Behavior**: Active on social media, values quality and convenience
 - **Pain Points**: Looking for trusted, efficient solutions
 
-## 📱 Recommended Marketing Channels
+## Recommended Marketing Channels
 1. **Social Media Marketing** (Priority: High)
-   - Focus on Instagram & Facebook
-   - Budget: 40% of marketing spend
-   - Expected ROI: 3-5x
+    - Focus on Instagram & Facebook
+    - Budget: 40% of marketing spend
+    - Expected ROI: 3-5x
 
 2. **Search Engine Marketing**
-   - Google Ads + SEO
-   - Budget: 30%
-   - Expected ROI: 4-6x
+    - Google Ads + SEO
+    - Budget: 30%
+    - Expected ROI: 4-6x
 
 3. **Email Marketing**
-   - Budget: 15%
-   - Expected ROI: 8-10x
+    - Budget: 15%
+    - Expected ROI: 8-10x
 
 4. **Content Marketing**
-   - Blog + Video content
-   - Budget: 15%
+    - Blog + Video content
+    - Budget: 15%
 
-## 💰 Budget Allocation
+## Budget Allocation
 - Total Monthly: Based on your quiz responses
 - Facebook/Instagram Ads: 40%
 - Google Ads: 30%
 - Email Marketing Tools: 15%
 - Content Creation: 15%
 
-## 📈 Key Performance Indicators (KPIs)
+## Key Performance Indicators (KPIs)
 1. Website Traffic: +150% in 90 days
 2. Lead Generation: 200+ qualified leads/month
 3. Conversion Rate: 3-5%
 4. Customer Acquisition Cost: <$50
 5. Return on Ad Spend (ROAS): 4:1
 
-## 🚀 90-Day Action Plan
+## 90-Day Action Plan
 
 ### Month 1: Foundation
 - Set up tracking (Google Analytics, Facebook Pixel)
@@ -150,7 +150,7 @@ Based on your profile, your ideal customers are:
 - Optimize conversion funnel
 - Build brand authority
 
-## 💡 Quick Wins
+## Quick Wins
 1. Create a lead magnet (free guide/checklist)
 2. Set up Facebook pixel for retargeting
 3. Start collecting customer testimonials
@@ -185,16 +185,16 @@ Would you like specific content ideas for your business?"""
         
         return """Thank you for your question! As an AI marketing advisor, I'm here to help with:
 
-✅ Marketing strategy development
-✅ Social media planning
-✅ Ad campaign optimization
-✅ Content creation ideas
-✅ Budget allocation
-✅ Performance tracking
+    - Marketing strategy development
+    - Social media planning
+    - Ad campaign optimization
+    - Content creation ideas
+    - Budget allocation
+    - Performance tracking
 
-**Note**: I'm currently running in demo mode. For full AI-powered responses, please configure a valid Gemini API key.
+    **Note**: I'm currently running in demo mode. For full AI-powered responses, please configure a valid Gemini API key.
 
-What specific marketing challenge can I help you with?"""
+    What specific marketing challenge can I help you with?"""
 
 
 # Global service instance
@@ -231,9 +231,9 @@ class ExamplesResponse(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
-    logger.info("🚀 Starting AdVisor AI Service")
+    logger.info("Starting AdVisor AI Service")
     yield
-    logger.info("👋 Shutting down AdVisor AI Service")
+    logger.info("Shutting down AdVisor AI Service")
 
 
 # Initialize FastAPI with lifespan

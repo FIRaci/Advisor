@@ -2,7 +2,7 @@
 
 AI-powered marketing strategy platform built with React, Express, FastAPI, and PostgreSQL.
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Run the application
@@ -14,7 +14,7 @@ This will:
 2. Start the database, backend, AI service, and frontend
 3. Open http://localhost in your browser
 
-## 🏗️ Architecture
+## Architecture
 
 | Service | Technology | Port |
 |---------|------------|------|
@@ -23,16 +23,16 @@ This will:
 | AI Service | FastAPI + Gemini | 8000 |
 | Database | PostgreSQL 17 | 5432 |
 
-## ✨ Features
+## Features
 
-- 🌙 Dark mode elegant UI (Vercel/GitHub style)
-- 🌐 Bilingual support (English/Vietnamese)
-- 🤖 AI-powered marketing recommendations
-- 🧭 Quiz-driven business profiling flow
-- 💬 Chat interface with Gemini AI
-- 🛟 Graceful fallback response when AI upstream is unavailable
+- Dark mode elegant UI (Vercel/GitHub style)
+- Bilingual support (English/Vietnamese)
+- AI-powered marketing recommendations
+- Quiz-driven business profiling flow
+- Chat interface with Gemini AI
+- Graceful fallback response when AI upstream is unavailable
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 GR1/
@@ -44,13 +44,13 @@ GR1/
 └── .env             # Environment variables
 ```
 
-## 🔑 Environment Variables
+## Environment Variables
 
 The `.env` file contains:
 - `GEMINI_API_KEY` - Google Gemini API key
 - `JWT_SECRET` - Secret for JWT tokens
 
-## 🛠️ Development
+## Development
 
 ```bash
 # Stop all services
@@ -66,7 +66,7 @@ docker-compose logs -f
 docker exec -it ai_marketing_db psql -U admin -d ai_marketing
 ```
 
-## 🤖 AI Utilities
+## AI Utilities
 
 ```bash
 # Smoke-test AI service endpoints
@@ -82,6 +82,6 @@ Available AI endpoints:
 - `GET /examples`
 - `POST /chat`
 
-## 📝 License
+## License
 
 MIT
