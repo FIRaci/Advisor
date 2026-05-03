@@ -28,8 +28,9 @@ This will:
 - 🌙 Dark mode elegant UI (Vercel/GitHub style)
 - 🌐 Bilingual support (English/Vietnamese)
 - 🤖 AI-powered marketing recommendations
-- 📊 Campaign management dashboard
+- 🧭 Quiz-driven business profiling flow
 - 💬 Chat interface with Gemini AI
+- 🛟 Graceful fallback response when AI upstream is unavailable
 
 ## 📁 Project Structure
 
@@ -64,6 +65,22 @@ docker-compose logs -f
 # Access database
 docker exec -it ai_marketing_db psql -U admin -d ai_marketing
 ```
+
+## 🤖 AI Utilities
+
+```bash
+# Smoke-test AI service endpoints
+cd ai_service
+python scripts/smoke_test.py
+
+# Optional: target a custom base URL
+python scripts/smoke_test.py http://localhost:8000
+```
+
+Available AI endpoints:
+- `GET /health`
+- `GET /examples`
+- `POST /chat`
 
 ## 📝 License
 

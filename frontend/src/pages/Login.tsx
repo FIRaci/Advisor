@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { Mail, Lock, ArrowRight, Sparkles } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { api } from '../hooks/useApi';
@@ -27,7 +27,7 @@ export default function Login() {
     if (res.success && res.data) {
       const { token, ...user } = res.data as any;
       setAuth(user, token);
-      navigate('/dashboard');
+      navigate('/chat', { replace: true });
     } else {
       setError(res.error || 'Login failed');
     }
@@ -58,30 +58,30 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-group">
               <label>{t('auth.email')}</label>
-              <div className="input-wrapper">
-                <Mail size={18} />
+              <div className="auth-input-shell">
+                <Mail size={18} className="auth-input-icon" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   required
-                  className="input"
+                  className="auth-input-field"
                 />
               </div>
             </div>
 
             <div className="form-group">
               <label>{t('auth.password')}</label>
-              <div className="input-wrapper">
-                <Lock size={18} />
+              <div className="auth-input-shell">
+                <Lock size={18} className="auth-input-icon" />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="input"
+                  className="auth-input-field"
                 />
               </div>
             </div>

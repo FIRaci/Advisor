@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, useScroll, useTransform } from 'motion/react';
-import { ArrowRight, Sparkles, BarChart3, FileText, Globe, Zap, Shield, TrendingUp, Play, CheckCircle2, LayoutDashboard, LogOut, Settings, User } from 'lucide-react';
+import { ArrowRight, Sparkles, BarChart3, FileText, Globe, Zap, Shield, TrendingUp, Play, CheckCircle2, MessageSquare, LogOut, Settings, User } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useState, useRef, useEffect } from 'react';
 import './Landing.css';
@@ -85,6 +85,8 @@ export default function Landing() {
               onClick={toggleLanguage} 
               className="btn-icon" 
               title="Toggle Language"
+              aria-label={i18n.language === 'en' ? 'Switch to Vietnamese' : 'Chuyển sang tiếng Anh'}
+              type="button"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
             >
@@ -94,16 +96,18 @@ export default function Landing() {
 
             {isAuthenticated() ? (
               <>
-                {/* Dashboard - middle */}
-                <Link to="/dashboard" className="btn-icon" title="Dashboard">
-                  <LayoutDashboard size={18} />
+                {/* Chatbot shortcut */}
+                <Link to="/chat" className="btn-icon" title="Chatbot" aria-label={i18n.language === 'en' ? 'Open chat' : 'Mở chat'}>
+                  <MessageSquare size={18} />
                 </Link>
-                
+
                 {/* User avatar with dropdown - right */}
                 <div className="nav-user-menu" ref={userMenuRef}>
                   <button 
                     className="nav-avatar-btn"
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    type="button"
+                    aria-label={i18n.language === 'en' ? 'Open user menu' : 'Mở menu người dùng'}
                   >
                     {user?.name?.charAt(0) || 'U'}
                   </button>
@@ -127,7 +131,7 @@ export default function Landing() {
                         <Settings size={16} />
                         {i18n.language === 'en' ? 'Settings' : 'Cài đặt'}
                       </button>
-                      <button className="nav-dropdown-item" onClick={() => navigate('/profile')}>
+                      <button className="nav-dropdown-item" onClick={() => navigate('/settings')}>
                         <User size={16} />
                         {i18n.language === 'en' ? 'Edit Profile' : 'Chỉnh sửa tài khoản'}
                       </button>

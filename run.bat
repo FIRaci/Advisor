@@ -28,8 +28,34 @@ if %errorlevel% neq 0 (
 echo [OK] Docker is running
 echo.
 
+set "COMPOSE_CMD="
+docker compose version >nul 2>&1
+if %errorlevel% equ 0 (
+    set "COMPOSE_CMD=docker compose"
+) else (
+    docker-compose --version >nul 2>&1
+    if %errorlevel% equ 0 (
+        set "COMPOSE_CMD=docker-compose"
+    )
+)
+
+if "%COMPOSE_CMD%"=="" (
+    echo [ERROR] Docker Compose command not found
+    echo Please install or enable Docker Compose
+    pause
+    exit /b 1
+)
+
+echo [OK] Using compose command: %COMPOSE_CMD%
+echo.
+
 echo Starting services...
-docker-compose up --build -d
+%COMPOSE_CMD% up --build -d
+if %errorlevel% neq 0 (
+    echo [ERROR] Failed to start services. See errors above.
+    pause
+    exit /b 1
+)
 
 echo.
 echo Waiting for services to be ready...
@@ -51,5 +77,5 @@ start http://localhost
 echo Press any key to view logs...
 pause >nul
 
-docker-compose logs -f
+%COMPOSE_CMD% logs -f
 

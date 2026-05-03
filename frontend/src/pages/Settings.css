@@ -198,7 +198,8 @@
 }
 
 .form-group input:focus {
-  outline: none;
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
   border-color: var(--accent);
   background: var(--bg-primary);
 }

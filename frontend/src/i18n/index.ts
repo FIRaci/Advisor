@@ -9,7 +9,6 @@ const resources = {
         features: 'Features',
         login: 'Login',
         signup: 'Sign Up',
-        dashboard: 'Dashboard',
         logout: 'Logout'
       },
       hero: {
@@ -63,13 +62,6 @@ const resources = {
         hasAccount: 'Already have an account?',
         forgotPassword: 'Forgot password?'
       },
-      dashboard: {
-        welcome: 'Welcome back',
-        campaigns: 'Your Campaigns',
-        newCampaign: 'New Campaign',
-        noCampaigns: 'No campaigns yet',
-        startFirst: 'Create your first campaign to get started'
-      },
       quiz: {
         title: 'Tell Us About Your Business',
         subtitle: 'Answer a few questions to get personalized recommendations',
@@ -91,7 +83,6 @@ const resources = {
         features: 'Tính Năng',
         login: 'Đăng Nhập',
         signup: 'Đăng Ký',
-        dashboard: 'Bảng Điều Khiển',
         logout: 'Đăng Xuất'
       },
       hero: {
@@ -144,13 +135,6 @@ const resources = {
         noAccount: 'Chưa có tài khoản?',
         hasAccount: 'Đã có tài khoản?',
         forgotPassword: 'Quên mật khẩu?'
-      },
-      dashboard: {
-        welcome: 'Chào mừng trở lại',
-        campaigns: 'Chiến Dịch Của Bạn',
-        newCampaign: 'Chiến Dịch Mới',
-        noCampaigns: 'Chưa có chiến dịch',
-        startFirst: 'Tạo chiến dịch đầu tiên để bắt đầu'
       },
       quiz: {
         title: 'Kể Về Doanh Nghiệp Của Bạn',

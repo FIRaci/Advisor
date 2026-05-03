@@ -1,61 +1,45 @@
 @echo off
+setlocal
 echo.
 echo ========================================
 echo    Seeding Database
 echo ========================================
 echo.
 
-echo Waiting for services to be ready...
-timeout /t 5 /nobreak >nul
+set "COMPOSE_CMD="
+docker compose version >nul 2>&1
+if %errorlevel% equ 0 (
+    set "COMPOSE_CMD=docker compose"
+) else (
+    docker-compose --version >nul 2>&1
+    if %errorlevel% equ 0 (
+        set "COMPOSE_CMD=docker-compose"
+    )
+)
 
-echo Running seed script...
-docker exec gr1-backend-1 sh -c "cd /app && node -e \"
-const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
+if "%COMPOSE_CMD%"=="" (
+    echo [ERROR] Docker Compose command not found
+    exit /b 1
+)
 
-const prisma = new PrismaClient();
+echo [OK] Using compose command: %COMPOSE_CMD%
+echo Ensuring backend service is running...
+%COMPOSE_CMD% up -d db backend >nul
+if %errorlevel% neq 0 (
+    echo [ERROR] Failed to start db/backend services
+    exit /b 1
+)
 
-async function main() {
-  console.log('Seeding database...');
-  
-  const hashedPassword = bcrypt.hashSync('demo123', 10);
-  
-  const user = await prisma.user.upsert({
-    where: { email: 'demo@advisor.ai' },
-    update: {},
-    create: {
-      email: 'demo@advisor.ai',
-      password: hashedPassword,
-      name: 'Demo User'
-    }
-  });
-  
-  console.log('Created user:', user.email);
-  
-  await prisma.campaign.upsert({
-    where: { id: 'demo-campaign-1' },
-    update: {},
-    create: {
-      id: 'demo-campaign-1',
-      name: 'My First Campaign',
-      description: 'E-commerce marketing strategy',
-      status: 'ACTIVE',
-      userId: user.id
-    }
-  });
-  
-  console.log('Seed complete!');
-  console.log('');
-  console.log('Demo credentials:');
-  console.log('Email: demo@advisor.ai');
-  console.log('Password: demo123');
-}
-
-main()
-  .catch(console.error)
-  .finally(() => prisma.\$disconnect());
-\""
+echo Running backend seed script...
+%COMPOSE_CMD% exec -T backend npm run db:seed
+if %errorlevel% neq 0 (
+    echo [ERROR] Seed failed
+    exit /b 1
+)
 
 echo.
-echo Done!
-pause
+echo [OK] Seed complete.
+echo Demo credentials:
+echo   Email: demo@advisor.ai
+echo   Password: demo123
+endlocal

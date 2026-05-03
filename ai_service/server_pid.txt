@@ -1,0 +1,5 @@
+
+ NPM(K)    PM(M)      WS(M)     CPU(s)      Id  SI ProcessName
+ ------    -----      -----     ------      --  -- -----------
+      7     5.38       9.29       0.03    5888   2 python
+

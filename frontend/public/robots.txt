@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://advisor-570b7.web.app/sitemap.xml

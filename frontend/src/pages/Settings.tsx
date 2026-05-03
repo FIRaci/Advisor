@@ -1,15 +1,16 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import { ArrowLeft, User, Lock, Globe, Moon, Camera, Check } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { api } from '../hooks/useApi';
 import './Settings.css';
 
 export default function Settings() {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, token, setAuth } = useAuthStore();
   const lang = i18n.language as 'en' | 'vi';
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -21,9 +22,21 @@ export default function Settings() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savedMessage, setSavedMessage] = useState('');
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
 
-  if (!isAuthenticated()) {
-    navigate('/login');
+  useEffect(() => {
+    if (!token) {
+      navigate('/login');
+    }
+  }, [token, navigate]);
+
+  useEffect(() => {
+    setName(user?.name || '');
+    setEmail(user?.email || '');
+  }, [user]);
+
+  if (!token) {
     return null;
   }
 
@@ -38,13 +51,40 @@ export default function Settings() {
     }
   };
 
-  const handleSaveProfile = () => {
-    // TODO: API call to save profile
-    setSavedMessage(lang === 'en' ? 'Profile saved!' : 'Đã lưu hồ sơ!');
-    setTimeout(() => setSavedMessage(''), 3000);
+  const handleSaveProfile = async () => {
+    const nextName = name.trim();
+    const nextEmail = email.trim().toLowerCase();
+
+    if (!nextName || !nextEmail) {
+      alert(lang === 'en' ? 'Name and email are required' : 'Vui lòng nhập tên và email');
+      return;
+    }
+
+    setProfileSaving(true);
+
+    const res = await api.updateMe({ name: nextName, email: nextEmail });
+    if (res.success && res.data) {
+      setAuth(
+        { id: res.data.id, email: res.data.email, name: res.data.name },
+        token
+      );
+      setSavedMessage(lang === 'en' ? 'Profile saved!' : 'Đã lưu hồ sơ!');
+      setTimeout(() => setSavedMessage(''), 3000);
+      setProfileSaving(false);
+      return;
+    }
+
+    if (res.error === 'Session expired. Please log in again.') {
+      navigate('/login');
+      setProfileSaving(false);
+      return;
+    }
+
+    alert(res.error || (lang === 'en' ? 'Failed to save profile' : 'Lưu hồ sơ thất bại'));
+    setProfileSaving(false);
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
       alert(lang === 'en' ? 'Passwords do not match' : 'Mật khẩu không khớp');
       return;
@@ -53,12 +93,32 @@ export default function Settings() {
       alert(lang === 'en' ? 'Password must be at least 6 characters' : 'Mật khẩu phải có ít nhất 6 ký tự');
       return;
     }
-    // TODO: API call to change password
+
+    setPasswordSaving(true);
+
+    const res = await api.changePassword({
+      currentPassword,
+      newPassword
+    });
+
+    if (!res.success) {
+      if (res.error === 'Session expired. Please log in again.') {
+        navigate('/login');
+        setPasswordSaving(false);
+        return;
+      }
+
+      alert(res.error || (lang === 'en' ? 'Failed to change password' : 'Đổi mật khẩu thất bại'));
+      setPasswordSaving(false);
+      return;
+    }
+
     setSavedMessage(lang === 'en' ? 'Password changed!' : 'Đã đổi mật khẩu!');
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
     setTimeout(() => setSavedMessage(''), 3000);
+    setPasswordSaving(false);
   };
 
   const toggleLanguage = () => {
@@ -168,8 +228,10 @@ export default function Settings() {
                 />
               </div>
 
-              <button className="save-btn" onClick={handleSaveProfile}>
-                {lang === 'en' ? 'Save Changes' : 'Lưu thay đổi'}
+              <button className="save-btn" onClick={handleSaveProfile} disabled={profileSaving}>
+                {profileSaving
+                  ? (lang === 'en' ? 'Saving...' : 'Đang lưu...')
+                  : (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi')}
               </button>
             </div>
           )}
@@ -209,8 +271,10 @@ export default function Settings() {
                 />
               </div>
 
-              <button className="save-btn" onClick={handleChangePassword}>
-                {lang === 'en' ? 'Change Password' : 'Đổi mật khẩu'}
+              <button className="save-btn" onClick={handleChangePassword} disabled={passwordSaving}>
+                {passwordSaving
+                  ? (lang === 'en' ? 'Updating...' : 'Đang cập nhật...')
+                  : (lang === 'en' ? 'Change Password' : 'Đổi mật khẩu')}
               </button>
             </div>
           )}

@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from google import genai
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from examples import EXAMPLE_PROMPTS, build_few_shot_examples
 
 # Configure logging
 logging.basicConfig(
@@ -221,6 +222,12 @@ class HealthResponse(BaseModel):
     model: str
 
 
+class ExamplesResponse(BaseModel):
+    """Prompt examples response"""
+    count: int
+    examples: list[dict]
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
@@ -284,16 +291,27 @@ async def health_check():
     )
 
 
+@app.get("/examples", response_model=ExamplesResponse)
+async def examples_endpoint():
+    """Expose curated examples used for few-shot prompting"""
+    return ExamplesResponse(
+        count=len(EXAMPLE_PROMPTS),
+        examples=EXAMPLE_PROMPTS
+    )
+
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
     """Chat with AI marketing advisor"""
     try:
+        few_shot_context = build_few_shot_examples(limit=3)
+
         # Build context string if provided
         context_str = ""
         if request.context:
             context_str = f"\n\nContext about the business:\n{request.context}\n\n"
         
-        prompt = f"{SYSTEM_PROMPT}{context_str}User: {request.message}"
+        prompt = f"{SYSTEM_PROMPT}\n\n{few_shot_context}{context_str}User: {request.message}"
         
         response_text = await gemini_service.generate(prompt)
         

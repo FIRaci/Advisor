@@ -4,34 +4,26 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Send, Sparkles, Trash2, Plus, MessageSquare, ChevronLeft, ChevronRight, 
-  Settings, LogOut, MoreHorizontal, Pencil, Star, Copy, Check
+  Settings, LogOut, MoreHorizontal, Pencil, Star, Copy, Check, ListChecks
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useAuthStore } from '../store/authStore';
-import { api } from '../hooks/useApi';
+import { api, Campaign as ApiCampaign, ChatMessage } from '../hooks/useApi';
 import './Chat.css';
 
-interface Message {
-  id: string;
-  role: 'USER' | 'ASSISTANT';
-  content: string;
-  createdAt: string;
-}
+type Message = ChatMessage;
 
-interface Campaign {
-  id: string;
-  name: string;
-  createdAt: string;
-  isFavorite?: boolean;
+interface Campaign extends Pick<ApiCampaign, 'id' | 'name' | 'createdAt' | 'isFavorite'> {
+  status?: ApiCampaign['status'];
   quizData?: Record<string, string>;
 }
 
 export default function Chat() {
   const { campaignId } = useParams();
   const [searchParams] = useSearchParams();
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const navigate = useNavigate();
-  const { isAuthenticated, user, logout } = useAuthStore();
+  const { token, user, logout } = useAuthStore();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -50,8 +42,10 @@ export default function Chat() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const lang = i18n.language as 'en' | 'vi';
+  const isLoggedIn = Boolean(token);
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -66,7 +60,17 @@ export default function Chat() {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated()) {
+    document.documentElement.classList.add('chat-page-active');
+    document.body.classList.add('chat-page-active');
+
+    return () => {
+      document.documentElement.classList.remove('chat-page-active');
+      document.body.classList.remove('chat-page-active');
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
       navigate('/login');
       return;
     }
@@ -77,11 +81,21 @@ export default function Chat() {
     } else {
       setCurrentCampaign(null);
     }
-  }, [campaignId]);
+  }, [campaignId, isLoggedIn, navigate]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      return;
+    }
+
+    textarea.style.height = '0px';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 140)}px`;
+  }, [input]);
 
   useEffect(() => {
     if (searchParams.get('autostart') === 'true' && messages.length === 0 && !loading && !initialLoading) {
@@ -92,7 +106,7 @@ export default function Chat() {
   const fetchCampaigns = async () => {
     const res = await api.getCampaigns();
     if (res.success && res.data) {
-      setCampaigns(res.data as Campaign[]);
+      setCampaigns(res.data);
     }
   };
 
@@ -105,11 +119,81 @@ export default function Chat() {
   };
 
   const fetchHistory = async () => {
-    const res = await api.getChatHistory(campaignId);
+    if (!campaignId) {
+      setMessages([]);
+      setInitialLoading(false);
+      return;
+    }
+
+    const res = await api.getChatHistory(campaignId, 300);
     if (res.success && res.data) {
-      setMessages(res.data as Message[]);
+      setMessages(res.data);
     }
     setInitialLoading(false);
+  };
+
+  const appendAssistantMessage = (content: string) => {
+    const generatedId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setMessages((prev) => [...prev, {
+      id: generatedId,
+      role: 'ASSISTANT',
+      content,
+      createdAt: new Date().toISOString()
+    }]);
+  };
+
+  const getGenericAiErrorMessage = () =>
+    lang === 'en'
+      ? 'Sorry, I encountered an error. Please try again.'
+      : 'Xin loi, da xay ra loi. Vui long thu lai.';
+
+  const buildCampaignNameFromMessage = (message: string) => {
+    const normalized = message.trim().replace(/\s+/g, ' ');
+    const short = normalized.slice(0, 72);
+
+    if (short.length > 0) {
+      return short;
+    }
+
+    const now = new Date();
+    const month = now.toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', { month: 'short' });
+    return lang === 'vi' ? `Chiến dịch ${month} ${now.getDate()}` : `Campaign ${month} ${now.getDate()}`;
+  };
+
+  const ensureCampaignForMessage = async (message: string) => {
+    if (campaignId) {
+      return campaignId;
+    }
+
+    if (currentCampaign?.id) {
+      return currentCampaign.id;
+    }
+
+    const createRes = await api.createCampaign({
+      name: buildCampaignNameFromMessage(message)
+    });
+
+    if (!createRes.success || !createRes.data) {
+      if (createRes.error === 'Session expired. Please log in again.') {
+        navigate('/login');
+      }
+      return null;
+    }
+
+    const createdCampaign: Campaign = {
+      id: createRes.data.id,
+      name: createRes.data.name,
+      createdAt: createRes.data.createdAt,
+      isFavorite: createRes.data.isFavorite,
+      status: createRes.data.status,
+      quizData: createRes.data.quizData
+    };
+
+    setCampaigns((prev) => [createdCampaign, ...prev.filter((campaign) => campaign.id !== createdCampaign.id)]);
+    setCurrentCampaign(createdCampaign);
+    navigate(`/chat/${createdCampaign.id}`, { replace: true });
+
+    return createdCampaign.id;
   };
 
   const generateInitialStrategy = async () => {
@@ -129,18 +213,16 @@ export default function Chat() {
     setMessages([userMessage]);
 
     const res = await api.sendMessage(initialPrompt, campaignId);
-    
-    if (res.success && res.data) {
-      setMessages(prev => [...prev, res.data as Message]);
+    const assistantMessage = res.data;
+
+    if (res.success && assistantMessage) {
+      setMessages((prev) => [...prev, assistantMessage]);
     } else {
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        role: 'ASSISTANT',
-        content: lang === 'en' 
+      appendAssistantMessage(
+        lang === 'en'
           ? 'Sorry, I encountered an error generating your strategy. Please try sending a message.'
-          : 'Xin lỗi, đã xảy ra lỗi khi tạo chiến lược. Vui lòng thử gửi tin nhắn.',
-        createdAt: new Date().toISOString()
-      }]);
+          : 'Xin lỗi, đã xảy ra lỗi khi tạo chiến lược. Vui lòng thử gửi tin nhắn.'
+      );
     }
     
     setLoading(false);
@@ -148,43 +230,87 @@ export default function Chat() {
   };
 
   const handleSend = async () => {
-    if (!input.trim() || loading) return;
+    const nextInput = input.trim();
+    if (!nextInput || loading) return;
+    const isStartingFromBlank = !campaignId && !currentCampaign?.id;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'USER',
-      content: input.trim(),
+      content: nextInput,
       createdAt: new Date().toISOString()
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setLoading(true);
 
-    const res = await api.sendMessage(input.trim(), campaignId);
-    
-    if (res.success && res.data) {
-      setMessages(prev => [...prev, res.data as Message]);
+    const targetCampaignId = await ensureCampaignForMessage(nextInput);
+    if (!targetCampaignId) {
+      if (!useAuthStore.getState().token) {
+        setLoading(false);
+        navigate('/login');
+        return;
+      }
+
+      appendAssistantMessage(
+        lang === 'en'
+          ? 'Unable to initialize a new conversation. Please try again.'
+          : 'Không thể khởi tạo cuộc trò chuyện mới. Vui lòng thử lại.'
+      );
+      setLoading(false);
+      return;
+    }
+
+    const res = await api.sendMessage(nextInput, targetCampaignId);
+    const assistantMessage = res.data;
+
+    if (res.success && assistantMessage) {
+      setMessages((prev) => [...prev, assistantMessage]);
+
+      if (isStartingFromBlank) {
+        const historyRes = await api.getChatHistory(targetCampaignId, 300);
+        if (historyRes.success && historyRes.data) {
+          setMessages(historyRes.data);
+        }
+      }
     } else {
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        role: 'ASSISTANT',
-        content: 'Sorry, I encountered an error. Please try again.',
-        createdAt: new Date().toISOString()
-      }]);
+      appendAssistantMessage(getGenericAiErrorMessage());
     }
     
     setLoading(false);
   };
 
   const handleClear = async () => {
-    await api.clearChatHistory(campaignId);
-    setMessages([]);
-    setClearModalOpen(false);
+    if (!campaignId) {
+      setMessages([]);
+      setClearModalOpen(false);
+      return;
+    }
+
+    const res = await api.clearChatHistory(campaignId);
+    if (res.success) {
+      setMessages([]);
+      setClearModalOpen(false);
+    }
   };
 
+  const formatMessageTime = (time: string) =>
+    new Date(time).toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
   const handleNewChat = () => {
-    navigate('/quiz');
+    navigate('/chat');
+  };
+
+  const handleOpenQuiz = () => {
+    navigate('/quiz', { state: { from: campaignId ? `/chat/${campaignId}` : '/chat' } });
+  };
+
+  const focusComposer = () => {
+    textareaRef.current?.focus();
   };
 
   const handleLogout = () => {
@@ -207,11 +333,24 @@ export default function Chat() {
 
   // Campaign actions
   const handleRenameCampaign = async (id: string) => {
-    if (!editingName.trim()) return;
-    await api.updateCampaign(id, { name: editingName });
-    setCampaigns(prev => prev.map(c => c.id === id ? { ...c, name: editingName } : c));
+    const nextName = editingName.trim();
+    if (!nextName) return;
+
+    const res = await api.updateCampaign(id, { name: nextName });
+    const updatedCampaign = res.data;
+
+    if (res.success && updatedCampaign) {
+      setCampaigns((prev) => prev.map((campaign) =>
+        campaign.id === id ? { ...campaign, name: updatedCampaign.name } : campaign
+      ));
+      if (currentCampaign?.id === id) {
+        setCurrentCampaign((prev) => (prev ? { ...prev, name: updatedCampaign.name } : prev));
+      }
+    }
+
     setEditingCampaignId(null);
     setEditingName('');
+    setActiveCampaignMenu(null);
   };
 
   const openDeleteModal = (id: string) => {
@@ -222,17 +361,47 @@ export default function Chat() {
 
   const handleDeleteCampaign = async () => {
     if (!deletingCampaignId) return;
-    await api.deleteCampaign(deletingCampaignId);
-    setCampaigns(prev => prev.filter(c => c.id !== deletingCampaignId));
-    if (deletingCampaignId === campaignId) navigate('/chat');
+
+    const res = await api.deleteCampaign(deletingCampaignId);
+    if (res.success) {
+      setCampaigns((prev) => prev.filter((campaign) => campaign.id !== deletingCampaignId));
+      if (deletingCampaignId === campaignId) {
+        setCurrentCampaign(null);
+        navigate('/chat');
+      }
+    }
+
     setDeleteModalOpen(false);
     setDeletingCampaignId(null);
   };
 
-  const handleToggleFavorite = (id: string) => {
-    setCampaigns(prev => prev.map(c => 
-      c.id === id ? { ...c, isFavorite: !c.isFavorite } : c
+  const handleToggleFavorite = async (id: string) => {
+    const targetCampaign = campaigns.find((campaign) => campaign.id === id);
+    if (!targetCampaign) {
+      return;
+    }
+
+    const nextFavoriteState = !targetCampaign.isFavorite;
+
+    setCampaigns((prev) => prev.map((campaign) =>
+      campaign.id === id ? { ...campaign, isFavorite: nextFavoriteState } : campaign
     ));
+
+    if (currentCampaign?.id === id) {
+      setCurrentCampaign((prev) => (prev ? { ...prev, isFavorite: nextFavoriteState } : prev));
+    }
+
+    const res = await api.updateCampaign(id, { isFavorite: nextFavoriteState });
+    if (!res.success) {
+      setCampaigns((prev) => prev.map((campaign) =>
+        campaign.id === id ? { ...campaign, isFavorite: targetCampaign.isFavorite } : campaign
+      ));
+      if (currentCampaign?.id === id) {
+        setCurrentCampaign((prev) => (prev ? { ...prev, isFavorite: targetCampaign.isFavorite } : prev));
+      }
+    }
+
+    setActiveCampaignMenu(null);
   };
 
   // Get quiz summary info for display
@@ -255,6 +424,15 @@ export default function Chat() {
     }
     if (quizData.budget && quizData.budget !== 'not_sure') {
       items.push({ label: lang === 'en' ? 'Budget' : 'Ngân sách', value: quizData.budget });
+    }
+    if (quizData.seasonality && quizData.seasonality !== 'not_sure') {
+      items.push({ label: lang === 'en' ? 'Seasonality' : 'Mùa vụ', value: quizData.seasonality });
+    }
+    if (quizData.contentFormat && quizData.contentFormat !== 'not_sure') {
+      items.push({ label: lang === 'en' ? 'Content' : 'Nội dung', value: quizData.contentFormat });
+    }
+    if (quizData.offerType && quizData.offerType !== 'not_sure') {
+      items.push({ label: lang === 'en' ? 'Offer' : 'Ưu đãi', value: quizData.offerType });
     }
     
     return items.slice(0, 4); // Show max 4 items for header bar
@@ -341,6 +519,33 @@ export default function Chat() {
       global: { en: 'Global', vi: 'Toàn cầu' }
     };
 
+    const seasonalityLabels: Record<string, { en: string; vi: string }> = {
+      none: { en: 'No seasonality', vi: 'Không có mùa vụ rõ ràng' },
+      holiday: { en: 'Holiday-driven', vi: 'Theo dịp lễ tết' },
+      summer: { en: 'Summer peak', vi: 'Cao điểm mùa hè' },
+      yearend: { en: 'Year-end peak', vi: 'Cao điểm cuối năm' },
+      event: { en: 'Event-driven', vi: 'Theo sự kiện' },
+      always: { en: 'Always-on demand', vi: 'Nhu cầu ổn định' }
+    };
+
+    const contentFormatLabels: Record<string, { en: string; vi: string }> = {
+      short_video: { en: 'Short videos', vi: 'Video ngắn' },
+      long_video: { en: 'Long-form video', vi: 'Video dài' },
+      static_visual: { en: 'Static visuals', vi: 'Hình ảnh/carousel' },
+      article: { en: 'Articles/blog', vi: 'Bài viết/blog' },
+      email: { en: 'Email/newsletter', vi: 'Email/newsletter' },
+      mixed: { en: 'Mixed format', vi: 'Kết hợp nhiều định dạng' }
+    };
+
+    const offerTypeLabels: Record<string, { en: string; vi: string }> = {
+      discount: { en: 'Discount / flash sale', vi: 'Giảm giá / flash sale' },
+      bundle: { en: 'Bundle package', vi: 'Gói combo' },
+      trial: { en: 'Free trial / freemium', vi: 'Dùng thử / freemium' },
+      gift: { en: 'Gift with purchase', vi: 'Tặng quà kèm' },
+      consultation: { en: 'Free consultation/demo', vi: 'Tư vấn/demo miễn phí' },
+      custom_offer: { en: 'Custom segment offers', vi: 'Ưu đãi theo nhóm khách' }
+    };
+
     const getLabel = (value: string, labels: Record<string, { en: string; vi: string }>) => {
       if (!value || value === 'not_sure') return null;
       if (value.startsWith('custom: ')) return value.replace('custom: ', '');
@@ -381,6 +586,21 @@ export default function Chat() {
     const regionValue = getLabel(quizData.region, regionLabels);
     if (regionValue) {
       items.push({ icon: '🌍', label: lang === 'en' ? 'Region' : 'Khu vực', value: regionValue });
+    }
+
+    const seasonalityValue = getLabel(quizData.seasonality, seasonalityLabels);
+    if (seasonalityValue) {
+      items.push({ icon: '📅', label: lang === 'en' ? 'Seasonality' : 'Mùa vụ', value: seasonalityValue });
+    }
+
+    const contentFormatValue = getLabel(quizData.contentFormat, contentFormatLabels);
+    if (contentFormatValue) {
+      items.push({ icon: '🎬', label: lang === 'en' ? 'Content Format' : 'Định dạng nội dung', value: contentFormatValue });
+    }
+
+    const offerTypeValue = getLabel(quizData.offerType, offerTypeLabels);
+    if (offerTypeValue) {
+      items.push({ icon: '🏷️', label: lang === 'en' ? 'Offer Type' : 'Loại ưu đãi', value: offerTypeValue });
     }
     
     if (quizData.usp && quizData.usp !== 'not_sure') {
@@ -424,12 +644,12 @@ export default function Chat() {
 
             <button className="new-chat-btn" onClick={handleNewChat}>
               <Plus size={18} />
-              {lang === 'en' ? 'New Campaign' : 'Chiến dịch mới'}
+              {lang === 'en' ? 'New Chat' : 'Chat mới'}
             </button>
 
             {/* All campaigns (favorites sorted to top) */}
             <div className="sidebar-section">
-              <span className="section-label">{lang === 'en' ? 'Campaigns' : 'Chiến dịch'}</span>
+              <span className="section-label">{lang === 'en' ? 'Saved Campaigns' : 'Chiến dịch đã lưu'}</span>
               <div className="campaigns-list">
                 {sortedCampaigns.map((campaign) => (
                   <CampaignItem
@@ -504,31 +724,44 @@ export default function Chat() {
 
       {/* Main Chat Area */}
       <div className="chat-main">
-        {/* Header - only sidebar toggle, no duplicate icons */}
+        {/* Header */}
         <header className="chat-header">
-          {!sidebarOpen && (
-            <button className="sidebar-toggle-open" onClick={() => setSidebarOpen(true)}>
-              <ChevronRight size={18} />
-            </button>
-          )}
-          
-          {/* Quiz Summary Info Bar */}
-          {currentCampaign && getQuizSummaryItems().length > 0 && (
-            <div className="quiz-info-bar">
-              {getQuizSummaryItems().map((item, i) => (
-                <span key={i} className="quiz-info-item">
-                  <span className="quiz-info-label">{item.label}:</span>
-                  <span className="quiz-info-value">{item.value}</span>
-                </span>
-              ))}
+          <div className="chat-header-left">
+            {!sidebarOpen && (
+              <button className="sidebar-toggle-open" onClick={() => setSidebarOpen(true)}>
+                <ChevronRight size={18} />
+              </button>
+            )}
+
+            <div className="chat-title-wrap">
+              <h1 className="chat-title">
+                {currentCampaign?.name || (lang === 'en' ? 'General Marketing Chat' : 'Chat Marketing Tổng Quát')}
+              </h1>
+              <p className="chat-subtitle">
+                {lang === 'en'
+                  ? `${messages.length} message${messages.length === 1 ? '' : 's'}`
+                  : `${messages.length} tin nhắn`}
+              </p>
             </div>
-          )}
-          
-          <div className="chat-header-spacer" />
-          <div className="chat-header-actions">
-            <button className="btn btn-ghost btn-sm" onClick={() => setClearModalOpen(true)} title={lang === 'en' ? 'Clear chat' : 'Xóa chat'}>
-              <Trash2 size={18} />
-            </button>
+          </div>
+
+          <div className="chat-header-right">
+            {currentCampaign && getQuizSummaryItems().length > 0 && (
+              <div className="quiz-info-bar">
+                {getQuizSummaryItems().map((item, i) => (
+                  <span key={i} className="quiz-info-item">
+                    <span className="quiz-info-label">{item.label}:</span>
+                    <span className="quiz-info-value">{item.value}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="chat-header-actions">
+              <button className="btn btn-ghost btn-sm" onClick={() => setClearModalOpen(true)} title={lang === 'en' ? 'Clear chat' : 'Xóa chat'}>
+                <Trash2 size={18} />
+              </button>
+            </div>
           </div>
         </header>
 
@@ -568,59 +801,94 @@ export default function Chat() {
                 </div>
               )}
               
-              <div className="welcome-suggestions">
-                {[
-                  lang === 'en' ? 'Create a social media strategy' : 'Tạo chiến lược mạng xã hội',
-                  lang === 'en' ? 'Write ad copy for my product' : 'Viết nội dung quảng cáo cho sản phẩm',
-                  lang === 'en' ? 'Analyze my target audience' : 'Phân tích đối tượng mục tiêu',
-                  lang === 'en' ? 'Suggest marketing channels' : 'Đề xuất kênh marketing'
-                ].map((suggestion, i) => (
-                  <button 
-                    key={i} 
-                    className="suggestion-btn"
-                    onClick={() => setInput(suggestion)}
-                  >
-                    {suggestion}
-                  </button>
-                ))}
+              <div className="welcome-actions">
+                <button className="welcome-action primary" onClick={handleOpenQuiz}>
+                  <div className="welcome-action-title">
+                    <ListChecks size={16} />
+                    <span>{lang === 'en' ? 'Start with Smart Quiz' : 'Bắt đầu với Quiz thông minh'}</span>
+                  </div>
+                  <p>
+                    {lang === 'en'
+                      ? 'Answer a few questions so AI creates a stronger campaign plan.'
+                      : 'Trả lời vài câu hỏi để AI tạo chiến dịch sát thực tế hơn.'}
+                  </p>
+                </button>
+
+                <button className="welcome-action secondary" onClick={focusComposer}>
+                  <div className="welcome-action-title">
+                    <MessageSquare size={16} />
+                    <span>{lang === 'en' ? 'Skip Quiz, Chat Directly' : 'Bỏ qua Quiz, Chat trực tiếp'}</span>
+                  </div>
+                  <p>
+                    {lang === 'en'
+                      ? 'Type your first request below. A new campaign will be created automatically.'
+                      : 'Nhập yêu cầu đầu tiên ở ô bên dưới. Hệ thống sẽ tự tạo campaign mới.'}
+                  </p>
+                </button>
               </div>
             </div>
           ) : (
             messages.map((msg, i) => (
               <motion.div
                 key={msg.id}
-                className={`message ${msg.role.toLowerCase()}`}
+                className={`message ${msg.role === 'USER' ? 'user' : 'assistant'}`}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.02 }}
               >
-                <div className="message-avatar">
-                  {msg.role === 'USER' ? (user?.name?.charAt(0) || 'U') : <Sparkles size={16} />}
+                {msg.role === 'ASSISTANT' && (
+                  <div className="message-avatar assistant-avatar">
+                    <Sparkles size={16} />
+                  </div>
+                )}
+
+                <div className="message-main">
+                  <div className="message-meta">
+                    <span className="message-author">
+                      {msg.role === 'USER' ? (user?.name || (lang === 'en' ? 'You' : 'Bạn')) : 'AdVisor AI'}
+                    </span>
+                    <span className="message-time">{formatMessageTime(msg.createdAt)}</span>
+                  </div>
+
+                  <div className="message-content">
+                    {msg.role === 'ASSISTANT' ? (
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    ) : (
+                      <p>{msg.content}</p>
+                    )}
+                  </div>
+
+                  <div className="message-tools">
+                    <button 
+                      className="message-copy-btn"
+                      onClick={() => handleCopyMessage(msg.content, msg.id)}
+                      title={lang === 'en' ? 'Copy' : 'Sao chép'}
+                    >
+                      {copiedId === msg.id ? <Check size={14} /> : <Copy size={14} />}
+                    </button>
+                  </div>
                 </div>
-                <div className="message-content">
-                  {msg.role === 'ASSISTANT' ? (
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
-                  ) : (
-                    <p>{msg.content}</p>
-                  )}
-                </div>
-                <button 
-                  className="message-copy-btn"
-                  onClick={() => handleCopyMessage(msg.content, msg.id)}
-                  title={lang === 'en' ? 'Copy' : 'Sao chép'}
-                >
-                  {copiedId === msg.id ? <Check size={14} /> : <Copy size={14} />}
-                </button>
+
+                {msg.role === 'USER' && (
+                  <div className="message-avatar user-avatar">
+                    {user?.name?.charAt(0) || 'U'}
+                  </div>
+                )}
               </motion.div>
             ))
           )}
 
           {loading && (
-            <div className="message assistant">
-              <div className="message-avatar"><Sparkles size={16} /></div>
-              <div className="message-content">
-                <div className="typing-indicator">
-                  <span /><span /><span />
+            <div className="message assistant loading-message">
+              <div className="message-avatar assistant-avatar"><Sparkles size={16} /></div>
+              <div className="message-main">
+                <div className="message-meta">
+                  <span className="message-author">AdVisor AI</span>
+                </div>
+                <div className="message-content typing-bubble">
+                  <div className="typing-indicator">
+                    <span /><span /><span />
+                  </div>
                 </div>
               </div>
             </div>
@@ -631,12 +899,26 @@ export default function Chat() {
 
         {/* Input */}
         <div className="chat-input-wrapper">
+          <div className="chat-toolbar">
+            <button className="chat-quiz-cta" onClick={handleOpenQuiz}>
+              <ListChecks size={14} />
+              <span>{lang === 'en' ? 'Do Quiz for Better Strategy' : 'Làm Quiz để ra chiến lược tốt hơn'}</span>
+            </button>
+            <span className="chat-toolbar-hint">
+              {lang === 'en' ? 'Enter to send, Shift + Enter for new line' : 'Enter để gửi, Shift + Enter xuống dòng'}
+            </span>
+          </div>
           <div className="chat-input">
             <textarea
+              ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={t('chat.placeholder')}
+              placeholder={
+                lang === 'en'
+                  ? 'Ask me anything about marketing...'
+                  : 'Hỏi tôi bất kỳ điều gì về marketing...'
+              }
               rows={1}
               disabled={loading}
             />

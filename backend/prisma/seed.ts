@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
@@ -7,13 +9,18 @@ async function main() {
   console.log('🌱 Seeding database...');
 
   // Create demo user
-  const hashedPassword = await bcrypt.hash('demo123', 10);
+  const demoEmail = 'demo@advisor.ai';
+  const demoPassword = 'demo123';
+  const hashedPassword = await bcrypt.hash(demoPassword, 10);
   
   const demoUser = await prisma.user.upsert({
-    where: { email: 'demo@advisor.ai' },
-    update: {},
+    where: { email: demoEmail },
+    update: {
+      password: hashedPassword,
+      name: 'Demo User'
+    },
     create: {
-      email: 'demo@advisor.ai',
+      email: demoEmail,
       password: hashedPassword,
       name: 'Demo User'
     }
@@ -24,12 +31,25 @@ async function main() {
   // Create sample campaign
   const campaign = await prisma.campaign.upsert({
     where: { id: 'demo-campaign-1' },
-    update: {},
+    update: {
+      name: 'My First Campaign',
+      description: 'E-commerce marketing strategy for fashion brand',
+      status: 'ACTIVE',
+      isFavorite: true,
+      userId: demoUser.id,
+      quizData: {
+        business: 'ecommerce',
+        audience: 'b2c',
+        goal: 'sales',
+        budget: 'medium'
+      }
+    },
     create: {
       id: 'demo-campaign-1',
       name: 'My First Campaign',
       description: 'E-commerce marketing strategy for fashion brand',
       status: 'ACTIVE',
+      isFavorite: true,
       userId: demoUser.id,
       quizData: {
         business: 'ecommerce',
@@ -42,19 +62,29 @@ async function main() {
 
   console.log('✅ Created sample campaign:', campaign.name);
 
-  // Create sample chat messages
-  await prisma.chat.createMany({
-    skipDuplicates: true,
-    data: [
-      {
-        role: 'USER',
-        content: 'How can I improve my social media presence?',
-        userId: demoUser.id,
-        campaignId: campaign.id
-      },
-      {
-        role: 'ASSISTANT', 
-        content: `Great question! Here are my top recommendations for improving your social media presence:
+  // Keep sample chat deterministic across multiple seed runs
+  await prisma.chat.upsert({
+    where: { id: 'demo-chat-user-1' },
+    update: {
+      role: 'USER',
+      content: 'How can I improve my social media presence?',
+      userId: demoUser.id,
+      campaignId: campaign.id
+    },
+    create: {
+      id: 'demo-chat-user-1',
+      role: 'USER',
+      content: 'How can I improve my social media presence?',
+      userId: demoUser.id,
+      campaignId: campaign.id
+    }
+  });
+
+  await prisma.chat.upsert({
+    where: { id: 'demo-chat-assistant-1' },
+    update: {
+      role: 'ASSISTANT',
+      content: `Great question! Here are my top recommendations for improving your social media presence:
 
 ## 1. Content Strategy
 - Post consistently (3-5 times per week)
@@ -72,10 +102,33 @@ async function main() {
 - A/B test your creatives
 
 Would you like me to create a detailed content calendar for you?`,
-        userId: demoUser.id,
-        campaignId: campaign.id
-      }
-    ]
+      userId: demoUser.id,
+      campaignId: campaign.id
+    },
+    create: {
+      id: 'demo-chat-assistant-1',
+      role: 'ASSISTANT',
+      content: `Great question! Here are my top recommendations for improving your social media presence:
+
+## 1. Content Strategy
+- Post consistently (3-5 times per week)
+- Mix content types: images, videos, stories, reels
+- Use trending audio and hashtags
+
+## 2. Engagement
+- Respond to comments within 2 hours
+- Ask questions in your captions
+- Run polls and Q&A sessions
+
+## 3. Paid Advertising
+- Start with $10-20/day on Instagram/Facebook ads
+- Target lookalike audiences
+- A/B test your creatives
+
+Would you like me to create a detailed content calendar for you?`,
+      userId: demoUser.id,
+      campaignId: campaign.id
+    }
   });
 
   console.log('✅ Created sample chat messages');
@@ -83,8 +136,8 @@ Would you like me to create a detailed content calendar for you?`,
   console.log('🎉 Seed complete!');
   console.log('');
   console.log('📝 Demo credentials:');
-  console.log('   Email: demo@advisor.ai');
-  console.log('   Password: demo123');
+  console.log(`   Email: ${demoEmail}`);
+  console.log(`   Password: ${demoPassword}`);
 }
 
 main()

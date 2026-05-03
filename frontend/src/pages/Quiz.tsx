@@ -6,7 +6,7 @@ import {
   ArrowLeft, Sparkles, Building, Users, Target, DollarSign, Globe, Clock, 
   Megaphone, TrendingUp, Pencil, HelpCircle, ChevronLeft, ChevronRight,
   Package, Briefcase, Zap, Heart, BarChart3, Smartphone, ShoppingBag,
-  CheckCircle2, Circle, ListChecks
+  CheckCircle2, ListChecks
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { api } from '../hooks/useApi';
@@ -260,6 +260,54 @@ const questions: Question[] = [
       { value: 'enterprise', label: { en: '$20,000 - $100,000', vi: '$20,000 - $100,000' } },
       { value: 'unlimited', label: { en: '$100,000+', vi: '$100,000+' } }
     ]
+  },
+  // 16. Seasonal impact
+  {
+    id: 'seasonality',
+    icon: Clock,
+    question: { en: 'Does your business have seasonal peaks?', vi: 'Doanh nghiệp của bạn có mùa cao điểm không?' },
+    shortLabel: { en: 'Seasonality', vi: 'Mua vu' },
+    type: 'select',
+    options: [
+      { value: 'none', label: { en: 'No major seasonality', vi: 'Khong co mua vu ro rang' } },
+      { value: 'holiday', label: { en: 'Holiday-driven', vi: 'Theo dip le tet' } },
+      { value: 'summer', label: { en: 'Summer peak', vi: 'Cao diem mua he' } },
+      { value: 'yearend', label: { en: 'Year-end peak', vi: 'Cao diem cuoi nam' } },
+      { value: 'event', label: { en: 'Event/campaign driven', vi: 'Theo su kien/chien dich' } },
+      { value: 'always', label: { en: 'Always-on demand', vi: 'Nhu cau on dinh quanh nam' } }
+    ]
+  },
+  // 17. Preferred content format
+  {
+    id: 'contentFormat',
+    icon: Megaphone,
+    question: { en: 'What content format fits your brand best?', vi: 'Dinh dang noi dung nao phu hop voi thuong hieu nhat?' },
+    shortLabel: { en: 'Content', vi: 'Noi dung' },
+    type: 'select',
+    options: [
+      { value: 'short_video', label: { en: 'Short videos (Reels/TikTok)', vi: 'Video ngan (Reels/TikTok)' } },
+      { value: 'long_video', label: { en: 'Long-form video', vi: 'Video dai' } },
+      { value: 'static_visual', label: { en: 'Static visuals/carousels', vi: 'Hinh anh/carousel' } },
+      { value: 'article', label: { en: 'Articles/blog posts', vi: 'Bai viet/blog' } },
+      { value: 'email', label: { en: 'Email/newsletter', vi: 'Email/newsletter' } },
+      { value: 'mixed', label: { en: 'Mixed format', vi: 'Ket hop nhieu dinh dang' } }
+    ]
+  },
+  // 18. Offer type
+  {
+    id: 'offerType',
+    icon: Target,
+    question: { en: 'What offer do you usually run?', vi: 'Loai uu dai ban thuong chay la gi?' },
+    shortLabel: { en: 'Offer', vi: 'Uu dai' },
+    type: 'select',
+    options: [
+      { value: 'discount', label: { en: 'Discount / flash sale', vi: 'Giam gia / flash sale' } },
+      { value: 'bundle', label: { en: 'Bundle package', vi: 'Goi combo' } },
+      { value: 'trial', label: { en: 'Free trial / freemium', vi: 'Dung thu mien phi / freemium' } },
+      { value: 'gift', label: { en: 'Gift with purchase', vi: 'Tang qua kem' } },
+      { value: 'consultation', label: { en: 'Free consultation/demo', vi: 'Tu van/demo mien phi' } },
+      { value: 'custom_offer', label: { en: 'Custom by customer segment', vi: 'Ca nhan hoa theo nhom khach hang' } }
+    ]
   }
 ];
 
@@ -267,7 +315,7 @@ export default function Quiz() {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated } = useAuthStore();
+  const { token } = useAuthStore();
   
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -315,67 +363,42 @@ export default function Quiz() {
     }
   };
 
-  const handleSelect = async (value: string) => {
+  const applyAnswer = async (value: string) => {
     const newAnswers = { ...answers, [currentQuestion.id]: value };
     setAnswers(newAnswers);
     setShowCustomInput(false);
     setCustomInput('');
-    
+
     if (step < questions.length - 1) {
+      const nextStep = step + 1;
       setTimeout(() => {
-        setStep(step + 1);
-        setTextInput(newAnswers[questions[step + 1]?.id] || '');
+        setStep(nextStep);
+        setTextInput(newAnswers[questions[nextStep]?.id] || '');
       }, 200);
-    } else {
-      await handleSubmit(newAnswers);
+      return;
     }
+
+    await handleSubmit(newAnswers);
+  };
+
+  const handleSelect = async (value: string) => {
+    await applyAnswer(value);
   };
 
   const handleTextSubmit = async () => {
     const value = textInput.trim() || 'not_sure';
-    const newAnswers = { ...answers, [currentQuestion.id]: value };
-    setAnswers(newAnswers);
-    
-    if (step < questions.length - 1) {
-      setTimeout(() => {
-        setStep(step + 1);
-        setTextInput(newAnswers[questions[step + 1]?.id] || '');
-      }, 200);
-    } else {
-      await handleSubmit(newAnswers);
-    }
+    await applyAnswer(value);
   };
 
   const handleCustomSubmit = async () => {
-    if (!customInput.trim()) return;
-    
-    const newAnswers = { ...answers, [currentQuestion.id]: `custom: ${customInput}` };
-    setAnswers(newAnswers);
-    setShowCustomInput(false);
-    setCustomInput('');
-    
-    if (step < questions.length - 1) {
-      setTimeout(() => {
-        setStep(step + 1);
-        setTextInput('');
-      }, 200);
-    } else {
-      await handleSubmit(newAnswers);
-    }
+    const normalized = customInput.trim();
+    if (!normalized) return;
+
+    await applyAnswer(`custom: ${normalized}`);
   };
 
   const handleSkip = async () => {
-    const newAnswers = { ...answers, [currentQuestion.id]: 'not_sure' };
-    setAnswers(newAnswers);
-    
-    if (step < questions.length - 1) {
-      setTimeout(() => {
-        setStep(step + 1);
-        setTextInput('');
-      }, 200);
-    } else {
-      await handleSubmit(newAnswers);
-    }
+    await applyAnswer('not_sure');
   };
 
   const handleJumpToQuestion = (index: number) => {
@@ -387,7 +410,7 @@ export default function Quiz() {
   };
 
   const handleSubmit = async (finalAnswers: Record<string, string>) => {
-    if (!isAuthenticated()) {
+    if (!token) {
       navigate('/login');
       return;
     }
@@ -459,14 +482,19 @@ export default function Quiz() {
     };
     
     const res = await api.createCampaign({
-      name: generateCampaignName(),
+      name: generateCampaignName().trim().replace(/\s+/g, ' ').slice(0, 120),
       quizData: finalAnswers
     });
 
     if (res.success && res.data) {
       navigate(`/chat/${(res.data as any).id}?autostart=true`);
     } else {
-      alert(lang === 'en' ? 'Failed to create campaign' : 'Không thể tạo chiến dịch');
+      alert(
+        res.error ||
+          (lang === 'en'
+            ? 'Failed to create campaign. Please try again.'
+            : 'Không thể tạo chiến dịch. Vui lòng thử lại.')
+      );
       setLoading(false);
     }
   };
@@ -558,9 +586,9 @@ export default function Quiz() {
                     <div className="summary-item-left">
                       <div className="summary-item-status">
                         {hasAnswer ? (
-                          <CheckCircle2 size={16} className="check-icon" />
+                          <CheckCircle2 size={16} className="summary-check-icon" />
                         ) : (
-                          <Circle size={16} className="empty-icon" />
+                          <span className="summary-empty-dot" />
                         )}
                       </div>
                       <div className="summary-item-icon">

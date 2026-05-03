@@ -2,5 +2,8 @@
   "name": "advisor-monorepo",
   "version": "2.0.0",
   "private": true,
-  "description": "AdVisor AI Marketing Agency - Monorepo root"
+  "description": "AdVisor AI Marketing Agency - Monorepo root",
+  "scripts": {
+    "build:frontend": "npm --prefix frontend run build"
+  }
 }

@@ -7,29 +7,30 @@ import { prisma } from '../index';
 const router = Router();
 
 const registerSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().email(),
   password: z.string().min(6),
-  name: z.string().min(2)
+  name: z.string().trim().min(2).max(120)
 });
 
 const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string()
+  email: z.string().trim().email(),
+  password: z.string().min(1)
 });
 
 // Register
 router.post('/register', async (req, res) => {
   try {
     const { email, password, name } = registerSchema.parse(req.body);
+    const normalizedEmail = email.toLowerCase();
     
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existingUser) {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, password: hashedPassword, name }
+      data: { email: normalizedEmail, password: hashedPassword, name }
     });
 
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '7d' });
@@ -56,8 +57,9 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = loginSchema.parse(req.body);
+    const normalizedEmail = email.toLowerCase();
     
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }

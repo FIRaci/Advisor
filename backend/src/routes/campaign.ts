@@ -8,17 +8,31 @@ const router = Router();
 router.use(authMiddleware);
 
 const createCampaignSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional(),
+  name: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(600).optional(),
   quizData: z.any().optional()
 });
+
+const updateCampaignSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120).optional(),
+    description: z.string().trim().max(600).nullable().optional(),
+    status: z.enum(['DRAFT', 'ACTIVE', 'COMPLETED', 'ARCHIVED']).optional(),
+    quizData: z.any().optional(),
+    strategy: z.any().optional(),
+    isFavorite: z.boolean().optional()
+  })
+  .strict()
+  .refine((payload) => Object.keys(payload).length > 0, {
+    message: 'No valid fields to update'
+  });
 
 // Get all campaigns for user
 router.get('/', async (req: AuthRequest, res) => {
   try {
     const campaigns = await prisma.campaign.findMany({
       where: { userId: req.userId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ isFavorite: 'desc' }, { createdAt: 'desc' }],
       include: {
         _count: { select: { chats: true } }
       }
@@ -36,7 +50,8 @@ router.get('/:id', async (req: AuthRequest, res) => {
     const campaign = await prisma.campaign.findFirst({
       where: { id: req.params.id, userId: req.userId },
       include: {
-        chats: { orderBy: { createdAt: 'asc' } }
+        chats: { orderBy: { createdAt: 'asc' } },
+        _count: { select: { chats: true } }
       }
     });
 
@@ -74,18 +89,30 @@ router.post('/', async (req: AuthRequest, res) => {
 // Update campaign
 router.patch('/:id', async (req: AuthRequest, res) => {
   try {
+    const data = updateCampaignSchema.parse(req.body);
+
     const campaign = await prisma.campaign.updateMany({
       where: { id: req.params.id, userId: req.userId },
-      data: req.body
+      data
     });
 
     if (campaign.count === 0) {
       return res.status(404).json({ error: 'Campaign not found' });
     }
 
-    const updated = await prisma.campaign.findUnique({ where: { id: req.params.id } });
+    const updated = await prisma.campaign.findFirst({
+      where: { id: req.params.id, userId: req.userId },
+      include: {
+        _count: { select: { chats: true } }
+      }
+    });
+
     res.json({ success: true, data: updated });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors[0].message });
+    }
+
     res.status(500).json({ error: 'Failed to update campaign' });
   }
 });
