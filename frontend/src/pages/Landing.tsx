@@ -114,7 +114,11 @@ export default function Landing() {
                     type="button"
                     aria-label={i18n.language === 'en' ? 'Open user menu' : 'Mở menu người dùng'}
                   >
-                    {user?.name?.charAt(0) || 'U'}
+                    {user?.avatar ? (
+                      <img src={user.avatar} alt={user.name || 'User'} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      user?.name?.charAt(0) || 'U'
+                    )}
                   </button>
                   
                   {userMenuOpen && (
@@ -125,7 +129,13 @@ export default function Landing() {
                       transition={{ duration: 0.15 }}
                     >
                       <div className="nav-dropdown-header">
-                        <div className="nav-dropdown-avatar">{user?.name?.charAt(0) || 'U'}</div>
+                        <div className="nav-dropdown-avatar">
+                          {user?.avatar ? (
+                            <img src={user.avatar} alt={user.name || 'User'} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                          ) : (
+                            user?.name?.charAt(0) || 'U'
+                          )}
+                        </div>
                         <div className="nav-dropdown-info">
                           <span className="nav-dropdown-name">{user?.name}</span>
                           <span className="nav-dropdown-email">{user?.email}</span>
