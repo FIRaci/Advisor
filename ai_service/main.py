@@ -88,8 +88,8 @@ class GeminiService:
         """Smart mock responses for demo mode"""
         msg_lower = message.lower()
         
-          if any(word in msg_lower for word in ['strategy', 'chiến lược', 'quiz', 'business']):
-                return """# Your Personalized Marketing Strategy
+        if any(word in msg_lower for word in ['strategy', 'chiến lược', 'quiz', 'business']):
+            return """# Your Personalized Marketing Strategy
 
 ## Target Audience Analysis
 Based on your profile, your ideal customers are:
@@ -113,23 +113,6 @@ Based on your profile, your ideal customers are:
     - Expected ROI: 8-10x
 
 4. **Content Marketing**
-    - Blog + Video content
-    - Budget: 15%
-
-## Budget Allocation
-- Total Monthly: Based on your quiz responses
-- Facebook/Instagram Ads: 40%
-- Google Ads: 30%
-- Email Marketing Tools: 15%
-- Content Creation: 15%
-
-## Key Performance Indicators (KPIs)
-1. Website Traffic: +150% in 90 days
-2. Lead Generation: 200+ qualified leads/month
-3. Conversion Rate: 3-5%
-4. Customer Acquisition Cost: <$50
-5. Return on Ad Spend (ROAS): 4:1
-
 ## 90-Day Action Plan
 
 ### Month 1: Foundation

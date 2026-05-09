@@ -6,9 +6,14 @@ import { prisma } from '../index';
 
 const router = Router();
 
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET must be defined in environment variables');
+}
+
 const registerSchema = z.object({
   email: z.string().trim().email(),
-  password: z.string().min(6),
+  password: z.string().min(8),
   name: z.string().trim().min(2).max(120)
 });
 
@@ -33,7 +38,7 @@ router.post('/register', async (req, res) => {
       data: { email: normalizedEmail, password: hashedPassword, name }
     });
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
     res.json({
       success: true,
@@ -69,7 +74,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
     res.json({
       success: true,
@@ -98,7 +103,7 @@ router.get('/me', async (req, res) => {
 
   try {
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
     const user = await prisma.user.findUnique({ 
       where: { id: decoded.userId },
       select: { id: true, email: true, name: true, role: true }

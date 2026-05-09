@@ -15,16 +15,16 @@ def test_connection():
     
     for model_name in MODELS:
         try:
-            print(f"🔄 Testing model: {model_name}")
+            print(f"Testing model: {model_name}")
             response = client.models.generate_content(
                 model=model_name,
                 contents="Hello, say hi!"
             )
-            print(f"✅ {model_name} works!")
+            print(f"{model_name} works!")
             print(f"Response: {response.text[:100]}...")
             return model_name  # Return first working model
         except Exception as e:
-            print(f"❌ {model_name} failed: {e}")
+            print(f"{model_name} failed: {e}")
     
     return None
 
@@ -36,9 +36,9 @@ if __name__ == "__main__":
     working_model = test_connection()
     
     if working_model:
-        print(f"\n✅ Use this model in main.py: {working_model}")
+        print(f"\nUse this model in main.py: {working_model}")
     else:
-        print("\n❌ No models work. Check:")
+        print("\nNo models work. Check:")
         print("1. pip install google-genai")
         print("2. API key valid at https://aistudio.google.com")
         print("3. Try VPN if in blocked region")

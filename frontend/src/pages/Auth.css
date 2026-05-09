@@ -98,6 +98,8 @@
 .auth-input-shell:focus-within {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-muted);
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
 }
 
 .auth-input-icon {
@@ -130,6 +132,10 @@
 
 .auth-input-field:focus {
   box-shadow: none !important;
+}
+
+.auth-input-field:focus-visible {
+  outline: none;
 }
 
 .auth-input-field:-webkit-autofill,

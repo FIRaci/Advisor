@@ -6,6 +6,7 @@ import authRoutes from './routes/auth';
 import userRoutes from './routes/user';
 import campaignRoutes from './routes/campaign';
 import chatRoutes from './routes/chat';
+import { rateLimit } from 'express-rate-limit';
 
 dotenv.config();
 
@@ -19,6 +20,27 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' }
+});
+
+const authLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts, please try again later.' }
+});
+
+app.use('/api/', limiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -41,7 +63,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 AdVisor API running on port ${PORT}`);
+  console.log(`AdVisor API running on port ${PORT}`);
 });
 
 // Graceful shutdown

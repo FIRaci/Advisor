@@ -13,6 +13,7 @@ model User {
   email     String   @unique
   password  String
   name      String
+  avatar    String?  @db.Text
   role      Role     @default(USER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -33,10 +34,23 @@ model Campaign {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  quizData  Json?
-  strategy  Json?
+  quizData     Json?
+  quizProgress Json?
+  strategy     Json?
   
-  chats Chat[]
+  chats    Chat[]
+  metrics  CampaignMetricsSnapshot[]
+}
+
+model CampaignMetricsSnapshot {
+  id         String   @id @default(cuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  periodStart DateTime
+  periodEnd   DateTime
+  label       String?
+  metrics     Json
+  createdAt   DateTime @default(now())
 }
 
 model Chat {

@@ -75,12 +75,34 @@ function AppMeta() {
     }
 
     const matchedPath = Object.prototype.hasOwnProperty.call(titles, path) ? path : '/'
-    document.title = titles[matchedPath][isVi ? 'vi' : 'en']
+    const nextTitle = titles[matchedPath][isVi ? 'vi' : 'en']
+    const nextDescription = descriptions[matchedPath][isVi ? 'vi' : 'en']
+    const canonicalUrl = new URL(matchedPath, window.location.origin).toString()
+
+    document.title = nextTitle
 
     const metaDescription = document.querySelector('meta[name="description"]')
     if (metaDescription) {
-      metaDescription.setAttribute('content', descriptions[matchedPath][isVi ? 'vi' : 'en'])
+      metaDescription.setAttribute('content', nextDescription)
     }
+
+    const canonicalLink = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null
+    if (canonicalLink) {
+      canonicalLink.href = canonicalUrl
+    }
+
+    const setMeta = (selector: string, content: string) => {
+      const meta = document.querySelector(selector)
+      if (meta) {
+        meta.setAttribute('content', content)
+      }
+    }
+
+    setMeta('meta[property="og:title"]', nextTitle)
+    setMeta('meta[property="og:description"]', nextDescription)
+    setMeta('meta[property="og:url"]', canonicalUrl)
+    setMeta('meta[name="twitter:title"]', nextTitle)
+    setMeta('meta[name="twitter:description"]', nextDescription)
   }, [location.pathname, i18n.language])
 
   return null
@@ -88,7 +110,9 @@ function AppMeta() {
 
 function App() {
   useEffect(() => {
-    document.documentElement.classList.add('dark')
+    const storedTheme = localStorage.getItem('advisor-theme') || 'dark'
+    document.documentElement.setAttribute('data-theme', storedTheme)
+    document.documentElement.classList.toggle('dark', storedTheme === 'dark')
   }, [])
 
   return (

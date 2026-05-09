@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { motion, useScroll, useTransform } from 'motion/react';
-import { ArrowRight, Sparkles, BarChart3, FileText, Globe, Zap, Shield, TrendingUp, Play, CheckCircle2, MessageSquare, LogOut, Settings, User } from 'lucide-react';
+import { motion } from 'motion/react';
+import { ArrowRight, Sparkles, BarChart3, FileText, Globe, Zap, Shield, TrendingUp, Play, CheckCircle2, MessageSquare, LogOut, Settings } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useState, useRef, useEffect } from 'react';
 import './Landing.css';
@@ -13,11 +13,12 @@ export default function Landing() {
   const [isVideoOpen, setIsVideoOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll();
-  const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
+
 
   const toggleLanguage = () => {
-    i18n.changeLanguage(i18n.language === 'en' ? 'vi' : 'en');
+    const nextLang = i18n.language === 'en' ? 'vi' : 'en';
+    i18n.changeLanguage(nextLang);
+    localStorage.setItem('advisor-lang', nextLang);
   };
 
   // Close menu when clicking outside
@@ -32,9 +33,9 @@ export default function Landing() {
   }, []);
 
   const stats = [
-    { value: '10K+', label: 'Active Users' },
-    { value: '50M+', label: 'Ads Generated' },
-    { value: '98%', label: 'Satisfaction' },
+    { value: '10K+', label: i18n.language === 'en' ? 'Active users' : 'Người dùng hoạt động' },
+    { value: '50M+', label: i18n.language === 'en' ? 'Ideas generated' : 'Ý tưởng đã tạo' },
+    { value: '98%', label: i18n.language === 'en' ? 'Positive feedback' : 'Phản hồi tích cực' },
   ];
 
   const features = [
@@ -47,9 +48,9 @@ export default function Landing() {
   ];
 
   const benefits = [
-    i18n.language === 'en' ? 'No credit card required' : 'Không cần thẻ tín dụng',
-    i18n.language === 'en' ? '14-day free trial' : 'Dùng thử 14 ngày',
-    i18n.language === 'en' ? 'Cancel anytime' : 'Hủy bất cứ lúc nào',
+    i18n.language === 'en' ? 'Quick setup, no hassle' : 'Thiết lập nhanh, không rườm rà',
+    i18n.language === 'en' ? 'Made for class-ready demos' : 'Tối ưu cho demo đồ án',
+    i18n.language === 'en' ? 'Friendly guidance included' : 'Hướng dẫn thân thiện, dễ hiểu',
   ];
 
   return (
@@ -76,7 +77,7 @@ export default function Landing() {
             >
               <Sparkles size={24} />
             </motion.div>
-            <span>AdVisor</span>
+            <span><span className="logo-highlight">Ad</span>Visor</span>
           </Link>
 
           <div className="nav-actions">
@@ -87,8 +88,9 @@ export default function Landing() {
               title="Toggle Language"
               aria-label={i18n.language === 'en' ? 'Switch to Vietnamese' : 'Chuyển sang tiếng Anh'}
               type="button"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
             >
               <Globe size={18} />
               <span>{i18n.language.toUpperCase()}</span>
@@ -96,10 +98,13 @@ export default function Landing() {
 
             {isAuthenticated() ? (
               <>
+
                 {/* Chatbot shortcut */}
-                <Link to="/chat" className="btn-icon" title="Chatbot" aria-label={i18n.language === 'en' ? 'Open chat' : 'Mở chat'}>
-                  <MessageSquare size={18} />
-                </Link>
+                <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} transition={{ type: 'spring', stiffness: 400, damping: 17 }}>
+                  <Link to="/chat" className="btn-icon" title="Chatbot" aria-label={i18n.language === 'en' ? 'Open chat' : 'Mở chat'}>
+                    <MessageSquare size={18} />
+                  </Link>
+                </motion.div>
 
                 {/* User avatar with dropdown - right */}
                 <div className="nav-user-menu" ref={userMenuRef}>
@@ -131,10 +136,6 @@ export default function Landing() {
                         <Settings size={16} />
                         {i18n.language === 'en' ? 'Settings' : 'Cài đặt'}
                       </button>
-                      <button className="nav-dropdown-item" onClick={() => navigate('/settings')}>
-                        <User size={16} />
-                        {i18n.language === 'en' ? 'Edit Profile' : 'Chỉnh sửa tài khoản'}
-                      </button>
                       <div className="nav-dropdown-divider" />
                       <button className="nav-dropdown-item logout" onClick={logout}>
                         <LogOut size={16} />
@@ -146,8 +147,10 @@ export default function Landing() {
               </>
             ) : (
               <>
-                <Link to="/login" className="btn btn-secondary">{t('nav.login')}</Link>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} transition={{ type: 'spring', stiffness: 400, damping: 17 }}>
+                  <Link to="/login" className="btn btn-secondary">{t('nav.login')}</Link>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} transition={{ type: 'spring', stiffness: 400, damping: 17 }}>
                   <Link to="/register" className="btn btn-primary">{t('nav.signup')}</Link>
                 </motion.div>
               </>
@@ -255,18 +258,7 @@ export default function Landing() {
           ))}
         </motion.div>
 
-        {/* Scroll indicator */}
-        <motion.div 
-          className="scroll-indicator"
-          style={{ opacity }}
-          animate={{ y: [0, 10, 0] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          <div className="scroll-mouse">
-            <div className="scroll-wheel" />
-          </div>
-          <span>Scroll to explore</span>
-        </motion.div>
+
 
         <div className="hero-glow" />
       </section>
@@ -316,7 +308,7 @@ export default function Landing() {
         <div className="footer-content">
           <div className="footer-brand">
             <Sparkles size={20} />
-            <span>AdVisor</span>
+            <span><span className="logo-highlight">Ad</span>Visor</span>
           </div>
           <p>© 2026 AdVisor. All rights reserved.</p>
         </div>

@@ -73,6 +73,26 @@ const resources = {
         title: 'Marketing Advisor',
         placeholder: 'Ask me anything about marketing...',
         send: 'Send'
+      },
+      settings: {
+        title: 'Settings',
+        profile: 'Profile',
+        security: 'Security',
+        preferences: 'Preferences',
+        profileInfo: 'Profile Information',
+        changePassword: 'Change Password',
+        appPreferences: 'App Preferences',
+        fullName: 'Full Name',
+        email: 'Email',
+        currentPassword: 'Current Password',
+        newPassword: 'New Password',
+        confirmPassword: 'Confirm New Password',
+        saveChanges: 'Save Changes',
+        saving: 'Saving...',
+        language: 'Language',
+        theme: 'Theme',
+        dark: 'Dark',
+        light: 'Light'
       }
     }
   },
@@ -147,16 +167,38 @@ const resources = {
         title: 'Cố Vấn Marketing',
         placeholder: 'Hỏi tôi bất cứ điều gì về marketing...',
         send: 'Gửi'
+      },
+      settings: {
+        title: 'Cài đặt',
+        profile: 'Hồ sơ',
+        security: 'Bảo mật',
+        preferences: 'Tùy chọn',
+        profileInfo: 'Thông tin hồ sơ',
+        changePassword: 'Đổi mật khẩu',
+        appPreferences: 'Tùy chọn ứng dụng',
+        fullName: 'Họ và tên',
+        email: 'Email',
+        currentPassword: 'Mật khẩu hiện tại',
+        newPassword: 'Mật khẩu mới',
+        confirmPassword: 'Xác nhận mật khẩu mới',
+        saveChanges: 'Lưu thay đổi',
+        saving: 'Đang lưu...',
+        language: 'Ngôn ngữ',
+        theme: 'Giao diện',
+        dark: 'Tối',
+        light: 'Sáng'
       }
     }
   }
 };
 
+const savedLang = localStorage.getItem('advisor-lang') || 'en';
+
 i18n
   .use(initReactI18next)
   .init({
     resources,
-    lng: 'en',
+    lng: savedLang,
     fallbackLng: 'en',
     interpolation: {
       escapeValue: false

@@ -12,7 +12,8 @@ router.use(authMiddleware);
 const updateProfileSchema = z
   .object({
     name: z.string().trim().min(2).max(120).optional(),
-    email: z.string().trim().email().max(180).optional()
+    email: z.string().trim().email().max(180).optional(),
+    avatar: z.string().optional()
   })
   .strict()
   .refine((payload) => Object.keys(payload).length > 0, {
@@ -22,7 +23,7 @@ const updateProfileSchema = z
 const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1),
-    newPassword: z.string().min(6).max(128)
+    newPassword: z.string().min(8).max(128)
   })
   .strict()
   .refine((payload) => payload.currentPassword !== payload.newPassword, {
@@ -35,7 +36,7 @@ router.get('/me', async (req: AuthRequest, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { id: true, email: true, name: true, role: true, createdAt: true }
+      select: { id: true, email: true, name: true, role: true, avatar: true, createdAt: true }
     });
     
     if (!user) {
@@ -56,7 +57,7 @@ router.patch('/me', async (req: AuthRequest, res) => {
     const user = await prisma.user.update({
       where: { id: req.userId },
       data,
-      select: { id: true, email: true, name: true, role: true }
+      select: { id: true, email: true, name: true, role: true, avatar: true }
     });
 
     res.json({ success: true, data: user });

@@ -17,11 +17,11 @@ services:
     build: ./backend
     environment:
       PORT: 3000
-      DATABASE_URL: postgresql://admin:password@db:5432/ai_marketing
+      DATABASE_URL: ${DATABASE_URL}
       AI_SERVICE_URL: http://ai_service:8000
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       JWT_SECRET: ${JWT_SECRET}
-      FRONTEND_URL: http://localhost
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
       NODE_ENV: production
     ports:
       - "3000:3000"

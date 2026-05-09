@@ -2,12 +2,14 @@ import { Router } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { prisma } from '../index';
 import { z } from 'zod';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const router = Router();
 
 router.use(authMiddleware);
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://ai_service:8000';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const AI_TIMEOUT_MS = 12_000;
 
 const vietnameseCharacterRegex = /[\u00C0-\u1EF9]/;
@@ -56,11 +58,17 @@ router.post('/message', async (req: AuthRequest, res) => {
   try {
     const { message, campaignId, context } = sendMessageSchema.parse(req.body);
 
-    let campaign: { id: string; name: string; quizData: unknown } | null = null;
+    let campaign: {
+      id: string;
+      name: string;
+      quizData: unknown;
+      quizProgress: unknown;
+      strategy: unknown;
+    } | null = null;
     if (campaignId) {
       campaign = await prisma.campaign.findFirst({
         where: { id: campaignId, userId: req.userId },
-        select: { id: true, name: true, quizData: true }
+        select: { id: true, name: true, quizData: true, quizProgress: true, strategy: true }
       });
 
       if (!campaign) {
@@ -81,39 +89,185 @@ router.post('/message', async (req: AuthRequest, res) => {
     // Build context: fetch quiz data from campaign if available
     let aiContext = context || {};
     if (campaign?.quizData) {
-      aiContext = { ...aiContext, quizData: campaign.quizData, campaignName: campaign.name };
+      aiContext = {
+        ...aiContext,
+        quizData: campaign.quizData,
+        quizProgress: campaign.quizProgress,
+        strategy: campaign.strategy,
+        campaignName: campaign.name
+      };
+    }
+
+    if (campaign?.id) {
+      const snapshots = await prisma.campaignMetricsSnapshot.findMany({
+        where: { campaignId: campaign.id },
+        orderBy: { periodEnd: 'desc' },
+        take: 2
+      });
+
+      if (snapshots.length > 0) {
+        aiContext = {
+          ...aiContext,
+          latestMetrics: snapshots[0],
+          previousMetrics: snapshots[1]
+        };
+      }
     }
 
     // Call AI service with timeout and graceful fallback
     let aiText = '';
     let usedFallback = false;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
 
     try {
-      const aiResponse = await fetch(`${AI_SERVICE_URL}/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, context: aiContext }),
-        signal: controller.signal
-      });
+      if (GEMINI_API_KEY && GEMINI_API_KEY !== 'REDACTED_GEMINI_KEY_1') {
+        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+        const prompt = `You are AdVisor, an expert AI marketing strategist. Your role is to help businesses create effective marketing campaigns. Provide actionable advice, consider budget constraints, and focus on ROI.
 
-      if (!aiResponse.ok) {
-        throw new Error(`AI service error (${aiResponse.status})`);
+Context about the campaign:
+${JSON.stringify(aiContext, null, 2)}
+
+User: ${message}`;
+
+        const result = await model.generateContent(prompt);
+        aiText = result.response.text();
+      } else {
+        throw new Error('Using mock mode (Invalid or default API key)');
       }
-
-      const aiData = await aiResponse.json() as Partial<{ response: string }>;
-      if (typeof aiData.response !== 'string' || !aiData.response.trim()) {
-        throw new Error('AI service returned empty response');
-      }
-
-      aiText = aiData.response.trim();
     } catch (aiError) {
       usedFallback = true;
-      console.error('AI upstream error:', aiError);
-      aiText = buildAiFallbackResponse(message);
-    } finally {
-      clearTimeout(timeoutId);
+      console.error('AI upstream error (falling back to mock):', aiError);
+      
+      const msgLower = message.toLowerCase();
+      const quizData = campaign ? await prisma.campaign.findUnique({ where: { id: campaign.id }, select: { quizData: true } }) : null;
+      const phase = (quizData?.quizData as any)?.phase || '1';
+      const selectedPlan = (quizData?.quizData as any)?.selectedPlan;
+
+      if (msgLower.includes('stage 3') || msgLower.includes('giai đoạn 3') || phase === '3' || msgLower.includes('report') || msgLower.includes('báo cáo')) {
+        aiText = `## Stage 3: Ongoing Optimization
+
+Thank you for your metrics report! Here is my analysis:
+
+### Performance Summary
+- Your campaign is performing **well** overall with room for improvement.
+- **CPC** and **CPA** trends look healthy.
+
+### Recommendations
+1. **Increase budget** on top-performing ad sets by 15-20%
+2. **Pause underperformers** with CPA above your target threshold
+3. **Test new creatives** — refresh ad fatigue every 2-3 weeks
+4. **Expand audience** using lookalike segments from your best converters
+
+### Next Steps
+- Submit your next metrics snapshot in **2 weeks**
+- Focus on retention campaigns this period
+
+*Keep submitting periodic reports and I'll track your progress over time!*`;
+      } else if (msgLower.includes('selected plan') || msgLower.includes('chốt plan') || msgLower.includes('chọn plan') || selectedPlan) {
+        if (phase === '2' || msgLower.includes('stage 2') || msgLower.includes('giai đoạn 2')) {
+          aiText = `## Stage 2: Refined Execution Plan
+
+Based on your refined preferences, here is your detailed execution plan:
+
+### Channel Strategy
+- **Primary:** Social Media (TikTok + Instagram) — 50% budget
+- **Secondary:** Google Ads (Search + Display) — 30% budget  
+- **Support:** Email + Content Marketing — 20% budget
+
+### Timeline & Milestones
+| Week | Action | KPI Target |
+|------|--------|------------|
+| 1-2 | Campaign setup & creative production | 5+ ad variants |
+| 3-4 | Launch & A/B testing phase | CTR > 2% |
+| 5-8 | Optimization & scaling | CPA < $15 |
+| 9-12 | Retention & community building | LTV +20% |
+
+### Budget Breakdown
+- Ad Spend: 60% | Content: 25% | Tools: 15%
+
+---
+
+**[STAGE_TRANSITION]** You have completed Stage 2! You can now move to **Stage 3: Ongoing Optimization** where you'll submit periodic reports and I'll help you continuously improve your results.`;
+        } else {
+          aiText = `## Your Personalized Marketing Strategy
+
+Based on your quiz responses, I've prepared **3 strategic plans** for you to choose from:
+
+---
+
+**[PLAN_OPTIONS]**
+[PLAN_A]
+**Plan A: Growth Accelerator**
+Focus on rapid customer acquisition through paid channels.
+- Budget allocation: 70% Paid Ads, 20% Content, 10% Email
+- Timeline: 3 months aggressive push
+- Expected ROI: 3-4x within 90 days
+- Best for: Fast results, higher initial spend
+[/PLAN_A]
+[PLAN_B]
+**Plan B: Organic Builder**
+Build sustainable growth through content and community.
+- Budget allocation: 30% Paid Ads, 50% Content, 20% Community
+- Timeline: 6 months steady growth
+- Expected ROI: 5-7x within 6 months
+- Best for: Long-term brand building, lower cost
+[/PLAN_B]
+[PLAN_C]
+**Plan C: Hybrid Strategy**
+Balance between paid acquisition and organic growth.
+- Budget allocation: 50% Paid Ads, 30% Content, 20% Email/Community
+- Timeline: 4 months balanced approach
+- Expected ROI: 4-5x within 4 months
+- Best for: Balanced risk, steady scaling
+[/PLAN_C]
+[/PLAN_OPTIONS]
+
+Select a plan above to proceed to **Stage 2** where we'll refine the details!`;
+        }
+      } else if (msgLower.includes('quiz') || msgLower.includes('plan') || msgLower.includes('strategy') || msgLower.includes('chiến lược')) {
+        aiText = `## Your Personalized Marketing Strategy
+
+Based on your quiz responses, I've prepared **3 strategic plans** for you to choose from:
+
+---
+
+**[PLAN_OPTIONS]**
+[PLAN_A]
+**Plan A: Growth Accelerator**
+Focus on rapid customer acquisition through paid channels.
+- Budget allocation: 70% Paid Ads, 20% Content, 10% Email
+- Timeline: 3 months aggressive push
+- Expected ROI: 3-4x within 90 days
+- Best for: Fast results, higher initial spend
+[/PLAN_A]
+[PLAN_B]
+**Plan B: Organic Builder**
+Build sustainable growth through content and community.
+- Budget allocation: 30% Paid Ads, 50% Content, 20% Community
+- Timeline: 6 months steady growth
+- Expected ROI: 5-7x within 6 months
+- Best for: Long-term brand building, lower cost
+[/PLAN_B]
+[PLAN_C]
+**Plan C: Hybrid Strategy**
+Balance between paid acquisition and organic growth.
+- Budget allocation: 50% Paid Ads, 30% Content, 20% Email/Community
+- Timeline: 4 months balanced approach
+- Expected ROI: 4-5x within 4 months
+- Best for: Balanced risk, steady scaling
+[/PLAN_C]
+[/PLAN_OPTIONS]
+
+Select a plan above to proceed to **Stage 2** where we'll refine the details!`;
+      } else {
+        aiText = `Thank you for your message! As an AI marketing advisor, I can help you with:
+- Marketing strategy development
+- Target audience analysis  
+- Budget allocation recommendations
+- Campaign performance optimization
+
+How can I assist you with your campaign today? Try completing the **Quiz** first for a tailored strategy!`;
+      }
     }
 
     // Save AI response
@@ -129,11 +283,18 @@ router.post('/message', async (req: AuthRequest, res) => {
     res.json({
       success: true,
       data: {
-        id: savedResponse.id,
-        role: 'ASSISTANT',
-        content: aiText,
-        createdAt: savedResponse.createdAt,
-        fallback: usedFallback
+        userMessage: {
+          role: 'USER',
+          content: message,
+          createdAt: new Date().toISOString() // Approximate
+        },
+        assistantMessage: {
+          id: savedResponse.id,
+          role: 'ASSISTANT',
+          content: aiText,
+          createdAt: savedResponse.createdAt,
+          fallback: usedFallback
+        }
       }
     });
   } catch (error) {
@@ -143,6 +304,176 @@ router.post('/message', async (req: AuthRequest, res) => {
 
     console.error('Chat error:', error);
     res.status(500).json({ error: 'Failed to process message' });
+  }
+});
+
+// Content Assistant (Stream 2) - Generates marketing content
+const assistSchema = z.object({
+  type: z.enum(['email', 'ad_copy', 'social_post', 'landing_page', 'custom']),
+  campaignId: z.string().trim().min(1),
+  customPrompt: z.string().trim().max(2000).optional()
+});
+
+router.post('/assist', async (req: AuthRequest, res) => {
+  try {
+    const { type, campaignId, customPrompt } = assistSchema.parse(req.body);
+
+    const campaign = await prisma.campaign.findFirst({
+      where: { id: campaignId, userId: req.userId },
+      select: { id: true, name: true, quizData: true, strategy: true }
+    });
+
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    const quizData = campaign.quizData as Record<string, string> || {};
+    const productName = quizData.productName || 'your product';
+    const audience = quizData.audience || 'target audience';
+    const goal = quizData.goal || 'increase awareness';
+
+    let assistText = '';
+    let usedFallback = false;
+
+    const contentTypeLabels: Record<string, string> = {
+      email: 'Marketing Email',
+      ad_copy: 'Ad Copy',
+      social_post: 'Social Media Post',
+      landing_page: 'Landing Page Copy',
+      custom: 'Custom Content'
+    };
+
+    try {
+      if (GEMINI_API_KEY && GEMINI_API_KEY !== 'REDACTED_GEMINI_KEY_1') {
+        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+        
+        const assistPrompt = `You are AdVisor Content Assistant, an expert marketing copywriter. Generate high-quality ${contentTypeLabels[type]} content.
+
+Campaign context:
+- Product: ${productName}
+- Target Audience: ${audience}  
+- Goal: ${goal}
+- Full quiz data: ${JSON.stringify(quizData)}
+
+${customPrompt ? `Additional instructions: ${customPrompt}` : ''}
+
+Generate professional, engaging ${contentTypeLabels[type]} content ready to use. Include:
+1. The actual content (ready to copy-paste)
+2. Key messaging points used
+3. A/B variant suggestion
+
+Format with clear markdown.`;
+
+        const result = await model.generateContent(assistPrompt);
+        assistText = result.response.text();
+      } else {
+        throw new Error('Using mock mode');
+      }
+    } catch (aiError) {
+      usedFallback = true;
+      
+      if (type === 'email') {
+        assistText = `## Marketing Email Draft
+
+**Subject Line:** Discover ${productName} — The Smarter Way to Achieve Your Goals
+
+---
+
+Hi [First Name],
+
+Are you tired of struggling with [pain point]? **${productName}** is here to change the game.
+
+### Here's what makes us different:
+- **Feature 1:** Save 50% of your time with our smart automation
+- **Feature 2:** Join 10,000+ satisfied ${audience} who already trust us
+- **Feature 3:** Get results in as little as 7 days
+
+> *"${productName} completely transformed how we work."* — Happy Customer
+
+### Limited Time Offer
+Start your free trial today and get **20% off** your first month.
+
+[**Get Started Now →**]
+
+Best regards,  
+The ${productName} Team
+
+---
+**A/B Variant:** Try "Your ${goal} journey starts here" as subject line.`;
+      } else if (type === 'ad_copy') {
+        assistText = `## Ad Copy Variants
+
+### Variant A — Problem-Agitation-Solution
+**Headline:** Stop Wasting Time on ${goal}  
+**Body:** Struggling to reach your ${audience}? ${productName} makes it effortless. 3x faster results.  
+**CTA:** Try Free for 14 Days →
+
+### Variant B — Social Proof
+**Headline:** 10,000+ Businesses Trust ${productName}  
+**Body:** Join successful brands using ${productName} to ${goal}.  
+**CTA:** See Why They Switched →
+
+### Variant C — Urgency
+**Headline:** Don't Miss Out — ${productName} Launch Offer  
+**Body:** For a limited time, get 30% off. The smart way for ${audience} to ${goal}.  
+**CTA:** Claim Your Discount →
+
+**Recommended:** Variant A for cold audiences, Variant B for retargeting.`;
+      } else if (type === 'social_post') {
+        assistText = `## Social Media Content Pack
+
+### Instagram / TikTok
+Still doing [old way]? There's a better way.
+
+Meet **${productName}** — built for ${audience} who want real results.
+
+✅ [Benefit 1] ✅ [Benefit 2] ✅ [Benefit 3]
+
+**Hashtags:** #${productName.replace(/\\s/g, '')} #Marketing #Growth
+
+### LinkedIn
+We launched ${productName} to help ${audience} ${goal} — without the complexity.
+
+After 6 months: Our users see 2.5x faster results.
+
+### Twitter/X Thread
+Tweet 1: We just helped our 10,000th customer ${goal}. Here's the playbook...  
+Tweet 2: Step 1: Identify your ${audience}  
+Tweet 3: Step 2: Use ${productName} to automate outreach  
+Tweet 4: Step 3: Track, optimize, repeat`;
+      } else {
+        assistText = `## Generated Content for ${productName}
+
+### Key Message
+${productName} helps ${audience} achieve ${goal} faster and more efficiently.
+
+### Call to Action
+Get started with ${productName} today.
+
+*Configure your Gemini API key for AI-generated personalized content.*`;
+      }
+    }
+
+    await prisma.chat.create({
+      data: {
+        role: 'ASSISTANT',
+        content: `[Content Assistant - ${contentTypeLabels[type]}]\n\n${assistText}`,
+        userId: req.userId!,
+        campaignId: campaign.id
+      }
+    });
+
+    res.json({
+      success: true,
+      data: { type, content: assistText, fallback: usedFallback }
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors[0].message });
+    }
+    console.error('Assist error:', error);
+    res.status(500).json({ error: 'Failed to generate content' });
   }
 });
 

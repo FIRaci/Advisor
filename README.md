@@ -25,12 +25,13 @@ This will:
 
 ## Features
 
-- Dark mode elegant UI (Vercel/GitHub style)
-- Bilingual support (English/Vietnamese)
-- AI-powered marketing recommendations
-- Quiz-driven business profiling flow
-- Chat interface with Gemini AI
-- Graceful fallback response when AI upstream is unavailable
+- **Advanced Dual-Pane Architecture**: Resizable split-pane chat interface featuring a Strategy Analyst and a dedicated AI Content Writer.
+- **Dynamic Conditional Rendering**: Content Writer pane appears intelligently once the user completes the Smart Quiz or engages in the chat.
+- **One-Click Strategy Transfer**: Easily push AI-generated marketing strategies to the Content Assistant with an intuitive arrow button, preserving context.
+- **Multi-Stage Smart Quiz**: Collects actionable business insights (product, target audience, region, budget) to ground the AI's recommendations.
+- **Comprehensive Insights Dashboard**: Features clear summaries of quiz data, active marketing metrics, and a history of previous campaigns.
+- **Interactive UI Components**: Includes Marketing Glossary, customizable Quiz inputs, and a seamless bilingual experience (English / Vietnamese).
+- **Graceful Error Handling**: Fallbacks are provided when the AI upstream is temporarily unavailable.
 
 ## Project Structure
 

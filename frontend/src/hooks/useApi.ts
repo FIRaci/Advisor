@@ -1,6 +1,6 @@
 import { useAuthStore } from '../store/authStore';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = '';
 const SESSION_EXPIRED_ERROR = 'Session expired. Please log in again.';
 
 export interface ApiResponse<T> {
@@ -18,6 +18,8 @@ export interface Campaign {
   createdAt: string;
   updatedAt: string;
   quizData?: Record<string, string>;
+  quizProgress?: QuizProgress;
+  strategy?: Record<string, unknown>;
   _count?: {
     chats: number;
   };
@@ -36,8 +38,41 @@ export interface CampaignUpdatePayload {
   description?: string | null;
   status?: Campaign['status'];
   quizData?: Record<string, string>;
+  quizProgress?: QuizProgress;
   strategy?: Record<string, unknown>;
   isFavorite?: boolean;
+}
+
+export interface QuizProgressSnapshot {
+  stageIndex: number;
+  stageLabel?: string;
+  completedAt: string;
+  answers: Record<string, string>;
+}
+
+export interface QuizProgress {
+  currentStage?: number;
+  completedStages?: number[];
+  totalStages?: number;
+  lastUpdated?: string;
+  stageSnapshots?: QuizProgressSnapshot[];
+}
+
+export interface MetricsSnapshot {
+  id: string;
+  campaignId: string;
+  periodStart: string;
+  periodEnd: string;
+  label?: string;
+  metrics: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface MetricsSnapshotPayload {
+  periodStart: string;
+  periodEnd: string;
+  label?: string;
+  metrics: Record<string, unknown>;
 }
 
 export interface UserProfile {
@@ -45,6 +80,7 @@ export interface UserProfile {
   email: string;
   name: string;
   role: string;
+  avatar?: string;
 }
 
 function clearAuthSession(): void {
@@ -63,13 +99,7 @@ function clearAuthSession(): void {
 
 function getTokenFromStorage(): string | null {
   try {
-    const raw = localStorage.getItem('advisor-auth');
-    if (!raw) {
-      return null;
-    }
-
-    const parsed = JSON.parse(raw) as { state?: { token?: string } };
-    return parsed.state?.token ?? null;
+    return useAuthStore.getState().token;
   } catch {
     return null;
   }
@@ -138,7 +168,7 @@ export const api = {
   me: () => request<UserProfile>('/api/auth/me'),
 
   // User settings
-  updateMe: (data: { name?: string; email?: string }) =>
+  updateMe: (data: { name?: string; email?: string; avatar?: string }) =>
     request<UserProfile>('/api/users/me', {
       method: 'PATCH',
       body: JSON.stringify(data)
@@ -155,7 +185,7 @@ export const api = {
 
   getCampaign: (id: string) => request<Campaign>(`/api/campaigns/${id}`),
 
-  createCampaign: (data: { name: string; description?: string; quizData?: Record<string, string> }) =>
+  createCampaign: (data: { name: string; description?: string; quizData?: Record<string, string>; quizProgress?: QuizProgress }) =>
     request<Campaign>('/api/campaigns', {
       method: 'POST',
       body: JSON.stringify(data)
@@ -166,6 +196,21 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(data)
     }),
+
+  updateQuizProgress: (id: string, data: { stageIndex: number; stageLabel?: string; totalStages?: number; answers?: Record<string, string>; completed?: boolean }) =>
+    request<Campaign>(`/api/campaigns/${id}/quiz-progress`, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    }),
+
+  createMetricsSnapshot: (id: string, data: MetricsSnapshotPayload) =>
+    request<MetricsSnapshot>(`/api/campaigns/${id}/metrics`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+
+  getMetricsSnapshots: (id: string, limit = 12) =>
+    request<MetricsSnapshot[]>(`/api/campaigns/${id}/metrics?limit=${limit}`),
 
   deleteCampaign: (id: string) =>
     request(`/api/campaigns/${id}`, { method: 'DELETE' }),
@@ -191,5 +236,12 @@ export const api = {
   clearChatHistory: (campaignId?: string) =>
     request(`/api/chat/history${campaignId ? `?campaignId=${campaignId}` : ''}`, {
       method: 'DELETE'
+    }),
+
+  // Content Assistant (Stream 2)
+  assistContent: (type: 'email' | 'ad_copy' | 'social_post' | 'landing_page' | 'custom', campaignId: string, customPrompt?: string) =>
+    request<{ type: string; content: string; fallback: boolean }>('/api/chat/assist', {
+      method: 'POST',
+      body: JSON.stringify({ type, campaignId, customPrompt })
     })
 };

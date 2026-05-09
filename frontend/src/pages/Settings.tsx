@@ -8,7 +8,7 @@ import { api } from '../hooks/useApi';
 import './Settings.css';
 
 export default function Settings() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { user, token, setAuth } = useAuthStore();
   const lang = i18n.language as 'en' | 'vi';
@@ -17,13 +17,16 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'preferences'>('profile');
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
-  const [avatar, setAvatar] = useState<string | null>(null);
+  const [avatar, setAvatar] = useState<string | null>(user?.avatar || null);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savedMessage, setSavedMessage] = useState('');
   const [profileSaving, setProfileSaving] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => (
+    localStorage.getItem('advisor-theme') === 'light' ? 'light' : 'dark'
+  ));
 
   useEffect(() => {
     if (!token) {
@@ -34,7 +37,14 @@ export default function Settings() {
   useEffect(() => {
     setName(user?.name || '');
     setEmail(user?.email || '');
+    setAvatar(user?.avatar || null);
   }, [user]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    localStorage.setItem('advisor-theme', theme);
+  }, [theme]);
 
   if (!token) {
     return null;
@@ -62,13 +72,13 @@ export default function Settings() {
 
     setProfileSaving(true);
 
-    const res = await api.updateMe({ name: nextName, email: nextEmail });
+    const res = await api.updateMe({ name: nextName, email: nextEmail, avatar: avatar || undefined });
     if (res.success && res.data) {
       setAuth(
-        { id: res.data.id, email: res.data.email, name: res.data.name },
+        { id: res.data.id, email: res.data.email, name: res.data.name, avatar: res.data.avatar },
         token
       );
-      setSavedMessage(lang === 'en' ? 'Profile saved!' : 'Đã lưu hồ sơ!');
+      setSavedMessage(t('settings.saveChanges') + '!');
       setTimeout(() => setSavedMessage(''), 3000);
       setProfileSaving(false);
       return;
@@ -89,8 +99,8 @@ export default function Settings() {
       alert(lang === 'en' ? 'Passwords do not match' : 'Mật khẩu không khớp');
       return;
     }
-    if (newPassword.length < 6) {
-      alert(lang === 'en' ? 'Password must be at least 6 characters' : 'Mật khẩu phải có ít nhất 6 ký tự');
+    if (newPassword.length < 8) {
+      alert(lang === 'en' ? 'Password must be at least 8 characters' : 'Mật khẩu phải có ít nhất 8 ký tự');
       return;
     }
 
@@ -122,8 +132,10 @@ export default function Settings() {
   };
 
   const toggleLanguage = () => {
-    i18n.changeLanguage(lang === 'en' ? 'vi' : 'en');
-    setSavedMessage(lang === 'en' ? 'Language changed!' : 'Đã đổi ngôn ngữ!');
+    const nextLang = lang === 'en' ? 'vi' : 'en';
+    i18n.changeLanguage(nextLang);
+    localStorage.setItem('advisor-lang', nextLang);
+    setSavedMessage(t('settings.language') + ' ' + (lang === 'en' ? 'changed!' : 'đã đổi!'));
     setTimeout(() => setSavedMessage(''), 3000);
   };
 
@@ -134,7 +146,7 @@ export default function Settings() {
         <button className="back-btn" onClick={() => navigate(-1)}>
           <ArrowLeft size={20} />
         </button>
-        <h1>{lang === 'en' ? 'Settings' : 'Cài đặt'}</h1>
+        <h1>{t('settings.title')}</h1>
       </header>
 
       {/* Main */}
@@ -146,21 +158,21 @@ export default function Settings() {
             onClick={() => setActiveTab('profile')}
           >
             <User size={18} />
-            <span>{lang === 'en' ? 'Profile' : 'Hồ sơ'}</span>
+            <span>{t('settings.profile')}</span>
           </button>
           <button 
             className={`tab-btn ${activeTab === 'security' ? 'active' : ''}`}
             onClick={() => setActiveTab('security')}
           >
             <Lock size={18} />
-            <span>{lang === 'en' ? 'Security' : 'Bảo mật'}</span>
+            <span>{t('settings.security')}</span>
           </button>
           <button 
             className={`tab-btn ${activeTab === 'preferences' ? 'active' : ''}`}
             onClick={() => setActiveTab('preferences')}
           >
             <Globe size={18} />
-            <span>{lang === 'en' ? 'Preferences' : 'Tùy chọn'}</span>
+            <span>{t('settings.preferences')}</span>
           </button>
         </div>
 
@@ -182,7 +194,7 @@ export default function Settings() {
           {/* Profile Tab */}
           {activeTab === 'profile' && (
             <div className="tab-content">
-              <h2>{lang === 'en' ? 'Profile Information' : 'Thông tin hồ sơ'}</h2>
+              <h2>{t('settings.profileInfo')}</h2>
               
               {/* Avatar */}
               <div className="avatar-section">
@@ -208,7 +220,7 @@ export default function Settings() {
 
               {/* Name */}
               <div className="form-group">
-                <label>{lang === 'en' ? 'Full Name' : 'Họ và tên'}</label>
+                <label>{t('settings.fullName')}</label>
                 <input
                   type="text"
                   value={name}
@@ -219,7 +231,7 @@ export default function Settings() {
 
               {/* Email */}
               <div className="form-group">
-                <label>{lang === 'en' ? 'Email' : 'Email'}</label>
+                <label>{t('settings.email')}</label>
                 <input
                   type="email"
                   value={email}
@@ -230,8 +242,8 @@ export default function Settings() {
 
               <button className="save-btn" onClick={handleSaveProfile} disabled={profileSaving}>
                 {profileSaving
-                  ? (lang === 'en' ? 'Saving...' : 'Đang lưu...')
-                  : (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi')}
+                  ? t('settings.saving')
+                  : t('settings.saveChanges')}
               </button>
             </div>
           )}
@@ -239,10 +251,10 @@ export default function Settings() {
           {/* Security Tab */}
           {activeTab === 'security' && (
             <div className="tab-content">
-              <h2>{lang === 'en' ? 'Change Password' : 'Đổi mật khẩu'}</h2>
+              <h2>{t('settings.changePassword')}</h2>
 
               <div className="form-group">
-                <label>{lang === 'en' ? 'Current Password' : 'Mật khẩu hiện tại'}</label>
+                <label>{t('settings.currentPassword')}</label>
                 <input
                   type="password"
                   value={currentPassword}
@@ -252,7 +264,7 @@ export default function Settings() {
               </div>
 
               <div className="form-group">
-                <label>{lang === 'en' ? 'New Password' : 'Mật khẩu mới'}</label>
+                <label>{t('settings.newPassword')}</label>
                 <input
                   type="password"
                   value={newPassword}
@@ -262,7 +274,7 @@ export default function Settings() {
               </div>
 
               <div className="form-group">
-                <label>{lang === 'en' ? 'Confirm New Password' : 'Xác nhận mật khẩu mới'}</label>
+                <label>{t('settings.confirmPassword')}</label>
                 <input
                   type="password"
                   value={confirmPassword}
@@ -273,8 +285,8 @@ export default function Settings() {
 
               <button className="save-btn" onClick={handleChangePassword} disabled={passwordSaving}>
                 {passwordSaving
-                  ? (lang === 'en' ? 'Updating...' : 'Đang cập nhật...')
-                  : (lang === 'en' ? 'Change Password' : 'Đổi mật khẩu')}
+                  ? t('settings.saving')
+                  : t('settings.changePassword')}
               </button>
             </div>
           )}
@@ -282,14 +294,14 @@ export default function Settings() {
           {/* Preferences Tab */}
           {activeTab === 'preferences' && (
             <div className="tab-content">
-              <h2>{lang === 'en' ? 'App Preferences' : 'Tùy chọn ứng dụng'}</h2>
+              <h2>{t('settings.appPreferences')}</h2>
 
               {/* Language */}
               <div className="preference-item">
                 <div className="preference-info">
                   <Globe size={20} />
                   <div>
-                    <h3>{lang === 'en' ? 'Language' : 'Ngôn ngữ'}</h3>
+                    <h3>{t('settings.language')}</h3>
                     <p>{lang === 'en' ? 'Choose your preferred language' : 'Chọn ngôn ngữ hiển thị'}</p>
                   </div>
                 </div>
@@ -303,12 +315,15 @@ export default function Settings() {
                 <div className="preference-info">
                   <Moon size={20} />
                   <div>
-                    <h3>{lang === 'en' ? 'Theme' : 'Giao diện'}</h3>
+                    <h3>{t('settings.theme')}</h3>
                     <p>{lang === 'en' ? 'App color scheme' : 'Chế độ màu ứng dụng'}</p>
                   </div>
                 </div>
-                <button className="toggle-btn active">
-                  {lang === 'en' ? 'Dark' : 'Tối'}
+                <button 
+                  className={`toggle-btn ${theme === 'dark' ? 'active' : ''}`}
+                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                >
+                  {theme === 'dark' ? t('settings.dark') : t('settings.light')}
                 </button>
               </div>
             </div>

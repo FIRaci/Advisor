@@ -16,7 +16,7 @@ MODELS = [
 
 def test_key(label, api_key):
     print(f"\n{'='*50}")
-    print(f"🔑 Testing key from: {label}")
+    print(f"Testing key from: {label}")
     print(f"   Key: ...{api_key[-8:]}")
     print(f"{'='*50}")
     
@@ -26,11 +26,11 @@ def test_key(label, api_key):
     try:
         models = list(client.models.list())
         gemini3_models = [m.name for m in models if 'gemini-3' in m.name or 'gemini-2' in m.name]
-        print(f"\n📋 Available Gemini 2/3 models ({len(gemini3_models)} found):")
+        print(f"\nAvailable Gemini 2/3 models ({len(gemini3_models)} found):")
         for m in gemini3_models[:10]:
             print(f"   - {m}")
     except Exception as e:
-        print(f"❌ Cannot list models: {e}")
+        print(f"Cannot list models: {e}")
         return
     
     # Try specific models
@@ -40,12 +40,12 @@ def test_key(label, api_key):
                 model=model,
                 contents="Say: OK"
             )
-            print(f"\n✅ SUCCESS with model: {model}")
+            print(f"\nSUCCESS with model: {model}")
             print(f"   Response: {response.text[:100]}")
             break
         except Exception as e:
             err = str(e)[:80]
-            print(f"❌ {model}: {err}")
+            print(f"{model}: {err}")
 
 for label, key in KEYS.items():
     test_key(label, key)

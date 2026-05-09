@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { prisma } from '../index';
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 
 const router = Router();
@@ -10,7 +11,8 @@ router.use(authMiddleware);
 const createCampaignSchema = z.object({
   name: z.string().trim().min(1).max(120),
   description: z.string().trim().max(600).optional(),
-  quizData: z.any().optional()
+  quizData: z.any().optional(),
+  quizProgress: z.any().optional()
 });
 
 const updateCampaignSchema = z
@@ -19,6 +21,7 @@ const updateCampaignSchema = z
     description: z.string().trim().max(600).nullable().optional(),
     status: z.enum(['DRAFT', 'ACTIVE', 'COMPLETED', 'ARCHIVED']).optional(),
     quizData: z.any().optional(),
+    quizProgress: z.any().optional(),
     strategy: z.any().optional(),
     isFavorite: z.boolean().optional()
   })
@@ -26,6 +29,31 @@ const updateCampaignSchema = z
   .refine((payload) => Object.keys(payload).length > 0, {
     message: 'No valid fields to update'
   });
+
+const updateQuizProgressSchema = z.object({
+  stageIndex: z.number().int().min(0),
+  stageLabel: z.string().trim().min(1).max(80).optional(),
+  totalStages: z.number().int().min(1).max(10).optional(),
+  answers: z.record(z.string()).optional(),
+  completed: z.boolean().optional()
+});
+
+const metricsSnapshotSchema = z.object({
+  periodStart: z.string().datetime(),
+  periodEnd: z.string().datetime(),
+  label: z.string().trim().max(120).optional(),
+  metrics: z.record(z.any())
+}).refine((payload) => {
+  const start = new Date(payload.periodStart);
+  const end = new Date(payload.periodEnd);
+  return !isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end;
+}, {
+  message: 'periodStart must be a valid date and before periodEnd'
+});
+
+const metricsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(24).default(12)
+});
 
 // Get all campaigns for user
 router.get('/', async (req: AuthRequest, res) => {
@@ -114,6 +142,154 @@ router.patch('/:id', async (req: AuthRequest, res) => {
     }
 
     res.status(500).json({ error: 'Failed to update campaign' });
+  }
+});
+
+// Update quiz progress + stage answers
+router.patch('/:id/quiz-progress', async (req: AuthRequest, res) => {
+  try {
+    const payload = updateQuizProgressSchema.parse(req.body);
+
+    const campaign = await prisma.campaign.findFirst({
+      where: { id: req.params.id, userId: req.userId },
+      select: { id: true, quizData: true, quizProgress: true }
+    });
+
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    const mergedQuizData = {
+      ...(campaign.quizData && typeof campaign.quizData === 'object' ? campaign.quizData : {}),
+      ...(payload.answers || {})
+    } as Record<string, string>;
+
+    const previousProgress = (campaign.quizProgress && typeof campaign.quizProgress === 'object')
+      ? campaign.quizProgress as Record<string, unknown>
+      : {};
+    const previousTotalStages = typeof previousProgress.totalStages === 'number'
+      ? previousProgress.totalStages
+      : undefined;
+
+    const nowIso = new Date().toISOString();
+    const completedStages = new Set(
+      Array.isArray(previousProgress.completedStages) ? previousProgress.completedStages as number[] : []
+    );
+
+    if (payload.completed) {
+      completedStages.add(payload.stageIndex);
+    }
+
+    const stageSnapshots = Array.isArray(previousProgress.stageSnapshots)
+      ? [...(previousProgress.stageSnapshots as Array<Record<string, unknown>>)]
+      : [];
+
+    if (payload.completed && payload.answers) {
+      const existingIndex = stageSnapshots.findIndex(
+        (snapshot) => snapshot.stageIndex === payload.stageIndex
+      );
+      const nextSnapshot = {
+        stageIndex: payload.stageIndex,
+        stageLabel: payload.stageLabel,
+        completedAt: nowIso,
+        answers: payload.answers
+      };
+
+      if (existingIndex >= 0) {
+        stageSnapshots[existingIndex] = nextSnapshot;
+      } else {
+        stageSnapshots.push(nextSnapshot);
+      }
+    }
+
+    const nextProgress = {
+      ...previousProgress,
+      currentStage: payload.completed ? payload.stageIndex + 1 : payload.stageIndex,
+      totalStages: payload.totalStages ?? previousTotalStages,
+      completedStages: Array.from(completedStages).sort(),
+      lastUpdated: nowIso,
+      stageSnapshots
+    };
+
+    const updated = await prisma.campaign.update({
+      where: { id: campaign.id },
+      data: {
+        quizData: mergedQuizData,
+        quizProgress: nextProgress as Prisma.InputJsonValue
+      }
+    });
+
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors[0].message });
+    }
+
+    res.status(500).json({ error: 'Failed to update quiz progress' });
+  }
+});
+
+// Create metrics snapshot
+router.post('/:id/metrics', async (req: AuthRequest, res) => {
+  try {
+    const payload = metricsSnapshotSchema.parse(req.body);
+
+    const campaign = await prisma.campaign.findFirst({
+      where: { id: req.params.id, userId: req.userId },
+      select: { id: true }
+    });
+
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    const snapshot = await prisma.campaignMetricsSnapshot.create({
+      data: {
+        campaignId: campaign.id,
+        periodStart: new Date(payload.periodStart),
+        periodEnd: new Date(payload.periodEnd),
+        label: payload.label,
+        metrics: payload.metrics
+      }
+    });
+
+    res.json({ success: true, data: snapshot });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors[0].message });
+    }
+
+    res.status(500).json({ error: 'Failed to create metrics snapshot' });
+  }
+});
+
+// List metrics snapshots
+router.get('/:id/metrics', async (req: AuthRequest, res) => {
+  try {
+    const { limit } = metricsQuerySchema.parse(req.query);
+
+    const campaign = await prisma.campaign.findFirst({
+      where: { id: req.params.id, userId: req.userId },
+      select: { id: true }
+    });
+
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    const snapshots = await prisma.campaignMetricsSnapshot.findMany({
+      where: { campaignId: campaign.id },
+      orderBy: { periodEnd: 'desc' },
+      take: limit
+    });
+
+    res.json({ success: true, data: snapshots });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors[0].message });
+    }
+
+    res.status(500).json({ error: 'Failed to fetch metrics snapshots' });
   }
 });
 
