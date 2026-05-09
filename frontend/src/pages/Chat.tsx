@@ -1274,7 +1274,7 @@ export default function Chat() {
             initial={{ width: 0, opacity: 0 }}
             animate={{ width: 280, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 250 }}
+            transition={{ type: 'tween', duration: 0.3, ease: 'easeInOut' }}
           >
             <div className="sidebar-header">
               <Link to="/" className="sidebar-logo">
@@ -1330,7 +1330,11 @@ export default function Chat() {
                   className="user-profile-btn"
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                 >
-                  <div className="user-avatar-small">{user?.name?.charAt(0) || 'U'}</div>
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt={user.name || 'User'} className="user-avatar-small" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                  ) : (
+                    <div className="user-avatar-small">{user?.name?.charAt(0) || 'U'}</div>
+                  )}
                   <span className="user-name-text">{user?.name || 'User'}</span>
                 </button>
                 
@@ -1344,7 +1348,11 @@ export default function Chat() {
                       transition={{ duration: 0.15 }}
                     >
                       <div className="user-dropdown-header">
-                        <div className="user-avatar-large">{user?.name?.charAt(0) || 'U'}</div>
+                        {user?.avatar ? (
+                          <img src={user.avatar} alt={user.name || 'User'} className="user-avatar-large" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                        ) : (
+                          <div className="user-avatar-large">{user?.name?.charAt(0) || 'U'}</div>
+                        )}
                         <div className="user-dropdown-info">
                           <span className="user-dropdown-name">{user?.name || 'User'}</span>
                           <span className="user-dropdown-email">{user?.email}</span>
@@ -1681,9 +1689,13 @@ export default function Chat() {
                 </div>
 
                 {msg.role === 'USER' && (
-                  <div className="message-avatar user-avatar">
-                    {user?.name?.charAt(0) || 'U'}
-                  </div>
+                  user?.avatar ? (
+                    <img src={user.avatar} alt={user.name || 'User'} className="message-avatar user-avatar" style={{ objectFit: 'cover' }} />
+                  ) : (
+                    <div className="message-avatar user-avatar">
+                      {user?.name?.charAt(0) || 'U'}
+                    </div>
+                  )
                 )}
               </motion.div>
             ))
@@ -2142,7 +2154,7 @@ export default function Chat() {
                 </button>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto', paddingRight: '0.5rem', maxHeight: '60vh' }}>
                 {/* Stage 1 */}
                 <div style={{
                   padding: '1.25rem', borderRadius: 'var(--radius-lg)',
@@ -2162,10 +2174,11 @@ export default function Chat() {
                       </h4>
                     </div>
                   </div>
-                  <ul style={{ margin: 0, paddingLeft: '1.25rem', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.8 }}>
-                    <li>{lang === 'en' ? 'Complete the Smart Quiz (product, business type, audience, goals, budget)' : 'Hoàn thành Quiz thông minh (sản phẩm, loại hình, đối tượng, mục tiêu, ngân sách)'}</li>
-                    <li>{lang === 'en' ? 'AI analyzes your data and proposes 3 strategic plans' : 'AI phân tích dữ liệu và đề xuất 3 kế hoạch chiến lược'}</li>
-                    <li>{lang === 'en' ? 'Select the plan that best fits your goals' : 'Chọn kế hoạch phù hợp nhất với mục tiêu của bạn'}</li>
+                  <ul style={{ margin: 0, paddingLeft: '2.5rem', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>
+                    <li>{lang === 'en' ? 'Complete the Smart Quiz to tell us about your product, business type, audience, goals, and budget.' : 'Hoàn thành bài Smart Quiz để cung cấp thông tin về sản phẩm, loại hình doanh nghiệp, đối tượng, mục tiêu và ngân sách.'}</li>
+                    <li>{lang === 'en' ? 'AI analyzes your data and proposes 3 tailored strategic plans.' : 'AI phân tích dữ liệu của bạn và đề xuất 3 kế hoạch chiến lược phù hợp.'}</li>
+                    <li>{lang === 'en' ? 'You can chat with the AI to refine these strategies. Once satisfied, select the plan that best fits your goals.' : 'Bạn có thể trò chuyện với AI để tinh chỉnh các chiến lược này. Khi đã hài lòng, hãy chọn kế hoạch phù hợp nhất với mục tiêu của bạn.'}</li>
+                    <li>{lang === 'en' ? 'Click the arrow button on any AI message to send it to the Content Writer pane for content generation.' : 'Bấm vào nút mũi tên trên bất kỳ tin nhắn nào của AI để chuyển nó sang khung Content Writer để tạo nội dung.'}</li>
                   </ul>
                 </div>
 
@@ -2184,22 +2197,23 @@ export default function Chat() {
                     }}>2</div>
                     <div>
                       <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>
-                        {lang === 'en' ? 'Stage 2: Refinement & Execution' : 'Giai đoạn 2: Chi tiết & Triển khai'}
+                        {lang === 'en' ? 'Stage 2: Refinement & Execution' : 'Giai đoạn 2: Tinh chỉnh & Thực thi'}
                       </h4>
                     </div>
                   </div>
-                  <ul style={{ margin: 0, paddingLeft: '1.25rem', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.8 }}>
-                    <li>{lang === 'en' ? 'Answer deeper questions (channels, budget allocation, timeline)' : 'Trả lời câu hỏi chi tiết hơn (kênh, phân bổ ngân sách, timeline)'}</li>
-                    <li>{lang === 'en' ? 'AI creates a detailed execution plan with milestones and KPIs' : 'AI tạo kế hoạch triển khai chi tiết với milestone và KPI'}</li>
-                    <li>{lang === 'en' ? 'Review and confirm the refined strategy' : 'Xem xét và xác nhận chiến lược đã tinh chỉnh'}</li>
+                  <ul style={{ margin: 0, paddingLeft: '2.5rem', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>
+                    <li>{lang === 'en' ? 'Answer deeper questions regarding specific marketing channels, budget allocation across platforms, and timeline.' : 'Trả lời các câu hỏi chuyên sâu về các kênh marketing cụ thể, phân bổ ngân sách trên từng nền tảng và tiến độ thời gian.'}</li>
+                    <li>{lang === 'en' ? 'AI creates a detailed execution plan with milestones and KPIs to track your success.' : 'AI tạo ra một kế hoạch thực thi chi tiết với các cột mốc và KPI để theo dõi thành công của bạn.'}</li>
+                    <li>{lang === 'en' ? 'Review and confirm the refined strategy before moving to the optimization stage.' : 'Xem xét và xác nhận chiến lược đã tinh chỉnh trước khi chuyển sang giai đoạn tối ưu hóa.'}</li>
+                    <li>{lang === 'en' ? 'Use the Content Assistant to generate ad copies, emails, and landing page content seamlessly.' : 'Sử dụng Content Assistant để tạo ra các bài quảng cáo, email và nội dung landing page một cách mượt mà.'}</li>
                   </ul>
                 </div>
 
                 {/* Stage 3 */}
                 <div style={{
                   padding: '1.25rem', borderRadius: 'var(--radius-lg)',
-                  border: '1px solid rgba(251, 191, 36, 0.25)',
-                  background: 'rgba(251, 191, 36, 0.05)'
+                  border: '1px solid rgba(245, 158, 11, 0.25)',
+                  background: 'rgba(245, 158, 11, 0.05)'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
                     <div style={{
@@ -2210,11 +2224,11 @@ export default function Chat() {
                     }}>3</div>
                     <div>
                       <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>
-                        {lang === 'en' ? 'Stage 3: Ongoing Optimization' : 'Giai đoạn 3: Tối ưu liên tục'}
+                        {lang === 'en' ? 'Stage 3: Ongoing Optimization' : 'Giai đoạn 3: Tối ưu hóa liên tục'}
                       </h4>
                     </div>
                   </div>
-                  <ul style={{ margin: 0, paddingLeft: '1.25rem', color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.8 }}>
+                  <ul style={{ margin: 0, paddingLeft: '2.5rem', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>
                     <li>{lang === 'en' ? 'Submit periodic metrics reports (CPC, CPA, ROI, etc.)' : 'Gửi báo cáo số liệu định kỳ (CPC, CPA, ROI, v.v.)'}</li>
                     <li>{lang === 'en' ? 'AI analyzes performance trends and suggests adjustments' : 'AI phân tích xu hướng hiệu suất và đề xuất điều chỉnh'}</li>
                     <li>{lang === 'en' ? 'Continuously improve your campaigns over time' : 'Liên tục cải thiện chiến dịch theo thời gian'}</li>

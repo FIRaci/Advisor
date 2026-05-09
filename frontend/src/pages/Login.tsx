@@ -36,7 +36,7 @@ export default function Login() {
         avatar: userCredential.user.photoURL || undefined
       }, token);
       
-      navigate('/chat', { replace: true });
+      navigate('/', { replace: true });
     } catch (err: any) {
       setError(err.message || 'Login failed');
     }
@@ -57,7 +57,7 @@ export default function Login() {
         avatar: userCredential.user.photoURL || undefined
       }, token);
       
-      navigate('/chat', { replace: true });
+      navigate('/', { replace: true });
     } catch (err: any) {
       setError(err.message || 'Google Login failed');
     }

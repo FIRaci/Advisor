@@ -43,7 +43,7 @@ export default function Register() {
         avatar: userCredential.user.photoURL || undefined
       }, token);
       
-      navigate('/quiz');
+      navigate('/', { replace: true });
     } catch (err: any) {
       setError(err.message || 'Registration failed');
     }
@@ -64,7 +64,7 @@ export default function Register() {
         avatar: userCredential.user.photoURL || undefined
       }, token);
       
-      navigate('/quiz');
+      navigate('/', { replace: true });
     } catch (err: any) {
       setError(err.message || 'Google Login failed');
     }
