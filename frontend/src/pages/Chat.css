@@ -299,6 +299,8 @@ body.chat-page-active {
   color: #fff;
   font-weight: 700;
   background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .user-avatar-small {
@@ -1010,6 +1012,7 @@ body.chat-page-active {
   font-size: 0.76rem;
   font-weight: 700;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .assistant-avatar {
