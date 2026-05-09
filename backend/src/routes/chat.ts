@@ -332,6 +332,17 @@ router.post('/assist', async (req: AuthRequest, res) => {
     const audience = quizData.audience || 'target audience';
     const goal = quizData.goal || 'increase awareness';
 
+    const chatHistory = await prisma.chat.findMany({
+      where: { campaignId },
+      orderBy: { createdAt: 'asc' },
+      take: 10
+    });
+    
+    const historyText = chatHistory
+      .filter(msg => !msg.content.startsWith('[Content Prompt]') && !msg.content.startsWith('[Content Assistant'))
+      .map(msg => `${msg.role}: ${msg.content}`)
+      .join('\n\n');
+
     let assistText = '';
     let usedFallback = false;
 
@@ -356,7 +367,10 @@ Campaign context:
 - Goal: ${goal}
 - Full quiz data: ${JSON.stringify(quizData)}
 
-${customPrompt ? `Additional instructions: ${customPrompt}` : ''}
+Recent Strategy Discussion:
+${historyText || 'No previous discussion.'}
+
+${customPrompt ? `User's content request: ${customPrompt}` : ''}
 
 Generate professional, engaging ${contentTypeLabels[type]} content ready to use. Include:
 1. The actual content (ready to copy-paste)
@@ -448,11 +462,22 @@ Tweet 4: Step 3: Track, optimize, repeat`;
 ### Key Message
 ${productName} helps ${audience} achieve ${goal} faster and more efficiently.
 
-### Call to Action
-Get started with ${productName} today.
+### Draft Content
+${customPrompt ? `Here is a drafted response based on: "${customPrompt}"\n\n[This is a generated placeholder. Please configure a valid Gemini API key to get fully personalized content.]` : `Get started with ${productName} today.`}
 
 *Configure your Gemini API key for AI-generated personalized content.*`;
       }
+    }
+
+    if (customPrompt) {
+      await prisma.chat.create({
+        data: {
+          role: 'USER',
+          content: `[Content Prompt] ${customPrompt}`,
+          userId: req.userId!,
+          campaignId: campaign.id
+        }
+      });
     }
 
     await prisma.chat.create({

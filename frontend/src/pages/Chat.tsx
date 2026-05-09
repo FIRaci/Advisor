@@ -779,9 +779,24 @@ export default function Chat() {
           createdAt: new Date().toISOString()
         };
         setMessages(prev => [...prev, assistMsg]);
+      } else {
+        const errorMsg: Message = {
+          id: `assist-error-${Date.now()}`,
+          role: 'ASSISTANT',
+          content: lang === 'en' ? 'Failed to generate content. Please try again.' : 'Lỗi khi tạo nội dung. Vui lòng thử lại.',
+          createdAt: new Date().toISOString()
+        };
+        setMessages(prev => [...prev, errorMsg]);
       }
     } catch (e) {
       console.error('Failed to generate content', e);
+      const errorMsg: Message = {
+        id: `assist-error-${Date.now()}`,
+        role: 'ASSISTANT',
+        content: lang === 'en' ? 'Network error when generating content.' : 'Lỗi mạng khi tạo nội dung.',
+        createdAt: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, errorMsg]);
     }
     setAssistLoading(false);
   };
@@ -811,9 +826,24 @@ export default function Chat() {
           createdAt: new Date().toISOString()
         };
         setMessages(prev => [...prev, assistMsg]);
+      } else {
+        const errorMsg: Message = {
+          id: `assist-error-${Date.now()}`,
+          role: 'ASSISTANT',
+          content: lang === 'en' ? 'Failed to generate content. Please try again.' : 'Lỗi khi tạo nội dung. Vui lòng thử lại.',
+          createdAt: new Date().toISOString()
+        };
+        setMessages(prev => [...prev, errorMsg]);
       }
     } catch (e) {
       console.error(e);
+      const errorMsg: Message = {
+        id: `assist-error-${Date.now()}`,
+        role: 'ASSISTANT',
+        content: lang === 'en' ? 'Network error when generating content.' : 'Lỗi mạng khi tạo nội dung.',
+        createdAt: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, errorMsg]);
     }
     setAssistLoading(false);
   };
@@ -1665,8 +1695,8 @@ export default function Chat() {
                         className="message-copy-btn"
                         onClick={() => {
                           setContentInput(lang === 'en' 
-                            ? `Based on this strategy:\n\n"""\n${msg.content}\n"""\n\nPlease write:\n` 
-                            : `Dựa vào chiến lược này:\n\n"""\n${msg.content}\n"""\n\nHãy viết:\n`);
+                            ? `Please write marketing content based on the strategy above...` 
+                            : `Hãy viết nội dung marketing dựa trên kế hoạch trên...`);
                           setTimeout(() => {
                             const inputField = document.querySelector('.content-pane textarea') as HTMLTextAreaElement;
                             if (inputField) inputField.focus();
