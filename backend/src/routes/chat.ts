@@ -10,7 +10,15 @@ router.use(authMiddleware);
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://ai_service:8000';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const AI_MODE = process.env.AI_MODE || 'auto'; // 'auto' | 'mock' | 'live'
 const AI_TIMEOUT_MS = 12_000;
+
+function shouldUseLiveAi(): boolean {
+  if (AI_MODE === 'mock') return false;
+  if (AI_MODE === 'live') return true;
+  // auto: live only when key looks valid (length-based heuristic)
+  return GEMINI_API_KEY.length > 30;
+}
 
 const vietnameseCharacterRegex = /[\u00C0-\u1EF9]/;
 
@@ -119,7 +127,7 @@ router.post('/message', async (req: AuthRequest, res) => {
     let usedFallback = false;
 
     try {
-      if (GEMINI_API_KEY && GEMINI_API_KEY !== 'REDACTED_GEMINI_KEY_1') {
+      if (shouldUseLiveAi()) {
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
         const prompt = `You are AdVisor, an expert AI marketing strategist. Your role is to help businesses create effective marketing campaigns. Provide actionable advice, consider budget constraints, and focus on ROI.
@@ -132,7 +140,7 @@ User: ${message}`;
         const result = await model.generateContent(prompt);
         aiText = result.response.text();
       } else {
-        throw new Error('Using mock mode (Invalid or default API key)');
+        throw new Error('Using mock mode');
       }
     } catch (aiError) {
       usedFallback = true;
@@ -355,7 +363,7 @@ router.post('/assist', async (req: AuthRequest, res) => {
     };
 
     try {
-      if (GEMINI_API_KEY && GEMINI_API_KEY !== 'REDACTED_GEMINI_KEY_1') {
+      if (shouldUseLiveAi()) {
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
         
