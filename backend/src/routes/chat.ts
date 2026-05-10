@@ -247,9 +247,10 @@ Here is your detailed execution plan:
 ---
 
 **[STAGE_TRANSITION]** You have completed Stage 2! You can now move to **Stage 3: Ongoing Optimization** where you'll submit periodic reports and I'll help you continuously improve your results.`;
-        const business = (quizData?.quizData as any)?.business || 'your business';
-        const goal = (quizData?.quizData as any)?.goal || 'your primary goal';
-        const audience = (quizData?.quizData as any)?.audience || 'target audience';
+        } else {
+          const business = (quizData?.quizData as any)?.business || 'your business';
+          const goal = (quizData?.quizData as any)?.goal || 'your primary goal';
+          const audience = (quizData?.quizData as any)?.audience || 'target audience';
         
         aiText = `## Strategic Analysis & Recommendations
 

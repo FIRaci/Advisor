@@ -1133,6 +1133,8 @@ export default function Chat() {
   };
 
   const handleLogout = () => {
+    const confirmText = lang === 'en' ? 'Are you sure you want to logout?' : 'Bạn có chắc chắn muốn đăng xuất không?';
+    if (!window.confirm(confirmText)) return;
     logout();
     navigate('/');
   };
@@ -1850,7 +1852,7 @@ export default function Chat() {
 
           <div className="chat-header-right">
             {currentCampaign && (
-              <div className="stage-indicator" role="list" aria-label={lang === 'en' ? 'Campaign stages' : 'Cac giai doan chien dich'}>
+              <div className="chat-stage-timeline" role="list" aria-label={lang === 'en' ? 'Campaign stages' : 'Các giai đoạn chiến dịch'}>
                 {([0, 1, 2, 3] as const).map(stage => (
                   <button
                     key={stage}
@@ -1912,7 +1914,7 @@ export default function Chat() {
           <div className={`stage-banner stage-banner--stage-${currentStage}`}>
             <div className="stage-banner-text">
               <strong className="stage-banner-title">
-                {`${lang === 'en' ? 'Stage' : 'Giai doan'} ${currentStage} \u2022 ${stageDescriptor.title[lang]}`}
+                {`${lang === 'en' ? 'Stage' : 'Giai đoạn'} ${currentStage} \u2022 ${stageDescriptor.title[lang]}`}
               </strong>
               <p className="stage-banner-subtitle">{stageDescriptor.subtitle[lang]}</p>
               <p className="stage-banner-next">{stageDescriptor.nextAction[lang]}</p>
@@ -2027,12 +2029,12 @@ export default function Chat() {
                   <button className="welcome-action secondary" onClick={focusComposer}>
                     <div className="welcome-action-title">
                       <MessageSquare size={16} />
-                      <span>{lang === 'en' ? 'Skip Quiz, Chat Directly' : 'Bo qua Quiz, Chat truc tiep'}</span>
+                      <span>{lang === 'en' ? 'Skip Quiz, Chat Directly' : 'Bỏ qua Quiz, Chat trực tiếp'}</span>
                     </div>
                     <p>
                       {lang === 'en'
                         ? 'Type your first request below. A new campaign will be created automatically.'
-                        : 'Nhap yeu cau dau tien o o ben duoi. He thong se tu tao campaign moi.'}
+                        : 'Nhập yêu cầu đầu tiên ở ô bên dưới. Hệ thống sẽ tự tạo campaign mới.'}
                     </p>
                   </button>
 
@@ -2046,12 +2048,12 @@ export default function Chat() {
                   >
                     <div className="welcome-action-title">
                       <HelpCircle size={16} />
-                      <span>{lang === 'en' ? 'Show me how AdVisor works' : 'Xem huong dan AdVisor'}</span>
+                      <span>{lang === 'en' ? 'Show me how AdVisor works' : 'Xem hướng dẫn AdVisor'}</span>
                     </div>
                     <p>
                       {lang === 'en'
                         ? 'Walkthrough of the four stages, the two panes, and how metrics tie everything together.'
-                        : 'Huong dan 4 giai doan, hai khung chat, va cach metrics ket noi tat ca.'}
+                        : 'Hướng dẫn 4 giai đoạn, hai khung chat, và cách metrics kết nối tất cả.'}
                     </p>
                   </button>
                 </div>
@@ -2071,7 +2073,7 @@ export default function Chat() {
                   <div key={msg.id} className="stage-transition-divider" role="note">
                     <span className="stage-transition-line" aria-hidden="true" />
                     <span className="stage-transition-label">
-                      {`${lang === 'en' ? 'Stage' : 'Giai doan'} ${toStage} \u2022 ${desc.title[lang]}`}
+                      {`${lang === 'en' ? 'Stage' : 'Giai đoạn'} ${toStage} \u2022 ${desc.title[lang]}`}
                     </span>
                     <span className="stage-transition-line" aria-hidden="true" />
                   </div>
