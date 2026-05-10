@@ -25,12 +25,39 @@ export interface Campaign {
   };
 }
 
+export type ChatPane = 'STRATEGY' | 'CONTENT' | 'SYSTEM';
+
+export type ChatKind =
+  | 'plan_options'
+  | 'stage_transition'
+  | 'plan_selected'
+  | 'content_prompt'
+  | 'content_response'
+  | 'system_event'
+  | null;
+
 export interface ChatMessage {
   id: string;
-  role: 'USER' | 'ASSISTANT';
+  role: 'USER' | 'ASSISTANT' | 'SYSTEM';
+  pane: ChatPane;
+  kind?: ChatKind;
+  metadata?: Record<string, unknown> | null;
   content: string;
   createdAt: string;
   fallback?: boolean;
+}
+
+export interface AssistContentResponse {
+  type: string;
+  content: string;
+  fallback: boolean;
+  userMessage: ChatMessage | null;
+  assistantMessage: ChatMessage;
+}
+
+export interface SendMessageResponse {
+  userMessage: ChatMessage;
+  assistantMessage: ChatMessage;
 }
 
 export interface CampaignUpdatePayload {
@@ -217,7 +244,7 @@ export const api = {
 
   // Chat
   sendMessage: (message: string, campaignId?: string, context?: Record<string, unknown>) =>
-    request<ChatMessage>('/api/chat/message', {
+    request<SendMessageResponse>('/api/chat/message', {
       method: 'POST',
       body: JSON.stringify({ message, campaignId, context })
     }),
@@ -240,7 +267,7 @@ export const api = {
 
   // Content Assistant (Stream 2)
   assistContent: (type: 'email' | 'ad_copy' | 'social_post' | 'landing_page' | 'custom', campaignId: string, customPrompt?: string) =>
-    request<{ type: string; content: string; fallback: boolean }>('/api/chat/assist', {
+    request<AssistContentResponse>('/api/chat/assist', {
       method: 'POST',
       body: JSON.stringify({ type, campaignId, customPrompt })
     })

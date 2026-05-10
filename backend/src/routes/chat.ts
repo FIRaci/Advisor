@@ -20,6 +20,16 @@ function shouldUseLiveAi(): boolean {
   return GEMINI_API_KEY.length > 30;
 }
 
+function detectStrategyKind(content: string): { kind: string | null; metadata: Record<string, unknown> | null } {
+  if (content.includes('[PLAN_OPTIONS]')) {
+    return { kind: 'plan_options', metadata: null };
+  }
+  if (content.includes('[STAGE_TRANSITION]')) {
+    return { kind: 'stage_transition', metadata: null };
+  }
+  return { kind: null, metadata: null };
+}
+
 const vietnameseCharacterRegex = /[\u00C0-\u1EF9]/;
 
 function buildAiFallbackResponse(message: string): string {
@@ -84,10 +94,11 @@ router.post('/message', async (req: AuthRequest, res) => {
       }
     }
 
-    // Save user message
-    await prisma.chat.create({
+    // Save user message (Strategy pane)
+    const savedUserMessage = await prisma.chat.create({
       data: {
         role: 'USER',
+        pane: 'STRATEGY',
         content: message,
         userId: req.userId!,
         campaignId: campaign?.id
@@ -278,10 +289,15 @@ How can I assist you with your campaign today? Try completing the **Quiz** first
       }
     }
 
-    // Save AI response
+    // Save AI response (Strategy pane). Tag well-known marker kinds so the frontend
+    // can render plan selectors / stage transition cards without prefix sniffing.
+    const { kind: assistantKind, metadata: assistantMetadata } = detectStrategyKind(aiText);
     const savedResponse = await prisma.chat.create({
       data: {
         role: 'ASSISTANT',
+        pane: 'STRATEGY',
+        kind: assistantKind,
+        metadata: assistantMetadata as any,
         content: aiText,
         userId: req.userId!,
         campaignId: campaign?.id
@@ -292,13 +308,20 @@ How can I assist you with your campaign today? Try completing the **Quiz** first
       success: true,
       data: {
         userMessage: {
+          id: savedUserMessage.id,
           role: 'USER',
+          pane: 'STRATEGY',
+          kind: null,
+          metadata: null,
           content: message,
-          createdAt: new Date().toISOString() // Approximate
+          createdAt: savedUserMessage.createdAt
         },
         assistantMessage: {
           id: savedResponse.id,
           role: 'ASSISTANT',
+          pane: 'STRATEGY',
+          kind: assistantKind,
+          metadata: assistantMetadata,
           content: aiText,
           createdAt: savedResponse.createdAt,
           fallback: usedFallback
@@ -347,7 +370,7 @@ router.post('/assist', async (req: AuthRequest, res) => {
     });
     
     const historyText = chatHistory
-      .filter(msg => !msg.content.startsWith('[Content Prompt]') && !msg.content.startsWith('[Content Assistant'))
+      .filter(msg => msg.pane === 'STRATEGY')
       .map(msg => `${msg.role}: ${msg.content}`)
       .join('\n\n');
 
@@ -450,7 +473,9 @@ Still doing [old way]? There's a better way.
 
 Meet **${productName}** — built for ${audience} who want real results.
 
-✅ [Benefit 1] ✅ [Benefit 2] ✅ [Benefit 3]
+- [Benefit 1]
+- [Benefit 2]
+- [Benefit 3]
 
 **Hashtags:** #${productName.replace(/\\s/g, '')} #Marketing #Growth
 
@@ -477,21 +502,28 @@ ${customPrompt ? `Here is a drafted response based on: "${customPrompt}"\n\n[Thi
       }
     }
 
+    let savedUserPrompt: { id: string; createdAt: Date } | null = null;
     if (customPrompt) {
-      await prisma.chat.create({
+      savedUserPrompt = await prisma.chat.create({
         data: {
           role: 'USER',
-          content: `[Content Prompt] ${customPrompt}`,
+          pane: 'CONTENT',
+          kind: 'content_prompt',
+          metadata: { contentType: type } as any,
+          content: customPrompt,
           userId: req.userId!,
           campaignId: campaign.id
         }
       });
     }
 
-    await prisma.chat.create({
+    const savedAssistant = await prisma.chat.create({
       data: {
         role: 'ASSISTANT',
-        content: `[Content Assistant - ${contentTypeLabels[type]}]\n\n${assistText}`,
+        pane: 'CONTENT',
+        kind: 'content_response',
+        metadata: { contentType: type, label: contentTypeLabels[type] } as any,
+        content: assistText,
         userId: req.userId!,
         campaignId: campaign.id
       }
@@ -499,7 +531,32 @@ ${customPrompt ? `Here is a drafted response based on: "${customPrompt}"\n\n[Thi
 
     res.json({
       success: true,
-      data: { type, content: assistText, fallback: usedFallback }
+      data: {
+        type,
+        content: assistText,
+        fallback: usedFallback,
+        userMessage: savedUserPrompt
+          ? {
+              id: savedUserPrompt.id,
+              role: 'USER',
+              pane: 'CONTENT',
+              kind: 'content_prompt',
+              metadata: { contentType: type },
+              content: customPrompt,
+              createdAt: savedUserPrompt.createdAt
+            }
+          : null,
+        assistantMessage: {
+          id: savedAssistant.id,
+          role: 'ASSISTANT',
+          pane: 'CONTENT',
+          kind: 'content_response',
+          metadata: { contentType: type, label: contentTypeLabels[type] },
+          content: assistText,
+          createdAt: savedAssistant.createdAt,
+          fallback: usedFallback
+        }
+      }
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

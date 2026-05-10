@@ -61,9 +61,29 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
+// Backfill legacy chat rows that lack pane classification.
+// Strategy/Content split was previously inferred from content prefixes; we set the
+// proper pane field for older data on first boot after the schema migration.
+async function backfillChatPanes(): Promise<void> {
+  try {
+    const contentResult = await prisma.$executeRawUnsafe(
+      `UPDATE "Chat" SET "pane" = 'CONTENT'::"ChatPane"
+       WHERE ("content" LIKE '[Content Assistant%' OR "content" LIKE '[Content Prompt]%')
+         AND "pane" = 'STRATEGY'::"ChatPane"`
+    );
+
+    if (typeof contentResult === 'number' && contentResult > 0) {
+      console.log(`[backfill] Reclassified ${contentResult} legacy chat row(s) as CONTENT pane.`);
+    }
+  } catch (err) {
+    console.warn('[backfill] Skipped Chat pane backfill:', err);
+  }
+}
+
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`AdVisor API running on port ${PORT}`);
+  await backfillChatPanes();
 });
 
 // Graceful shutdown

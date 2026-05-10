@@ -1755,6 +1755,23 @@ body.chat-page-active {
   font-size: 0.75rem;
   color: var(--text-muted);
   transition: all 0.2s;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  cursor: default;
+}
+
+.stage-step.clickable {
+  cursor: pointer;
+}
+
+.stage-step.clickable:hover {
+  background: rgba(124, 58, 237, 0.08);
+  color: var(--text-primary);
+}
+
+.stage-step:disabled {
+  cursor: not-allowed;
 }
 
 .stage-step.completed {
@@ -1972,4 +1989,142 @@ body.chat-page-active {
   .chat-pane:last-child {
     border-bottom: none;
   }
+}
+/* Stage Banner -- always visible while a campaign is active. */
+.stage-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(124, 58, 237, 0.06), transparent);
+}
+
+.stage-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.stage-banner-title {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
+}
+
+.stage-banner-subtitle {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  max-width: 720px;
+}
+
+.stage-banner-next {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.stage-banner--stage-0 {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.07), transparent);
+}
+.stage-banner--stage-1 {
+  background: linear-gradient(180deg, rgba(124, 58, 237, 0.07), transparent);
+}
+.stage-banner--stage-2 {
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.07), transparent);
+}
+.stage-banner--stage-3 {
+  background: linear-gradient(180deg, rgba(234, 179, 8, 0.08), transparent);
+}
+
+.stage-banner-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-md);
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  font-size: 0.78rem;
+}
+
+.stage-banner-error-dismiss {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+}
+
+/* Recovery banner -- shown when quizData is internally inconsistent. */
+.stage-recovery-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid rgba(234, 179, 8, 0.4);
+  background: rgba(234, 179, 8, 0.08);
+}
+
+.stage-recovery-text strong {
+  display: block;
+  font-size: 0.85rem;
+  color: #facc15;
+  margin-bottom: 0.15rem;
+}
+
+.stage-recovery-text p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  max-width: 720px;
+}
+
+.stage-recovery-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Message metadata tag (e.g. "Marketing Email" label on Content responses). */
+.message-tag {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+}
+
+/* Inline stage transition divider rendered between strategy messages. */
+.stage-transition-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.75rem 0.25rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.stage-transition-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.stage-transition-label {
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--accent);
 }

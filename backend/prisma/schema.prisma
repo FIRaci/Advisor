@@ -56,6 +56,9 @@ model CampaignMetricsSnapshot {
 model Chat {
   id        String   @id @default(cuid())
   role      ChatRole
+  pane      ChatPane @default(STRATEGY)
+  kind      String?
+  metadata  Json?
   content   String
   createdAt DateTime @default(now())
 
@@ -64,6 +67,9 @@ model Chat {
 
   campaignId String?
   campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId, createdAt])
+  @@index([userId, createdAt])
 }
 
 enum Role {
@@ -81,4 +87,11 @@ enum CampaignStatus {
 enum ChatRole {
   USER
   ASSISTANT
+  SYSTEM
+}
+
+enum ChatPane {
+  STRATEGY
+  CONTENT
+  SYSTEM
 }

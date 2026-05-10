@@ -13,6 +13,14 @@ import ReactMarkdown from 'react-markdown';
 import { useAuthStore } from '../store/authStore';
 import { api, Campaign as ApiCampaign, ChatMessage, MetricsSnapshot, QuizProgress } from '../hooks/useApi';
 import { findGlossaryMatches, summarizeGlossary, glossaryGroups, getGlossaryByGroup } from '../utils/marketingGlossary';
+import {
+  type Stage,
+  STAGE_DESCRIPTORS,
+  deriveStage,
+  inspectQuizData,
+  canAdvance,
+  getContentPaneMode
+} from '../lib/stageMachine';
 import './Chat.css';
 
 type Message = ChatMessage;
@@ -200,15 +208,22 @@ export default function Chat() {
   const lang = i18n.language as 'en' | 'vi';
   const isLoggedIn = Boolean(token);
 
-  // Compute current stage from quizData
-  const currentStage = useMemo(() => {
-    if (!currentCampaign?.quizData) return 0; // No quiz done
-    const qd = currentCampaign.quizData;
-    if (qd.phase === '3') return 3;
-    if (qd.phase === '2') return 2;
-    if (Object.keys(qd).length > 0) return 1;
-    return 0;
-  }, [currentCampaign]);
+  // Compute current stage from quizData using the shared state-machine helper.
+  // The helper validates internal consistency (e.g. phase=2 with no selectedPlan
+  // is treated as Stage 0) so the UI never silently renders an invalid state.
+  const currentStage = useMemo<Stage>(
+    () => deriveStage(currentCampaign?.quizData),
+    [currentCampaign]
+  );
+
+  // Detect inconsistent campaign state so we can surface a recovery banner.
+  const quizDataIssue = useMemo(
+    () => inspectQuizData(currentCampaign?.quizData),
+    [currentCampaign]
+  );
+
+  const stageDescriptor = STAGE_DESCRIPTORS[currentStage];
+  const contentPaneMode = useMemo(() => getContentPaneMode(currentStage), [currentStage]);
 
   // Parse plan options from AI response
   const parsePlanOptions = (content: string) => {
@@ -383,7 +398,26 @@ export default function Chat() {
     setMessages((prev) => [...prev, {
       id: generatedId,
       role: 'ASSISTANT',
+      pane: 'STRATEGY',
+      kind: null,
+      metadata: null,
       content,
+      createdAt: new Date().toISOString()
+    }]);
+  };
+
+  // Insert a synthetic SYSTEM-pane message that records a stage transition.
+  // The metadata stores the stage number so the activity log can render a
+  // localised label even after the user toggles the language.
+  const appendSystemTransition = (toStage: Stage) => {
+    const generatedId = `system-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    setMessages((prev) => [...prev, {
+      id: generatedId,
+      role: 'SYSTEM',
+      pane: 'SYSTEM',
+      kind: 'stage_transition',
+      metadata: { toStage },
+      content: '',
       createdAt: new Date().toISOString()
     }]);
   };
@@ -442,16 +476,26 @@ export default function Chat() {
     return createdCampaign.id;
   };
 
-  const generateInitialStrategy = async () => {
+  // Trigger the initial strategy generation. Used both by the autostart query
+  // param (after a Quick Setup) and as a recovery option when a campaign has
+  // quizData but no AI response yet. Accepts an explicit campaign id so the
+  // caller can use it before the URL has been updated.
+  const generateInitialStrategy = async (targetCampaignId?: string) => {
+    const effectiveCampaignId = targetCampaignId ?? campaignId;
+    if (!effectiveCampaignId) return;
+
     setLoading(true);
-    
-    const initialPrompt = lang === 'en' 
+
+    const initialPrompt = lang === 'en'
       ? "Based on the quiz answers I provided, please create a comprehensive marketing strategy for my business. Include specific recommendations for channels, content, budget allocation, and timeline."
-      : "Dựa trên các câu trả lời quiz tôi đã cung cấp, hãy tạo một chiến lược marketing toàn diện cho doanh nghiệp của tôi. Bao gồm các khuyến nghị cụ thể về kênh, nội dung, phân bổ ngân sách và thời gian.";
+      : "Dua tren cac cau tra loi quiz toi da cung cap, hay tao mot chien luoc marketing toan dien cho doanh nghiep cua toi. Bao gom cac khuyen nghi cu the ve kenh, noi dung, phan bo ngan sach va thoi gian.";
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'USER',
+      pane: 'STRATEGY',
+      kind: null,
+      metadata: null,
       content: initialPrompt,
       createdAt: new Date().toISOString()
     };
@@ -465,21 +509,26 @@ export default function Chat() {
     const glossaryContext = summarizeGlossary(glossaryMatches, lang);
     const context = glossaryContext.length > 0 ? { glossary: glossaryContext } : undefined;
 
-    const res = await api.sendMessage(initialPrompt, campaignId, context);
-    const assistantMessage = res.data;
+    const res = await api.sendMessage(initialPrompt, effectiveCampaignId, context);
 
-    if (res.success && assistantMessage) {
-      setMessages((prev) => [...prev, assistantMessage]);
+    if (res.success && res.data) {
+      const { userMessage: savedUser, assistantMessage } = res.data;
+      setMessages(prev => {
+        const filtered = prev.filter(m => m.id !== userMessage.id);
+        return [...filtered, savedUser, assistantMessage];
+      });
     } else {
       appendAssistantMessage(
         lang === 'en'
           ? 'Sorry, I encountered an error generating your strategy. Please try sending a message.'
-          : 'Xin lỗi, đã xảy ra lỗi khi tạo chiến lược. Vui lòng thử gửi tin nhắn.'
+          : 'Xin loi, da xay ra loi khi tao chien luoc. Vui long thu gui tin nhan.'
       );
     }
-    
+
     setLoading(false);
-    navigate(`/chat/${campaignId}`, { replace: true });
+    if (!campaignId) {
+      navigate(`/chat/${effectiveCampaignId}`, { replace: true });
+    }
   };
 
   const handleSend = async () => {
@@ -490,6 +539,9 @@ export default function Chat() {
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'USER',
+      pane: 'STRATEGY',
+      kind: null,
+      metadata: null,
       content: nextInput,
       createdAt: new Date().toISOString()
     };
@@ -509,7 +561,7 @@ export default function Chat() {
       appendAssistantMessage(
         lang === 'en'
           ? 'Unable to initialize a new conversation. Please try again.'
-          : 'Không thể khởi tạo cuộc trò chuyện mới. Vui lòng thử lại.'
+          : 'Khong the khoi tao cuoc tro chuyen moi. Vui long thu lai.'
       );
       setLoading(false);
       return;
@@ -523,12 +575,11 @@ export default function Chat() {
     const context = glossaryContext.length > 0 ? { glossary: glossaryContext } : undefined;
 
     const res = await api.sendMessage(nextInput, targetCampaignId, context);
-    
+
     if (res.success && res.data) {
-      const { userMessage: savedUserMsg, assistantMessage } = res.data as any;
-      
+      const { userMessage: savedUserMsg, assistantMessage } = res.data;
+
       setMessages((prev) => {
-        // Remove the temporary message and add the saved ones
         const filtered = prev.filter(m => m.id !== userMessage.id);
         return [...filtered, savedUserMsg, assistantMessage];
       });
@@ -579,12 +630,63 @@ export default function Chat() {
     navigate(`/quiz${query}`, { state: { from: campaignId ? `/chat/${campaignId}` : '/chat' } });
   };
 
+  // Build a default campaign name from the Quick Setup answers so the new
+  // campaign in the sidebar is recognisable instead of "Campaign Apr 12".
+  const buildCampaignNameFromQuiz = (answers: Record<string, string>): string => {
+    const product = (answers.productName || '').trim();
+    if (product) return product;
+    const business = answers.business;
+    if (business) {
+      return lang === 'en' ? `${business} campaign` : `Chien dich ${business}`;
+    }
+    return buildCampaignNameFromMessage('');
+  };
+
+  // Persist Quick Setup answers, creating a new campaign first if necessary.
+  // Returns the campaign id used, or null on failure.
+  const persistQuickSetupAnswers = async (
+    answers: Record<string, string>
+  ): Promise<string | null> => {
+    let targetCampaignId = campaignId ?? currentCampaign?.id ?? null;
+
+    if (!targetCampaignId) {
+      const createRes = await api.createCampaign({ name: buildCampaignNameFromQuiz(answers) });
+      if (!createRes.success || !createRes.data) {
+        if (createRes.error === 'Session expired. Please log in again.') {
+          navigate('/login');
+        }
+        return null;
+      }
+      const createdCampaign: Campaign = {
+        id: createRes.data.id,
+        name: createRes.data.name,
+        createdAt: createRes.data.createdAt,
+        isFavorite: createRes.data.isFavorite,
+        status: createRes.data.status,
+        quizData: createRes.data.quizData
+      };
+      setCampaigns(prev => [createdCampaign, ...prev.filter(c => c.id !== createdCampaign.id)]);
+      setCurrentCampaign(createdCampaign);
+      targetCampaignId = createdCampaign.id;
+      navigate(`/chat/${targetCampaignId}`, { replace: true });
+    }
+
+    const updateRes = await api.updateCampaign(targetCampaignId, {
+      quizData: answers,
+      status: 'ACTIVE'
+    });
+
+    if (!updateRes.success) return null;
+
+    fetchCurrentCampaign();
+    fetchCampaigns();
+    return targetCampaignId;
+  };
+
   const handleQuizSkipAll = async () => {
     setQuizPopupOpen(false);
-    // Let AI work automatically with whatever answers we have
-    if (Object.keys(quizAnswers).length > 0 && campaignId) {
-      await api.updateCampaign(campaignId, { quizData: quizAnswers });
-      fetchCurrentCampaign();
+    if (Object.keys(quizAnswers).length > 0) {
+      await persistQuickSetupAnswers(quizAnswers);
     }
     focusComposer();
   };
@@ -599,17 +701,26 @@ export default function Chat() {
         setQuizStep(quizStep + 1);
         setQuizTextInput(newAnswers[quickQuizQuestions[quizStep + 1]?.id] || '');
       }, 200);
-    } else {
-      // All quick questions done - save and close
-      setQuizPopupOpen(false);
-      
-      if (campaignId) {
-        await api.updateCampaign(campaignId, { quizData: newAnswers, status: 'ACTIVE' });
-        fetchCurrentCampaign();
-        // Auto-generate strategy
-        generateInitialStrategy();
-      }
+      return;
     }
+
+    // All quick questions answered. Persist (create campaign if needed) and
+    // auto-trigger the initial strategy generation so the user immediately
+    // sees an AI response instead of an empty chat.
+    setQuizPopupOpen(false);
+
+    const targetCampaignId = await persistQuickSetupAnswers(newAnswers);
+    if (!targetCampaignId) {
+      appendAssistantMessage(
+        lang === 'en'
+          ? 'We saved your answers locally but could not sync them to the server. Please retry.'
+          : 'Da luu cau tra loi cuc bo nhung khong dong bo voi server duoc. Vui long thu lai.'
+      );
+      return;
+    }
+
+    appendSystemTransition(1);
+    generateInitialStrategy(targetCampaignId);
   };
 
   const handleQuizTextSubmit = () => {
@@ -662,22 +773,34 @@ export default function Chat() {
   const handlePhase2Complete = async (answers: Record<string, string>) => {
     setPhase2PopupOpen(false);
     if (!campaignId) return;
-    
+
     const updatedQuizData = { ...currentCampaign?.quizData, ...answers, phase: '2' };
-    await api.updateCampaign(campaignId, { quizData: updatedQuizData });
+    const updateRes = await api.updateCampaign(campaignId, { quizData: updatedQuizData });
+    if (!updateRes.success) {
+      appendAssistantMessage(
+        lang === 'en'
+          ? 'We could not save your Stage 2 details. Please retry.'
+          : 'Khong the luu chi tiet Giai doan 2. Vui long thu lai.'
+      );
+      return;
+    }
     fetchCurrentCampaign();
+    appendSystemTransition(2);
 
     const planText = Object.entries(answers)
       .map(([k, v]) => `${k}: ${v}`)
       .join(', ');
-    
-    const messageContent = lang === 'en' 
+
+    const messageContent = lang === 'en'
       ? `I have selected my plan details: ${planText}. Let's proceed with execution and tracking setup.`
-      : `Tôi đã chốt chi tiết kế hoạch: ${planText}. Hãy tiến hành bước triển khai và thiết lập.`;
+      : `Toi da chot chi tiet ke hoach: ${planText}. Hay tien hanh buoc trien khai va thiet lap.`;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'USER',
+      pane: 'STRATEGY',
+      kind: null,
+      metadata: null,
       content: messageContent,
       createdAt: new Date().toISOString()
     };
@@ -686,7 +809,7 @@ export default function Chat() {
 
     const res = await api.sendMessage(messageContent, campaignId);
     if (res.success && res.data) {
-      const { userMessage: savedUserMsg, assistantMessage } = res.data as any;
+      const { userMessage: savedUserMsg, assistantMessage } = res.data;
       setMessages((prev) => {
         const filtered = prev.filter(m => m.id !== userMessage.id);
         return [...filtered, savedUserMsg, assistantMessage];
@@ -704,18 +827,32 @@ export default function Chat() {
     if (!campaignId || loading) return;
     setSelectedPlanInChat(planId);
     const updatedQuizData = { ...currentCampaign?.quizData, selectedPlan: planId };
-    await api.updateCampaign(campaignId, { quizData: updatedQuizData });
+    const updateRes = await api.updateCampaign(campaignId, { quizData: updatedQuizData });
+    if (!updateRes.success) {
+      // Roll back local optimistic plan selection so the UI does not lie about
+      // the server state.
+      setSelectedPlanInChat(null);
+      appendAssistantMessage(
+        lang === 'en'
+          ? 'We could not record your plan selection. Please retry.'
+          : 'Khong the luu lua chon plan. Vui long thu lai.'
+      );
+      return;
+    }
     fetchCurrentCampaign();
 
     // Send message to AI about selection
     const messageContent = lang === 'en'
       ? `I have selected Plan ${planId}. Let's proceed to Stage 2 to refine the details.`
-      : `Tôi đã chọn Plan ${planId}. Hãy chuyển sang Giai đoạn 2 để chi tiết hóa kế hoạch.`;
+      : `Toi da chon Plan ${planId}. Hay chuyen sang Giai doan 2 de chi tiet hoa ke hoach.`;
     setInput('');
     setLoading(true);
     const userMsg: Message = {
       id: Date.now().toString(),
       role: 'USER',
+      pane: 'STRATEGY',
+      kind: 'plan_selected',
+      metadata: { plan: planId },
       content: messageContent,
       createdAt: new Date().toISOString()
     };
@@ -724,7 +861,7 @@ export default function Chat() {
     try {
       const res = await api.sendMessage(messageContent, campaignId);
       if (res.success && res.data) {
-        const { userMessage: savedUserMsg, assistantMessage } = res.data as any;
+        const { userMessage: savedUserMsg, assistantMessage } = res.data;
         setMessages(prev => {
           const filtered = prev.filter(m => m.id !== userMsg.id);
           return [...filtered, savedUserMsg, assistantMessage];
@@ -734,27 +871,65 @@ export default function Chat() {
     setLoading(false);
   };
 
+  const [stageTransitionPending, setStageTransitionPending] = useState(false);
+  const [stageTransitionError, setStageTransitionError] = useState<string | null>(null);
+
   const handleAdvanceStage = async (targetStage: number) => {
     if (!campaignId) return;
-    if (targetStage === 2) {
-      // Open Phase 2 quiz
+    if (stageTransitionPending) return;
+
+    const target = targetStage as Stage;
+    const guard = canAdvance(currentStage, target, currentCampaign?.quizData);
+    if (!guard.ok && guard.reason) {
+      setStageTransitionError(guard.reason[lang]);
+      return;
+    }
+
+    setStageTransitionError(null);
+
+    if (target === 2) {
+      // Open Phase 2 quiz; the actual quizData update happens inside
+      // handlePhase2Complete after the user submits their answers.
       setPhase2PopupOpen(true);
       setPhase2Step(0);
-    } else if (targetStage === 3) {
-      const updatedQuizData = { ...currentCampaign?.quizData, phase: '3' };
-      await api.updateCampaign(campaignId, { quizData: updatedQuizData });
+      return;
+    }
+
+    if (target === 3) {
+      setStageTransitionPending(true);
+      const previousQuizData = currentCampaign?.quizData;
+      const updatedQuizData = { ...previousQuizData, phase: '3' };
+      const updateRes = await api.updateCampaign(campaignId, { quizData: updatedQuizData });
+      if (!updateRes.success) {
+        setStageTransitionPending(false);
+        setStageTransitionError(
+          lang === 'en'
+            ? 'Could not advance to Stage 3 (network or server error). Please retry.'
+            : 'Khong the chuyen sang Giai doan 3 (loi mang hoac server). Vui long thu lai.'
+        );
+        return;
+      }
       fetchCurrentCampaign();
-      // Send transition message
+      appendSystemTransition(3);
+
       const msg = lang === 'en'
         ? 'Moving to Stage 3: Ongoing Optimization. I will submit periodic reports for AI analysis.'
-        : 'Chuyển sang Giai đoạn 3: Tối ưu hóa liên tục. Tôi sẽ gửi báo cáo định kỳ để AI phân tích.';
+        : 'Chuyen sang Giai doan 3: Toi uu hoa lien tuc. Toi se gui bao cao dinh ky de AI phan tich.';
       setLoading(true);
-      const userMsg: Message = { id: Date.now().toString(), role: 'USER', content: msg, createdAt: new Date().toISOString() };
+      const userMsg: Message = {
+        id: Date.now().toString(),
+        role: 'USER',
+        pane: 'STRATEGY',
+        kind: null,
+        metadata: null,
+        content: msg,
+        createdAt: new Date().toISOString()
+      };
       setMessages(prev => [...prev, userMsg]);
       try {
         const res = await api.sendMessage(msg, campaignId);
         if (res.success && res.data) {
-          const { userMessage: savedUserMsg, assistantMessage } = res.data as any;
+          const { userMessage: savedUserMsg, assistantMessage } = res.data;
           setMessages(prev => {
             const filtered = prev.filter(m => m.id !== userMsg.id);
             return [...filtered, savedUserMsg, assistantMessage];
@@ -762,8 +937,65 @@ export default function Chat() {
         }
       } catch (e) { /* handled */ }
       setLoading(false);
+      setStageTransitionPending(false);
     }
   };
+
+  // Reset the campaign back to an earlier stage. The quiz answers are kept,
+  // but phase / selectedPlan are cleared as appropriate so the user can
+  // re-do the affected steps. The full activity log is preserved.
+  const handleResetToStage = async (targetStage: Stage) => {
+    if (!campaignId || stageTransitionPending) return;
+    if (targetStage >= currentStage) return;
+
+    const confirmText = lang === 'en'
+      ? `Reset this campaign back to Stage ${targetStage}? Your previous answers stay in the activity log.`
+      : `Dat lai chien dich ve Giai doan ${targetStage}? Cac cau tra loi truoc van duoc luu trong lich su.`;
+    if (!window.confirm(confirmText)) return;
+
+    setStageTransitionPending(true);
+    setStageTransitionError(null);
+
+    const previous = currentCampaign?.quizData ?? {};
+    const next: Record<string, string> = { ...previous };
+    if (targetStage < 3) delete next.phase;
+    if (targetStage < 2) delete next.phase;
+    if (targetStage < 1) {
+      delete next.selectedPlan;
+    }
+    if (targetStage === 0) {
+      // Wipe all quiz answers but keep the campaign so logs survive.
+      Object.keys(next).forEach(k => { delete next[k]; });
+    } else if (targetStage === 1) {
+      // Drop phase-specific answers; keep base quiz answers + selectedPlan.
+      delete next.phase;
+    }
+
+    const updateRes = await api.updateCampaign(campaignId, { quizData: next });
+    if (!updateRes.success) {
+      setStageTransitionPending(false);
+      setStageTransitionError(
+        lang === 'en' ? 'Could not reset stage. Please retry.' : 'Khong the dat lai giai doan. Vui long thu lai.'
+      );
+      return;
+    }
+    setSelectedPlanInChat(null);
+    fetchCurrentCampaign();
+    appendSystemTransition(targetStage);
+    setStageTransitionPending(false);
+  };
+
+  // Build a temporary CONTENT-pane error message that always lands in the
+  // correct (right-hand) pane.
+  const buildContentErrorMessage = (text: string): Message => ({
+    id: `assist-error-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    role: 'ASSISTANT',
+    pane: 'CONTENT',
+    kind: 'content_response',
+    metadata: { error: true },
+    content: text,
+    createdAt: new Date().toISOString()
+  });
 
   const handleAssistContent = async (type: 'email' | 'ad_copy' | 'social_post') => {
     if (!campaignId || assistLoading) return;
@@ -771,47 +1003,51 @@ export default function Chat() {
     try {
       const res = await api.assistContent(type, campaignId);
       if (res.success && res.data) {
-        // Add to chat messages for context
-        const assistMsg: Message = {
-          id: `assist-${Date.now()}`,
-          role: 'ASSISTANT',
-          content: (res.data as any).content,
-          createdAt: new Date().toISOString()
-        };
-        setMessages(prev => [...prev, assistMsg]);
+        // Use the server-tagged messages so they are guaranteed to render on
+        // the Content pane (kind=content_response, pane=CONTENT).
+        const updates: Message[] = [];
+        if (res.data.userMessage) updates.push(res.data.userMessage);
+        updates.push(res.data.assistantMessage);
+        setMessages(prev => [...prev, ...updates]);
       } else {
-        const errorMsg: Message = {
-          id: `assist-error-${Date.now()}`,
-          role: 'ASSISTANT',
-          content: lang === 'en' ? 'Failed to generate content. Please try again.' : 'Lỗi khi tạo nội dung. Vui lòng thử lại.',
-          createdAt: new Date().toISOString()
-        };
-        setMessages(prev => [...prev, errorMsg]);
+        setMessages(prev => [
+          ...prev,
+          buildContentErrorMessage(
+            lang === 'en'
+              ? 'Failed to generate content. Please try again.'
+              : 'Loi khi tao noi dung. Vui long thu lai.'
+          )
+        ]);
       }
     } catch (e) {
       console.error('Failed to generate content', e);
-      const errorMsg: Message = {
-        id: `assist-error-${Date.now()}`,
-        role: 'ASSISTANT',
-        content: lang === 'en' ? 'Network error when generating content.' : 'Lỗi mạng khi tạo nội dung.',
-        createdAt: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, errorMsg]);
+      setMessages(prev => [
+        ...prev,
+        buildContentErrorMessage(
+          lang === 'en' ? 'Network error when generating content.' : 'Loi mang khi tao noi dung.'
+        )
+      ]);
     }
     setAssistLoading(false);
   };
 
   const handleSendContent = async () => {
     if (!contentInput.trim() || !campaignId || assistLoading) return;
+    if (!contentPaneMode.enabled) return;
     const prompt = contentInput;
     setContentInput('');
     setAssistLoading(true);
 
-    // Optimistically add user message to right pane
+    // Optimistically add user message to the Content pane. We mark it pane:CONTENT
+    // so the message lands in the right pane regardless of any prefix.
+    const tempUserMsgId = `temp-${Date.now()}`;
     const tempUserMsg: Message = {
-      id: `temp-${Date.now()}`,
+      id: tempUserMsgId,
       role: 'USER',
-      content: `[Content Prompt] ${prompt}`,
+      pane: 'CONTENT',
+      kind: 'content_prompt',
+      metadata: { contentType: 'custom' },
+      content: prompt,
       createdAt: new Date().toISOString()
     };
     setMessages(prev => [...prev, tempUserMsg]);
@@ -819,31 +1055,32 @@ export default function Chat() {
     try {
       const res = await api.assistContent('custom', campaignId, prompt);
       if (res.success && res.data) {
-        const assistMsg: Message = {
-          id: `assist-${Date.now()}`,
-          role: 'ASSISTANT',
-          content: (res.data as any).content,
-          createdAt: new Date().toISOString()
-        };
-        setMessages(prev => [...prev, assistMsg]);
+        const persistedUser = res.data.userMessage;
+        setMessages(prev => {
+          const withoutTemp = prev.filter(m => m.id !== tempUserMsgId);
+          const next: Message[] = persistedUser
+            ? [...withoutTemp, persistedUser, res.data!.assistantMessage]
+            : [...withoutTemp, tempUserMsg, res.data!.assistantMessage];
+          return next;
+        });
       } else {
-        const errorMsg: Message = {
-          id: `assist-error-${Date.now()}`,
-          role: 'ASSISTANT',
-          content: lang === 'en' ? 'Failed to generate content. Please try again.' : 'Lỗi khi tạo nội dung. Vui lòng thử lại.',
-          createdAt: new Date().toISOString()
-        };
-        setMessages(prev => [...prev, errorMsg]);
+        setMessages(prev => [
+          ...prev,
+          buildContentErrorMessage(
+            lang === 'en'
+              ? 'Failed to generate content. Please try again.'
+              : 'Loi khi tao noi dung. Vui long thu lai.'
+          )
+        ]);
       }
     } catch (e) {
       console.error(e);
-      const errorMsg: Message = {
-        id: `assist-error-${Date.now()}`,
-        role: 'ASSISTANT',
-        content: lang === 'en' ? 'Network error when generating content.' : 'Lỗi mạng khi tạo nội dung.',
-        createdAt: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, errorMsg]);
+      setMessages(prev => [
+        ...prev,
+        buildContentErrorMessage(
+          lang === 'en' ? 'Network error when generating content.' : 'Loi mang khi tao noi dung.'
+        )
+      ]);
     }
     setAssistLoading(false);
   };
@@ -945,6 +1182,9 @@ export default function Chat() {
     setMessages((prev) => [...prev, {
       id: generatedId,
       role: 'USER',
+      pane: 'STRATEGY',
+      kind: null,
+      metadata: null,
       content: textToResend,
       createdAt: new Date().toISOString()
     }]);
@@ -952,7 +1192,7 @@ export default function Chat() {
     try {
       const res = await api.sendMessage(textToResend, campaignId);
       if (res.success && res.data) {
-        const { userMessage: savedUserMsg, assistantMessage } = res.data as any;
+        const { userMessage: savedUserMsg, assistantMessage } = res.data;
         setMessages((prev) => {
           const filtered = prev.filter(m => m.id !== generatedId);
           return [...filtered, savedUserMsg, assistantMessage];
@@ -1290,8 +1530,24 @@ export default function Chat() {
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 
-  const analystMessages = messages.filter(m => !m.content.startsWith('[Content Assistant') && !m.content.startsWith('[Content Prompt]'));
-  const contentMessages = messages.filter(m => m.content.startsWith('[Content Assistant') || m.content.startsWith('[Content Prompt]'));
+  // Split messages by their `pane` field. Legacy data without a pane (returned
+  // by older backend versions) is classified by content prefix as a fallback,
+  // matching the one-time backfill executed on the backend.
+  const classifyPane = (msg: Message): 'STRATEGY' | 'CONTENT' | 'SYSTEM' => {
+    if (msg.pane) return msg.pane;
+    if (msg.content.startsWith('[Content Assistant') || msg.content.startsWith('[Content Prompt]')) {
+      return 'CONTENT';
+    }
+    return 'STRATEGY';
+  };
+
+  // Strategy pane shows STRATEGY messages plus inline SYSTEM transition
+  // markers so the user can see in-context when each stage advance happened.
+  const analystMessages = messages.filter(m => {
+    const p = classifyPane(m);
+    return p === 'STRATEGY' || p === 'SYSTEM';
+  });
+  const contentMessages = messages.filter(m => classifyPane(m) === 'CONTENT');
   const showContentPane = currentStage > 0 || analystMessages.length > 0;
 
   return (
@@ -1435,19 +1691,26 @@ export default function Chat() {
           </div>
 
           <div className="chat-header-right">
-            {currentCampaign && currentStage > 0 && (
-              <div className="stage-indicator">
-                {[1, 2, 3].map(stage => (
-                  <div key={stage} className={`stage-step ${currentStage >= stage ? 'completed' : ''} ${currentStage === stage ? 'current' : ''}`}>
+            {currentCampaign && (
+              <div className="stage-indicator" role="list" aria-label={lang === 'en' ? 'Campaign stages' : 'Cac giai doan chien dich'}>
+                {([0, 1, 2, 3] as const).map(stage => (
+                  <button
+                    key={stage}
+                    type="button"
+                    role="listitem"
+                    className={`stage-step ${currentStage >= stage ? 'completed' : ''} ${currentStage === stage ? 'current' : ''} ${stage < currentStage ? 'clickable' : ''}`}
+                    disabled={stage > currentStage || stageTransitionPending}
+                    onClick={() => stage < currentStage && handleResetToStage(stage)}
+                    aria-current={currentStage === stage ? 'step' : undefined}
+                    title={stage < currentStage
+                      ? (lang === 'en' ? `Reset to Stage ${stage}` : `Dat lai ve Giai doan ${stage}`)
+                      : STAGE_DESCRIPTORS[stage].title[lang]}
+                  >
                     <div className="stage-dot">
                       {currentStage > stage ? <Check size={12} /> : stage}
                     </div>
-                    <span className="stage-label">
-                      {stage === 1 ? (lang === 'en' ? 'Discovery' : 'Khám phá') :
-                       stage === 2 ? (lang === 'en' ? 'Refine' : 'Chi tiết') :
-                       (lang === 'en' ? 'Optimize' : 'Tối ưu')}
-                    </span>
-                  </div>
+                    <span className="stage-label">{STAGE_DESCRIPTORS[stage].title[lang]}</span>
+                  </button>
                 ))}
               </div>
             )}
@@ -1484,6 +1747,63 @@ export default function Chat() {
             </div>
           </div>
         </header>
+
+        {/* Stage banner: always visible when a campaign is open. Tells the user
+            where they are and what the next action should be. */}
+        {currentCampaign && (
+          <div className={`stage-banner stage-banner--stage-${currentStage}`}>
+            <div className="stage-banner-text">
+              <strong className="stage-banner-title">
+                {`${lang === 'en' ? 'Stage' : 'Giai doan'} ${currentStage} \u2022 ${stageDescriptor.title[lang]}`}
+              </strong>
+              <p className="stage-banner-subtitle">{stageDescriptor.subtitle[lang]}</p>
+              <p className="stage-banner-next">{stageDescriptor.nextAction[lang]}</p>
+            </div>
+            {stageTransitionError && (
+              <div className="stage-banner-error" role="alert">
+                {stageTransitionError}
+                <button
+                  type="button"
+                  className="stage-banner-error-dismiss"
+                  onClick={() => setStageTransitionError(null)}
+                  aria-label={lang === 'en' ? 'Dismiss' : 'Dong'}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Recovery banner: surface when quizData is internally inconsistent
+            (e.g. phase=3 but no selectedPlan). Offers explicit recovery
+            actions instead of silently rendering an invalid stage. */}
+        {currentCampaign && quizDataIssue && (
+          <div className="stage-recovery-banner" role="alert">
+            <div className="stage-recovery-text">
+              <strong>{lang === 'en' ? 'Campaign data needs recovery' : 'Du lieu chien dich can khoi phuc'}</strong>
+              <p>{quizDataIssue.message[lang]}</p>
+            </div>
+            <div className="stage-recovery-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => handleResetToStage(1)}
+                disabled={stageTransitionPending}
+              >
+                {lang === 'en' ? 'Reselect plan' : 'Chon lai plan'}
+              </button>
+              <button
+                type="button"
+                className="btn-tertiary"
+                onClick={() => handleResetToStage(0)}
+                disabled={stageTransitionPending}
+              >
+                {lang === 'en' ? 'Restart quiz' : 'Lam lai quiz'}
+              </button>
+            </div>
+          </div>
+        )}
 
 
         {/* Dual Pane Container */}
@@ -1561,7 +1881,27 @@ export default function Chat() {
               )}
             </div>
           ) : (
-            analystMessages.map((msg, i) => (
+            analystMessages.map((msg, i) => {
+              // SYSTEM-pane messages are rendered as inline stage transition
+              // markers (small label + horizontal rule) instead of chat
+              // bubbles. Their content is computed from `metadata.toStage` so
+              // the label respects the user's current language.
+              if (classifyPane(msg) === 'SYSTEM') {
+                const meta = (msg.metadata ?? {}) as Record<string, unknown>;
+                const toStage = (typeof meta.toStage === 'number' ? meta.toStage : 0) as Stage;
+                const desc = STAGE_DESCRIPTORS[toStage] ?? STAGE_DESCRIPTORS[0];
+                return (
+                  <div key={msg.id} className="stage-transition-divider" role="note">
+                    <span className="stage-transition-line" aria-hidden="true" />
+                    <span className="stage-transition-label">
+                      {`${lang === 'en' ? 'Stage' : 'Giai doan'} ${toStage} \u2022 ${desc.title[lang]}`}
+                    </span>
+                    <span className="stage-transition-line" aria-hidden="true" />
+                  </div>
+                );
+              }
+
+              return (
               <motion.div
                 key={msg.id}
                 className={`message ${msg.role === 'USER' ? 'user' : 'assistant'}`}
@@ -1728,7 +2068,8 @@ export default function Chat() {
                   )
                 )}
               </motion.div>
-            ))
+              );
+            })
           )}
 
           {loading && (
@@ -1752,17 +2093,14 @@ export default function Chat() {
 
         {/* Input */}
         <div className="chat-input-wrapper">
-          <div className="chat-toolbar">
-            {(!currentCampaign || Object.keys(currentCampaign.quizData || {}).length === 0) && (
+          {(!currentCampaign || Object.keys(currentCampaign.quizData || {}).length === 0) && (
+            <div className="chat-toolbar">
               <button className="chat-quiz-cta" onClick={handleOpenQuiz}>
                 <ListChecks size={14} />
-                <span>{lang === 'en' ? 'Do Quiz for Better Strategy' : 'Làm Quiz để ra chiến lược tốt hơn'}</span>
+                <span>{lang === 'en' ? 'Do Quiz for Better Strategy' : 'Lam Quiz de ra chien luoc tot hon'}</span>
               </button>
-            )}
-            <span className="chat-toolbar-hint">
-              {lang === 'en' ? 'Enter to send, Shift + Enter for new line' : 'Enter để gửi, Shift + Enter xuống dòng'}
-            </span>
-          </div>
+            </div>
+          )}
           <div className="chat-input">
             <textarea
               ref={textareaRef}
@@ -1803,82 +2141,102 @@ export default function Chat() {
       {showContentPane && (
         <div className="chat-pane content-pane">
           <div className="chat-pane-header" style={{background: 'rgba(16, 185, 129, 0.05)'}}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <FileText size={16} style={{color: '#34d399'}} />
-            <h3 style={{color: '#34d399'}}>{lang === 'en' ? 'Content Assistant' : 'Trợ lý Nội dung'}</h3>
-          </div>
-        </div>
-        <div className="chat-messages">
-          {contentMessages.length === 0 ? (
-            <div className="chat-welcome" style={{marginTop: '2rem'}}>
-              <div className="welcome-icon" style={{background: 'rgba(16, 185, 129, 0.1)', color: '#34d399'}}>
-                <FileText size={40} />
-              </div>
-              <h2 style={{ fontSize: '1.25rem' }}>{lang === 'en' ? 'AI Content Writer' : 'AI Viết Nội Dung'}</h2>
-              <p style={{ fontSize: '0.85rem' }}>{lang === 'en' ? 'Request emails, ad copies, or social media posts for your campaign here.' : 'Yêu cầu viết email, bài quảng cáo, bài đăng MXH tại đây.'}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <FileText size={16} style={{color: '#34d399'}} />
+              <h3 style={{color: '#34d399'}}>{lang === 'en' ? 'Content Writer' : 'Tro ly Noi dung'}</h3>
             </div>
-          ) : (
-            contentMessages.map((msg, i) => (
-              <motion.div
-                key={msg.id}
-                className={`message ${msg.role === 'USER' ? 'user' : 'assistant'}`}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.02 }}
-              >
-                {msg.role === 'ASSISTANT' && (
-                  <div className="message-avatar assistant-avatar" style={{background: 'linear-gradient(135deg, #10b981, #3b82f6)'}}>
-                    <FileText size={16} />
-                  </div>
-                )}
-                <div className="message-main">
-                  <div className="message-meta">
-                    <span className="message-author">{msg.role === 'USER' ? (user?.name || 'You') : 'Content Assistant'}</span>
-                  </div>
-                  <div className="message-content">
-                    <ReactMarkdown>{msg.content.replace(/^\[Content Prompt\] |^\[Content Assistant - [^\]]+\]\n\n/, '')}</ReactMarkdown>
-                  </div>
+          </div>
+          <div className="chat-messages">
+            {contentMessages.length === 0 ? (
+              <div className="chat-welcome" style={{marginTop: '2rem'}}>
+                <div className="welcome-icon" style={{background: 'rgba(16, 185, 129, 0.1)', color: '#34d399'}}>
+                  <FileText size={40} />
+                </div>
+                <h2 style={{ fontSize: '1.25rem' }}>{contentPaneMode.emptyTitle[lang]}</h2>
+                <p style={{ fontSize: '0.85rem' }}>{contentPaneMode.emptyHint[lang]}</p>
+              </div>
+            ) : (
+              contentMessages.map((msg, i) => (
+                <motion.div
+                  key={msg.id}
+                  className={`message ${msg.role === 'USER' ? 'user' : 'assistant'}`}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.02 }}
+                >
                   {msg.role === 'ASSISTANT' && (
-                    <div className="message-tools">
-                      <button className="message-copy-btn" onClick={() => navigator.clipboard.writeText(msg.content.replace(/^\[Content Assistant - [^\]]+\]\n\n/, ''))}>
-                        <Copy size={14} />
-                      </button>
+                    <div className="message-avatar assistant-avatar" style={{background: 'linear-gradient(135deg, #10b981, #3b82f6)'}}>
+                      <FileText size={16} />
                     </div>
                   )}
-                </div>
-              </motion.div>
-            ))
-          )}
-          {assistLoading && (
-            <div className="message assistant loading-message">
-              <div className="message-avatar assistant-avatar" style={{background: 'linear-gradient(135deg, #10b981, #3b82f6)'}}><FileText size={16} /></div>
-              <div className="message-main">
-                <div className="message-content typing-bubble">
-                  <div className="typing-indicator"><span /><span /><span /></div>
+                  <div className="message-main">
+                    <div className="message-meta">
+                      <span className="message-author">
+                        {msg.role === 'USER'
+                          ? (user?.name || (lang === 'en' ? 'You' : 'Ban'))
+                          : (lang === 'en' ? 'Content Writer' : 'Tro ly Noi dung')}
+                      </span>
+                      {typeof msg.metadata === 'object' && msg.metadata && 'label' in msg.metadata ? (
+                        <span className="message-tag">{String((msg.metadata as Record<string, unknown>).label)}</span>
+                      ) : null}
+                    </div>
+                    <div className="message-content">
+                      <ReactMarkdown>
+                        {msg.content.replace(/^\[Content Prompt\] |^\[Content Assistant - [^\]]+\]\n\n/, '')}
+                      </ReactMarkdown>
+                    </div>
+                    {msg.role === 'ASSISTANT' && (
+                      <div className="message-tools">
+                        <button
+                          className="message-copy-btn"
+                          onClick={() => navigator.clipboard.writeText(
+                            msg.content.replace(/^\[Content Assistant - [^\]]+\]\n\n/, '')
+                          )}
+                          aria-label={lang === 'en' ? 'Copy content' : 'Sao chep noi dung'}
+                        >
+                          <Copy size={14} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              ))
+            )}
+            {assistLoading && (
+              <div className="message assistant loading-message">
+                <div className="message-avatar assistant-avatar" style={{background: 'linear-gradient(135deg, #10b981, #3b82f6)'}}><FileText size={16} /></div>
+                <div className="message-main">
+                  <div className="message-content typing-bubble">
+                    <div className="typing-indicator"><span /><span /><span /></div>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-        <div className="chat-input-wrapper">
-          <div className="chat-input">
-            <textarea
-              value={contentInput}
-              onChange={(e) => setContentInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendContent();
-                }
-              }}
-              placeholder={lang === 'en' ? 'Write an email about our new product...' : 'Viết bài đăng Facebook về...'}
-              rows={1}
-              disabled={assistLoading}
-              style={{ padding: '0.8rem 1rem', fontSize: '0.85rem' }}
-            />
-            <button className="send-btn" onClick={handleSendContent} disabled={!contentInput.trim() || assistLoading}>
-              <Send size={18} />
-            </button>
+            )}
+          </div>
+          <div className="chat-input-wrapper">
+            <div className="chat-input">
+              <textarea
+                value={contentInput}
+                onChange={(e) => setContentInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendContent();
+                  }
+                }}
+                placeholder={contentPaneMode.placeholder[lang]}
+                rows={1}
+                disabled={assistLoading || !contentPaneMode.enabled}
+                style={{ padding: '0.8rem 1rem', fontSize: '0.85rem' }}
+              />
+              <button
+                className="send-btn"
+                onClick={handleSendContent}
+                disabled={!contentInput.trim() || assistLoading || !contentPaneMode.enabled}
+                aria-label={lang === 'en' ? 'Send' : 'Gui'}
+              >
+                <Send size={18} />
+              </button>
             </div>
           </div>
         </div>
