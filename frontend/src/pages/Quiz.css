@@ -621,7 +621,6 @@
 .custom-input-box button:active {
   transform: translateY(0) scale(0.97);
 }
-}
 
 /* Options Grid */
 .options-grid {

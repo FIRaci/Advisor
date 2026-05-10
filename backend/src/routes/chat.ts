@@ -141,7 +141,47 @@ router.post('/message', async (req: AuthRequest, res) => {
       if (shouldUseLiveAi()) {
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+        const phase = (aiContext.quizData as any)?.phase || '1';
+        let stageInstructions = '';
+        
+        if (phase === '1') {
+          stageInstructions = `
+You are currently in Stage 1 (Strategy Formulation).
+IMPORTANT INSTRUCTIONS:
+1. First, provide a highly detailed, insightful analysis of the user's business, target audience, and goals. Provide actionable suggestions and explain the "why" behind your thinking. Do NOT just give options immediately. Give them a robust strategy breakdown first.
+2. After your detailed analysis, you MUST provide exactly 3 strategic plan options using the exact formatting below:
+**[PLAN_OPTIONS]**
+[PLAN_A]
+**Plan A: <Title>**
+<Description>
+- Budget: ...
+- Timeline: ...
+- Expected ROI: ...
+[/PLAN_A]
+[PLAN_B]
+...
+[/PLAN_B]
+[PLAN_C]
+...
+[/PLAN_C]
+[/PLAN_OPTIONS]`;
+        } else if (phase === '2') {
+          stageInstructions = `
+You are currently in Stage 2 (Execution Plan).
+IMPORTANT INSTRUCTIONS:
+1. Provide a highly detailed execution plan based on the user's chosen plan from Stage 1. Break down the channel strategy, timeline, milestones, and budget. Explain why this execution plan will work.
+2. At the very end of your response, you MUST include this exact string to allow the user to transition to Stage 3:
+**[STAGE_TRANSITION]** You have completed Stage 2! You can now move to **Stage 3: Ongoing Optimization**.`;
+        } else if (phase === '3') {
+          stageInstructions = `
+You are currently in Stage 3 (Ongoing Optimization).
+IMPORTANT INSTRUCTIONS:
+1. Analyze any metrics snapshots provided. Give a highly detailed breakdown of performance, identify bottlenecks, and suggest concrete optimizations (e.g., budget shifts, new creatives). Provide deep reasoning for your suggestions.`;
+        }
+
         const prompt = `You are AdVisor, an expert AI marketing strategist. Your role is to help businesses create effective marketing campaigns. Provide actionable advice, consider budget constraints, and focus on ROI.
+
+${stageInstructions}
 
 Context about the campaign:
 ${JSON.stringify(aiContext, null, 2)}
@@ -165,11 +205,12 @@ User: ${message}`;
       if (msgLower.includes('stage 3') || msgLower.includes('giai đoạn 3') || phase === '3' || msgLower.includes('report') || msgLower.includes('báo cáo')) {
         aiText = `## Stage 3: Ongoing Optimization
 
-Thank you for your metrics report! Here is my analysis:
+Thank you for your metrics report! I've conducted a deep dive into your recent performance data to identify bottlenecks and growth opportunities. It looks like your initial ad sets have gathered enough data for statistical significance.
 
 ### Performance Summary
 - Your campaign is performing **well** overall with room for improvement.
-- **CPC** and **CPA** trends look healthy.
+- **CPC** and **CPA** trends look healthy, but ad fatigue might be setting in on your primary channel.
+- The engagement rate is solid, indicating your audience targeting is on the right track.
 
 ### Recommendations
 1. **Increase budget** on top-performing ad sets by 15-20%
@@ -186,7 +227,9 @@ Thank you for your metrics report! Here is my analysis:
         if (phase === '2' || msgLower.includes('stage 2') || msgLower.includes('giai đoạn 2')) {
           aiText = `## Stage 2: Refined Execution Plan
 
-Based on your refined preferences, here is your detailed execution plan:
+I've reviewed your chosen plan and your specific preferences. The key to executing this plan successfully is strict budget allocation and a phased rollout to minimize risk. By focusing on your most engaged demographics first, we can secure early wins before scaling. 
+
+Here is your detailed execution plan:
 
 ### Channel Strategy
 - **Primary:** Social Media (TikTok + Instagram) — 50% budget
@@ -210,7 +253,9 @@ Based on your refined preferences, here is your detailed execution plan:
         } else {
           aiText = `## Your Personalized Marketing Strategy
 
-Based on your quiz responses, I've prepared **3 strategic plans** for you to choose from:
+I've carefully analyzed your business profile, target audience, and goals. To maximize your ROI, I suggest focusing heavily on your core audience while testing a few high-leverage channels. A strong strategy here involves balancing short-term acquisition with long-term brand equity. 
+
+Based on these insights, I've prepared **3 strategic plans** for you to choose from. Review the options below to see which aligns best with your risk tolerance and operational capacity:
 
 ---
 

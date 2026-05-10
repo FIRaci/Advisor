@@ -1742,6 +1742,7 @@ body.chat-page-active {
 /* Stage Indicator */
 .stage-indicator {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 0.25rem;
 }

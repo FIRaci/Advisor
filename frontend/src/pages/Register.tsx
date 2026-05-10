@@ -7,8 +7,7 @@ import { useAuthStore } from '../store/authStore';
 
 import './Auth.css';
 
-import { createUserWithEmailAndPassword, signInWithPopup, updateProfile } from 'firebase/auth';
-import { auth, googleProvider } from '../lib/firebase';
+import { api } from '../hooks/useApi';
 
 export default function Register() {
   const { t } = useTranslation();
@@ -27,23 +26,18 @@ export default function Register() {
     setLoading(true);
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const res = await api.register(email, password, name);
       
-      // Update Firebase profile with name
-      await updateProfile(userCredential.user, {
-        displayName: name
-      });
-      
-      const token = await userCredential.user.getIdToken();
-      
-      setAuth({
-        id: userCredential.user.uid,
-        email: userCredential.user.email || '',
-        name: name || 'Firebase User',
-        avatar: userCredential.user.photoURL || undefined
-      }, token);
-      
-      navigate('/', { replace: true });
+      if (res.success && res.data) {
+        setAuth({
+          id: res.data.id,
+          email: res.data.email,
+          name: res.data.name
+        }, res.data.token);
+        navigate('/', { replace: true });
+      } else {
+        setError(res.error || 'Registration failed');
+      }
     } catch (err: any) {
       setError(err.message || 'Registration failed');
     }
@@ -52,22 +46,7 @@ export default function Register() {
   };
 
   const handleGoogleLogin = async () => {
-    setError('');
-    try {
-      const userCredential = await signInWithPopup(auth, googleProvider);
-      const token = await userCredential.user.getIdToken();
-      
-      setAuth({
-        id: userCredential.user.uid,
-        email: userCredential.user.email || '',
-        name: userCredential.user.displayName || 'Google User',
-        avatar: userCredential.user.photoURL || undefined
-      }, token);
-      
-      navigate('/', { replace: true });
-    } catch (err: any) {
-      setError(err.message || 'Google Login failed');
-    }
+    setError('Google login is not supported in this version.');
   };
 
   return (

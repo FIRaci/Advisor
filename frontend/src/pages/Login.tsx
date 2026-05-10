@@ -7,8 +7,7 @@ import { useAuthStore } from '../store/authStore';
 
 import './Auth.css';
 
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider } from '../lib/firebase';
+import { api } from '../hooks/useApi';
 
 export default function Login() {
   const { t } = useTranslation();
@@ -26,17 +25,17 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const token = await userCredential.user.getIdToken();
-      
-      setAuth({
-        id: userCredential.user.uid,
-        email: userCredential.user.email || '',
-        name: userCredential.user.displayName || 'Firebase User',
-        avatar: userCredential.user.photoURL || undefined
-      }, token);
-      
-      navigate('/', { replace: true });
+      const res = await api.login(email, password);
+      if (res.success && res.data) {
+        setAuth({
+          id: res.data.id,
+          email: res.data.email,
+          name: res.data.name
+        }, res.data.token);
+        navigate('/', { replace: true });
+      } else {
+        setError(res.error || 'Login failed');
+      }
     } catch (err: any) {
       setError(err.message || 'Login failed');
     }
@@ -45,22 +44,7 @@ export default function Login() {
   };
 
   const handleGoogleLogin = async () => {
-    setError('');
-    try {
-      const userCredential = await signInWithPopup(auth, googleProvider);
-      const token = await userCredential.user.getIdToken();
-      
-      setAuth({
-        id: userCredential.user.uid,
-        email: userCredential.user.email || '',
-        name: userCredential.user.displayName || 'Google User',
-        avatar: userCredential.user.photoURL || undefined
-      }, token);
-      
-      navigate('/', { replace: true });
-    } catch (err: any) {
-      setError(err.message || 'Google Login failed');
-    }
+    setError('Google login is not supported in this version.');
   };
 
   return (

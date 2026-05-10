@@ -2211,8 +2211,8 @@ export default function Chat() {
                         className="message-copy-btn"
                         onClick={() => {
                           setContentInput(lang === 'en' 
-                            ? `Please write marketing content based on the strategy above...` 
-                            : `Hãy viết nội dung marketing dựa trên kế hoạch trên...`);
+                            ? `Please write marketing content based on the strategy from the left pane...` 
+                            : `Hãy viết nội dung marketing dựa trên kế hoạch từ khung bên trái...`);
                           setTimeout(() => {
                             const inputField = document.querySelector('.content-pane textarea') as HTMLTextAreaElement;
                             if (inputField) inputField.focus();
