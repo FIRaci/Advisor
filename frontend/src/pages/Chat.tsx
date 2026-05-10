@@ -356,16 +356,26 @@ export default function Chat() {
     }
   }, [searchParams, initialLoading, messages.length]);
 
-  // Auto-show the guide popup the first time a user lands on the chat page so
-  // they understand the 4-stage workflow before getting overwhelmed. The
-  // localStorage flag is set on dismiss so subsequent visits stay quiet.
+  // Auto-show the guide popup on the user's very first visit. The persist
+  // effect must NOT run before the auto-show effect has had a chance to read
+  // the flag, otherwise it writes "seen" on every fresh mount (because
+  // guidePopupOpen defaults to false) and the modal never auto-opens. We gate
+  // the persist with a ref that flips only after we have actually shown the
+  // modal at least once in this session.
+  const guideHasOpenedOnceRef = useRef(false);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (initialLoading) return;
     try {
       const seen = window.localStorage.getItem('advisor.guide.seen');
       if (!seen) {
+        guideHasOpenedOnceRef.current = true;
         setGuidePopupOpen(true);
+      } else {
+        // Already seen on a prior visit; treat the modal as having been shown
+        // so a manual close in this session still persists the flag.
+        guideHasOpenedOnceRef.current = true;
       }
     } catch {
       // localStorage may be unavailable (private mode); fail silently.
@@ -373,9 +383,10 @@ export default function Chat() {
   }, [initialLoading]);
 
   // Persist the "seen" flag whenever the guide is dismissed via close button
-  // or overlay click.
+  // or overlay click. Gated on the ref so we never write before auto-show ran.
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (!guideHasOpenedOnceRef.current) return;
     if (!guidePopupOpen) {
       try {
         window.localStorage.setItem('advisor.guide.seen', '1');
@@ -438,16 +449,20 @@ export default function Chat() {
   };
 
   // Insert a synthetic SYSTEM-pane message that records a stage transition.
-  // The metadata stores the stage number so the activity log can render a
-  // localised label even after the user toggles the language.
-  const appendSystemTransition = (toStage: Stage) => {
+  // The metadata stores the target stage and the direction (advance vs
+  // rollback) so the activity log can render a localised, unambiguous label
+  // even after the user toggles the language.
+  const appendSystemTransition = (
+    toStage: Stage,
+    direction: 'advance' | 'rollback' = 'advance'
+  ) => {
     const generatedId = `system-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     setMessages((prev) => [...prev, {
       id: generatedId,
       role: 'SYSTEM',
       pane: 'SYSTEM',
       kind: 'stage_transition',
-      metadata: { toStage },
+      metadata: { toStage, direction },
       content: '',
       createdAt: new Date().toISOString()
     }]);
@@ -1012,7 +1027,7 @@ export default function Chat() {
     }
     setSelectedPlanInChat(null);
     fetchCurrentCampaign();
-    appendSystemTransition(targetStage);
+    appendSystemTransition(targetStage, 'rollback');
     setStageTransitionPending(false);
   };
 
@@ -1644,13 +1659,16 @@ export default function Chat() {
       if (msg.kind === 'stage_transition') {
         const meta = (msg.metadata ?? {}) as Record<string, unknown>;
         const toStage = (typeof meta.toStage === 'number' ? meta.toStage : 0) as Stage;
+        const direction = meta.direction === 'rollback' ? 'rollback' : 'advance';
         const desc = STAGE_DESCRIPTORS[toStage] ?? STAGE_DESCRIPTORS[0];
+        const verbEn = direction === 'rollback' ? 'Reset to Stage' : 'Advanced to Stage';
+        const verbVi = direction === 'rollback' ? 'Dat lai ve Giai doan' : 'Tien sang Giai doan';
         events.push({
           id: `stage-${msg.id}`,
           kind: 'stage',
           title: lang === 'en'
-            ? `Moved to Stage ${toStage} - ${desc.title.en}`
-            : `Chuyen sang Giai doan ${toStage} - ${desc.title.vi}`,
+            ? `${verbEn} ${toStage} - ${desc.title.en}`
+            : `${verbVi} ${toStage} - ${desc.title.vi}`,
           when: msg.createdAt
         });
       } else if (msg.kind === 'content_response') {
