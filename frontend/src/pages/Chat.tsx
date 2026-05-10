@@ -994,9 +994,10 @@ export default function Chat() {
     if (!campaignId || stageTransitionPending) return;
     if (targetStage >= currentStage) return;
 
-    const confirmText = lang === 'en'
-      ? `Reset this campaign back to Stage ${targetStage}? Your previous answers stay in the activity log.`
-      : `Dat lai chien dich ve Giai doan ${targetStage}? Cac cau tra loi truoc van duoc luu trong lich su.`;
+    const confirmText = lang === 'en' 
+      ? `Warning: You are about to return to Stage ${targetStage} (${STAGE_DESCRIPTORS[targetStage].title.en}). \n\nThis will permanently delete all strategy decisions, selected plans, and execution details made after this stage. Your chat history will remain, but the AI's current context will be reset to this earlier point. \n\nAre you sure you want to proceed?` 
+      : `Cảnh báo: Bạn chuẩn bị quay lại Giai đoạn ${targetStage} (${STAGE_DESCRIPTORS[targetStage].title.vi}). \n\nHành động này sẽ xoá vĩnh viễn các quyết định chiến lược, kế hoạch đã chọn và chi tiết thực thi sau giai đoạn này. Lịch sử chat vẫn được giữ lại, nhưng ngữ cảnh hiện tại của AI sẽ bị quay về thời điểm đó. \n\nBạn có chắc chắn muốn tiếp tục không?`;
+    
     if (!window.confirm(confirmText)) return;
 
     setStageTransitionPending(true);
@@ -1565,9 +1566,9 @@ export default function Chat() {
 
   const latestSnapshot = metricsSnapshots[0];
   const previousSnapshot = metricsSnapshots[1];
-  const completedStages = currentCampaign?.quizProgress?.completedStages?.length || 0;
-  const totalStages = currentCampaign?.quizProgress?.totalStages || 0;
-  const progressPercent = totalStages > 0 ? Math.round((completedStages / totalStages) * 100) : 0;
+  const progressPercent = Math.round((currentStage / 4) * 100);
+  const completedStages = currentStage;
+  const totalStages = 4;
 
   // Sort campaigns: favorites first, then by date
   const sortedCampaigns = [...campaigns].sort((a, b) => {
@@ -1855,12 +1856,12 @@ export default function Chat() {
                     key={stage}
                     type="button"
                     role="listitem"
-                    className={`stage-step ${currentStage >= stage ? 'completed' : ''} ${currentStage === stage ? 'current' : ''} ${stage < currentStage ? 'clickable' : ''}`}
+                    className={`stage-step ${currentStage > stage ? 'completed' : ''} ${currentStage === stage ? 'current' : ''} ${stage < currentStage ? 'clickable' : ''}`}
                     disabled={stage > currentStage || stageTransitionPending}
                     onClick={() => stage < currentStage && handleResetToStage(stage)}
                     aria-current={currentStage === stage ? 'step' : undefined}
                     title={stage < currentStage
-                      ? (lang === 'en' ? `Reset to Stage ${stage}` : `Dat lai ve Giai doan ${stage}`)
+                      ? (lang === 'en' ? `Return to Stage ${stage} (Warning: Progress after this stage will be reset)` : `Quay lại Giai đoạn ${stage} (Cảnh báo: Tiến trình sau giai đoạn này sẽ bị xoá)`)
                       : STAGE_DESCRIPTORS[stage].title[lang]}
                   >
                     <div className="stage-dot">

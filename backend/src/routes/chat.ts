@@ -149,7 +149,7 @@ router.post('/message', async (req: AuthRequest, res) => {
 You are currently in Stage 1 (Strategy Formulation).
 IMPORTANT INSTRUCTIONS:
 1. First, provide a highly detailed, insightful analysis of the user's business, target audience, and goals. Provide actionable suggestions and explain the "why" behind your thinking. Do NOT just give options immediately. Give them a robust strategy breakdown first.
-2. After your detailed analysis, you MUST provide exactly 3 strategic plan options using the exact formatting below:
+2. After your detailed analysis, provide between 1 to 3 strategic plan options (depending on what you think is most effective) using the exact formatting below:
 **[PLAN_OPTIONS]**
 [PLAN_A]
 **Plan A: <Title>**
@@ -158,12 +158,7 @@ IMPORTANT INSTRUCTIONS:
 - Timeline: ...
 - Expected ROI: ...
 [/PLAN_A]
-[PLAN_B]
-...
-[/PLAN_B]
-[PLAN_C]
-...
-[/PLAN_C]
+... (Repeat for PLAN_B and PLAN_C if needed)
 [/PLAN_OPTIONS]`;
         } else if (phase === '2') {
           stageInstructions = `
@@ -203,24 +198,26 @@ User: ${message}`;
       const selectedPlan = (quizData?.quizData as any)?.selectedPlan;
 
       if (msgLower.includes('stage 3') || msgLower.includes('giai đoạn 3') || phase === '3' || msgLower.includes('report') || msgLower.includes('báo cáo')) {
-        aiText = `## Stage 3: Ongoing Optimization
+        const goal = (quizData?.quizData as any)?.goal || 'your objectives';
+        const productName = (quizData?.quizData as any)?.productName || 'your product';
+        aiText = `## Stage 3: Ongoing Optimization for ${productName}
 
-Thank you for your metrics report! I've conducted a deep dive into your recent performance data to identify bottlenecks and growth opportunities. It looks like your initial ad sets have gathered enough data for statistical significance.
+Thank you for your metrics report! I've conducted a deep dive into your recent performance data to identify bottlenecks and growth opportunities for achieving ${goal}. It looks like your initial ad sets have gathered enough data for statistical significance.
 
 ### Performance Summary
-- Your campaign is performing **well** overall with room for improvement.
+- Your campaign for **${productName}** is performing **well** overall with room for improvement.
 - **CPC** and **CPA** trends look healthy, but ad fatigue might be setting in on your primary channel.
-- The engagement rate is solid, indicating your audience targeting is on the right track.
+- The engagement rate is solid, indicating your audience targeting for ${goal} is on the right track.
 
 ### Recommendations
-1. **Increase budget** on top-performing ad sets by 15-20%
-2. **Pause underperformers** with CPA above your target threshold
-3. **Test new creatives** — refresh ad fatigue every 2-3 weeks
-4. **Expand audience** using lookalike segments from your best converters
+1. **Increase budget** on top-performing ad sets by 15-20% to scale success.
+2. **Pause underperformers** with CPA above your target threshold to preserve budget.
+3. **Test new creatives** — refresh ad fatigue every 2-3 weeks to maintain CTR.
+4. **Expand audience** using lookalike segments from your best converters.
 
 ### Next Steps
-- Submit your next metrics snapshot in **2 weeks**
-- Focus on retention campaigns this period
+- Submit your next metrics snapshot in **2 weeks**.
+- Focus on retention campaigns this period to increase LTV.
 
 *Keep submitting periodic reports and I'll track your progress over time!*`;
       } else if (msgLower.includes('selected plan') || msgLower.includes('chốt plan') || msgLower.includes('chọn plan') || selectedPlan) {
@@ -238,11 +235,11 @@ Here is your detailed execution plan:
 
 ### Timeline & Milestones
 | Week | Action | KPI Target |
-|------|--------|------------|
-| 1-2 | Campaign setup & creative production | 5+ ad variants |
-| 3-4 | Launch & A/B testing phase | CTR > 2% |
-| 5-8 | Optimization & scaling | CPA < $15 |
-| 9-12 | Retention & community building | LTV +20% |
+| :--- | :--- | :--- |
+| **1-2** | Campaign setup & creative production | 5+ ad variants |
+| **3-4** | Launch & A/B testing phase | CTR > 2% |
+| **5-8** | Optimization & scaling | CPA < $15 |
+| **9-12** | Retention & community building | LTV +20% |
 
 ### Budget Breakdown
 - Ad Spend: 60% | Content: 25% | Tools: 15%
@@ -250,12 +247,25 @@ Here is your detailed execution plan:
 ---
 
 **[STAGE_TRANSITION]** You have completed Stage 2! You can now move to **Stage 3: Ongoing Optimization** where you'll submit periodic reports and I'll help you continuously improve your results.`;
-        } else {
-          aiText = `## Your Personalized Marketing Strategy
+        const business = (quizData?.quizData as any)?.business || 'your business';
+        const goal = (quizData?.quizData as any)?.goal || 'your primary goal';
+        const audience = (quizData?.quizData as any)?.audience || 'target audience';
+        
+        aiText = `## Strategic Analysis & Recommendations
 
-I've carefully analyzed your business profile, target audience, and goals. To maximize your ROI, I suggest focusing heavily on your core audience while testing a few high-leverage channels. A strong strategy here involves balancing short-term acquisition with long-term brand equity. 
+I've carefully analyzed your profile for **${business}**. To achieve your goal of **${goal}** with the **${audience}** segment, I recommend a multi-channel approach that prioritizes high-intent search traffic combined with social proof.
 
-Based on these insights, I've prepared **3 strategic plans** for you to choose from. Review the options below to see which aligns best with your risk tolerance and operational capacity:
+### Key Insights:
+- **Audience Behavior:** Your ${audience} demographic responds best to value-driven messaging and clear CTAs.
+- **Market Position:** Focusing on your unique selling points will help differentiate ${business} from established competitors.
+- **Channel Optimization:** I suggest allocating a larger portion of the initial budget to testing creative variants on your primary channel.
+
+### Strategic Suggestions:
+1. **Focus on conversion-centric copy** that addresses the specific pain points of ${audience}.
+2. **Implement a retargeting layer** early on to capture users who don't convert on the first touch.
+3. **Optimize for ROI** by scaling only the ad sets that meet your target CPA within the first 14 days.
+
+Based on these insights, I've prepared **3 strategic plans** for you to choose from. Review the options below and select the one that best matches your current capacity:
 
 ---
 
