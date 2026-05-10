@@ -42,6 +42,7 @@ const metricsFields = [
 
 interface Campaign extends Pick<ApiCampaign, 'id' | 'name' | 'createdAt' | 'isFavorite'> {
   status?: ApiCampaign['status'];
+  updatedAt?: string;
   quizData?: Record<string, string>;
   quizProgress?: QuizProgress;
   strategy?: Record<string, unknown>;
@@ -171,6 +172,7 @@ export default function Chat() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [guidePopupOpen, setGuidePopupOpen] = useState(false);
+  const [guideActiveTab, setGuideActiveTab] = useState<'overview' | 'stages' | 'panes' | 'metrics' | 'faq'>('overview');
   const [selectedPlanInChat, setSelectedPlanInChat] = useState<string | null>(null);
   const [assistLoading, setAssistLoading] = useState(false);
   const [contentInput, setContentInput] = useState('');
@@ -353,6 +355,35 @@ export default function Chat() {
       generateInitialStrategy();
     }
   }, [searchParams, initialLoading, messages.length]);
+
+  // Auto-show the guide popup the first time a user lands on the chat page so
+  // they understand the 4-stage workflow before getting overwhelmed. The
+  // localStorage flag is set on dismiss so subsequent visits stay quiet.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (initialLoading) return;
+    try {
+      const seen = window.localStorage.getItem('advisor.guide.seen');
+      if (!seen) {
+        setGuidePopupOpen(true);
+      }
+    } catch {
+      // localStorage may be unavailable (private mode); fail silently.
+    }
+  }, [initialLoading]);
+
+  // Persist the "seen" flag whenever the guide is dismissed via close button
+  // or overlay click.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!guidePopupOpen) {
+      try {
+        window.localStorage.setItem('advisor.guide.seen', '1');
+      } catch {
+        // ignore
+      }
+    }
+  }, [guidePopupOpen]);
 
   const fetchCampaigns = async () => {
     const res = await api.getCampaigns();
@@ -1541,6 +1572,114 @@ export default function Chat() {
     return 'STRATEGY';
   };
 
+  // Activity log derived from messages + metrics snapshots. The log gives
+  // the user a chronological audit of every meaningful campaign event:
+  // quick-quiz answers, plan selection, stage transitions, content
+  // generations, and metrics submissions.
+  type ActivityKind = 'quiz' | 'plan' | 'stage' | 'content' | 'metrics' | 'phase2';
+  interface ActivityEvent {
+    id: string;
+    kind: ActivityKind;
+    title: string;
+    detail?: string;
+    when: string;
+  }
+
+  const buildActivityEvents = (): ActivityEvent[] => {
+    if (!currentCampaign) return [];
+    const events: ActivityEvent[] = [];
+
+    // Quiz answers from quizData (the keys we know about).
+    const qd = currentCampaign.quizData ?? {};
+    const KNOWN_KEYS: Array<{ key: string; label: { en: string; vi: string } }> = [
+      { key: 'business', label: { en: 'Business type', vi: 'Loai hinh kinh doanh' } },
+      { key: 'audience', label: { en: 'Target audience', vi: 'Doi tuong muc tieu' } },
+      { key: 'goal', label: { en: 'Primary goal', vi: 'Muc tieu chinh' } },
+      { key: 'channel', label: { en: 'Preferred channel', vi: 'Kenh uu tien' } },
+      { key: 'budget', label: { en: 'Budget range', vi: 'Ngan sach' } },
+      { key: 'region', label: { en: 'Region', vi: 'Khu vuc' } },
+      { key: 'productName', label: { en: 'Product / service', vi: 'San pham / dich vu' } },
+      { key: 'seasonality', label: { en: 'Seasonality', vi: 'Mua vu' } }
+    ];
+    KNOWN_KEYS.forEach(({ key, label }) => {
+      const v = qd[key];
+      if (typeof v === 'string' && v.length > 0) {
+        events.push({
+          id: `quiz-${key}`,
+          kind: 'quiz',
+          title: lang === 'en' ? `Quiz: ${label.en}` : `Quiz: ${label.vi}`,
+          detail: v,
+          when: currentCampaign.createdAt
+        });
+      }
+    });
+
+    if (typeof qd.selectedPlan === 'string' && qd.selectedPlan) {
+      events.push({
+        id: `plan-${qd.selectedPlan}`,
+        kind: 'plan',
+        title: lang === 'en' ? `Plan ${qd.selectedPlan} selected` : `Da chon Plan ${qd.selectedPlan}`,
+        when: currentCampaign.updatedAt ?? currentCampaign.createdAt
+      });
+    }
+
+    // Stage 2 phase-specific answers (anything in quizData that is not in the
+    // base quiz keys above).
+    const baseKeySet = new Set(KNOWN_KEYS.map(k => k.key).concat(['selectedPlan', 'phase']));
+    Object.keys(qd).forEach(key => {
+      if (baseKeySet.has(key)) return;
+      const v = qd[key];
+      if (typeof v !== 'string' || !v) return;
+      events.push({
+        id: `phase2-${key}`,
+        kind: 'phase2',
+        title: lang === 'en' ? `Stage 2: ${key}` : `Giai doan 2: ${key}`,
+        detail: v,
+        when: currentCampaign.updatedAt ?? currentCampaign.createdAt
+      });
+    });
+
+    // Stage transitions and Content generations from messages.
+    messages.forEach(msg => {
+      if (msg.kind === 'stage_transition') {
+        const meta = (msg.metadata ?? {}) as Record<string, unknown>;
+        const toStage = (typeof meta.toStage === 'number' ? meta.toStage : 0) as Stage;
+        const desc = STAGE_DESCRIPTORS[toStage] ?? STAGE_DESCRIPTORS[0];
+        events.push({
+          id: `stage-${msg.id}`,
+          kind: 'stage',
+          title: lang === 'en'
+            ? `Moved to Stage ${toStage} - ${desc.title.en}`
+            : `Chuyen sang Giai doan ${toStage} - ${desc.title.vi}`,
+          when: msg.createdAt
+        });
+      } else if (msg.kind === 'content_response') {
+        const meta = (msg.metadata ?? {}) as Record<string, unknown>;
+        const label = typeof meta.label === 'string' ? meta.label : 'Content';
+        events.push({
+          id: `content-${msg.id}`,
+          kind: 'content',
+          title: lang === 'en' ? `Generated ${label}` : `Da tao ${label}`,
+          when: msg.createdAt
+        });
+      }
+    });
+
+    // Metrics snapshots.
+    metricsSnapshots.forEach(snap => {
+      events.push({
+        id: `metric-${snap.id}`,
+        kind: 'metrics',
+        title: lang === 'en'
+          ? `Metrics snapshot: ${snap.label || 'Untitled'}`
+          : `Du lieu hieu suat: ${snap.label || 'Chua dat ten'}`,
+        when: snap.createdAt
+      });
+    });
+
+    return events.sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime());
+  };
+
   // Strategy pane shows STRATEGY messages plus inline SYSTEM transition
   // markers so the user can see in-context when each stage advance happened.
   const analystMessages = messages.filter(m => {
@@ -1869,12 +2008,31 @@ export default function Chat() {
                   <button className="welcome-action secondary" onClick={focusComposer}>
                     <div className="welcome-action-title">
                       <MessageSquare size={16} />
-                      <span>{lang === 'en' ? 'Skip Quiz, Chat Directly' : 'Bỏ qua Quiz, Chat trực tiếp'}</span>
+                      <span>{lang === 'en' ? 'Skip Quiz, Chat Directly' : 'Bo qua Quiz, Chat truc tiep'}</span>
                     </div>
                     <p>
                       {lang === 'en'
                         ? 'Type your first request below. A new campaign will be created automatically.'
-                        : 'Nhập yêu cầu đầu tiên ở ô bên dưới. Hệ thống sẽ tự tạo campaign mới.'}
+                        : 'Nhap yeu cau dau tien o o ben duoi. He thong se tu tao campaign moi.'}
+                    </p>
+                  </button>
+
+                  <button
+                    className="welcome-action secondary"
+                    type="button"
+                    onClick={() => {
+                      setGuideActiveTab('overview');
+                      setGuidePopupOpen(true);
+                    }}
+                  >
+                    <div className="welcome-action-title">
+                      <HelpCircle size={16} />
+                      <span>{lang === 'en' ? 'Show me how AdVisor works' : 'Xem huong dan AdVisor'}</span>
+                    </div>
+                    <p>
+                      {lang === 'en'
+                        ? 'Walkthrough of the four stages, the two panes, and how metrics tie everything together.'
+                        : 'Huong dan 4 giai doan, hai khung chat, va cach metrics ket noi tat ca.'}
                     </p>
                   </button>
                 </div>
@@ -2490,11 +2648,12 @@ export default function Chat() {
 
 
 
-      {/* Guide Popup Modal */}
+      {/* Guide Popup Modal -- multi-tab walkthrough. Auto-shows the first
+          time a user lands on the chat page (gated by localStorage). */}
       <AnimatePresence>
         {guidePopupOpen && (
           <motion.div
-            className="modal-overlay"
+            className="modal-overlay guide-modal-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -2502,126 +2661,143 @@ export default function Chat() {
             style={{ zIndex: 1200 }}
           >
             <motion.div
+              className="guide-modal"
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              style={{
-                background: 'rgba(18, 18, 22, 0.97)',
-                backdropFilter: 'blur(20px)',
-                borderRadius: 'var(--radius-xl)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                boxShadow: '0 0 40px rgba(124, 58, 237, 0.2), 0 0 80px rgba(0,0,0,0.8)',
-                width: '94%',
-                maxWidth: '720px',
-                maxHeight: '85vh',
-                overflow: 'auto',
-                padding: '2rem'
-              }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{
-                    width: '40px', height: '40px', borderRadius: '10px',
-                    background: 'linear-gradient(135deg, rgba(124,58,237,0.2), rgba(236,72,153,0.2))',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'var(--accent)'
-                  }}>
-                    <HelpCircle size={20} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>
-                    {lang === 'en' ? 'How AdVisor Works' : 'Cách sử dụng AdVisor'}
-                  </h3>
+              <div className="guide-modal-header">
+                <div className="guide-modal-title">
+                  <div className="guide-modal-icon"><HelpCircle size={20} /></div>
+                  <h3>{lang === 'en' ? 'How AdVisor Works' : 'Cach su dung AdVisor'}</h3>
                 </div>
-                <button onClick={() => setGuidePopupOpen(false)} style={{
-                  background: 'transparent', border: 'none', color: 'var(--text-muted)',
-                  cursor: 'pointer', padding: '0.5rem', borderRadius: '0.5rem',
-                  display: 'flex', alignItems: 'center'
-                }}>
+                <button
+                  type="button"
+                  onClick={() => setGuidePopupOpen(false)}
+                  className="guide-modal-close"
+                  aria-label={lang === 'en' ? 'Close' : 'Dong'}
+                >
                   <X size={20} />
                 </button>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto', paddingRight: '0.5rem', maxHeight: '60vh' }}>
-                {/* Stage 1 */}
-                <div style={{
-                  padding: '1.25rem', borderRadius: 'var(--radius-lg)',
-                  border: '1px solid rgba(124, 58, 237, 0.25)',
-                  background: 'rgba(124, 58, 237, 0.05)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                    <div style={{
-                      width: '36px', height: '36px', borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #7c3aed, #ec4899)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#fff', fontSize: '0.85rem', fontWeight: 700
-                    }}>1</div>
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>
-                        {lang === 'en' ? 'Stage 1: Discovery & Strategy' : 'Giai đoạn 1: Khám phá & Chiến lược'}
-                      </h4>
-                    </div>
-                  </div>
-                  <ul style={{ margin: 0, paddingLeft: '2.5rem', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>
-                    <li>{lang === 'en' ? 'Complete the Smart Quiz to tell us about your product, business type, audience, goals, and budget.' : 'Hoàn thành bài Smart Quiz để cung cấp thông tin về sản phẩm, loại hình doanh nghiệp, đối tượng, mục tiêu và ngân sách.'}</li>
-                    <li>{lang === 'en' ? 'AI analyzes your data and proposes 3 tailored strategic plans.' : 'AI phân tích dữ liệu của bạn và đề xuất 3 kế hoạch chiến lược phù hợp.'}</li>
-                    <li>{lang === 'en' ? 'You can chat with the AI to refine these strategies. Once satisfied, select the plan that best fits your goals.' : 'Bạn có thể trò chuyện với AI để tinh chỉnh các chiến lược này. Khi đã hài lòng, hãy chọn kế hoạch phù hợp nhất với mục tiêu của bạn.'}</li>
-                    <li>{lang === 'en' ? 'Click the arrow button on any AI message to send it to the Content Writer pane for content generation.' : 'Bấm vào nút mũi tên trên bất kỳ tin nhắn nào của AI để chuyển nó sang khung Content Writer để tạo nội dung.'}</li>
-                  </ul>
-                </div>
+              <div className="guide-modal-tabs" role="tablist">
+                {([
+                  { id: 'overview', en: 'Overview', vi: 'Tong quan' },
+                  { id: 'stages', en: '4 Stages', vi: '4 Giai doan' },
+                  { id: 'panes', en: 'Two Panes', vi: 'Hai khung' },
+                  { id: 'metrics', en: 'Metrics', vi: 'Du lieu' },
+                  { id: 'faq', en: 'FAQ', vi: 'FAQ' }
+                ] as const).map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={guideActiveTab === tab.id}
+                    className={`guide-modal-tab ${guideActiveTab === tab.id ? 'active' : ''}`}
+                    onClick={() => setGuideActiveTab(tab.id)}
+                  >
+                    {lang === 'en' ? tab.en : tab.vi}
+                  </button>
+                ))}
+              </div>
 
-                {/* Stage 2 */}
-                <div style={{
-                  padding: '1.25rem', borderRadius: 'var(--radius-lg)',
-                  border: '1px solid rgba(16, 185, 129, 0.25)',
-                  background: 'rgba(16, 185, 129, 0.05)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                    <div style={{
-                      width: '36px', height: '36px', borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #10b981, #3b82f6)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#fff', fontSize: '0.85rem', fontWeight: 700
-                    }}>2</div>
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>
-                        {lang === 'en' ? 'Stage 2: Refinement & Execution' : 'Giai đoạn 2: Tinh chỉnh & Thực thi'}
-                      </h4>
-                    </div>
+              <div className="guide-modal-body">
+                {guideActiveTab === 'overview' && (
+                  <div className="guide-section">
+                    <p>
+                      {lang === 'en'
+                        ? 'AdVisor turns a short quiz into a full marketing plan. The AI walks you through four stages: discovery, strategy & plan selection, refinement, and ongoing optimisation.'
+                        : 'AdVisor bien mot bai quiz ngan thanh ke hoach marketing day du. AI dan ban qua 4 giai doan: kham pha, chien luoc & chon plan, tinh chinh, va toi uu lien tuc.'}
+                    </p>
+                    <ul className="guide-list">
+                      <li>{lang === 'en' ? 'Stage 0 - Quick Setup quiz captures your product, audience, goal, budget.' : 'Giai doan 0 - Quick Setup ghi nhan san pham, doi tuong, muc tieu, ngan sach.'}</li>
+                      <li>{lang === 'en' ? 'Stage 1 - AI proposes three plans (A / B / C). You pick the best fit.' : 'Giai doan 1 - AI de xuat ba ke hoach (A / B / C). Ban chon plan phu hop.'}</li>
+                      <li>{lang === 'en' ? 'Stage 2 - Phase 2 quiz refines messaging, channels, KPIs.' : 'Giai doan 2 - Quiz Phase 2 tinh chinh thong diep, kenh, KPI.'}</li>
+                      <li>{lang === 'en' ? 'Stage 3 - Submit metrics snapshots; AI analyses trends.' : 'Giai doan 3 - Nhap so lieu dinh ky; AI phan tich xu huong.'}</li>
+                    </ul>
                   </div>
-                  <ul style={{ margin: 0, paddingLeft: '2.5rem', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>
-                    <li>{lang === 'en' ? 'Answer deeper questions regarding specific marketing channels, budget allocation across platforms, and timeline.' : 'Trả lời các câu hỏi chuyên sâu về các kênh marketing cụ thể, phân bổ ngân sách trên từng nền tảng và tiến độ thời gian.'}</li>
-                    <li>{lang === 'en' ? 'AI creates a detailed execution plan with milestones and KPIs to track your success.' : 'AI tạo ra một kế hoạch thực thi chi tiết với các cột mốc và KPI để theo dõi thành công của bạn.'}</li>
-                    <li>{lang === 'en' ? 'Review and confirm the refined strategy before moving to the optimization stage.' : 'Xem xét và xác nhận chiến lược đã tinh chỉnh trước khi chuyển sang giai đoạn tối ưu hóa.'}</li>
-                    <li>{lang === 'en' ? 'Use the Content Assistant to generate ad copies, emails, and landing page content seamlessly.' : 'Sử dụng Content Assistant để tạo ra các bài quảng cáo, email và nội dung landing page một cách mượt mà.'}</li>
-                  </ul>
-                </div>
+                )}
 
-                {/* Stage 3 */}
-                <div style={{
-                  padding: '1.25rem', borderRadius: 'var(--radius-lg)',
-                  border: '1px solid rgba(245, 158, 11, 0.25)',
-                  background: 'rgba(245, 158, 11, 0.05)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                    <div style={{
-                      width: '36px', height: '36px', borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #f59e0b, #ef4444)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#fff', fontSize: '0.85rem', fontWeight: 700
-                    }}>3</div>
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>
-                        {lang === 'en' ? 'Stage 3: Ongoing Optimization' : 'Giai đoạn 3: Tối ưu hóa liên tục'}
-                      </h4>
-                    </div>
+                {guideActiveTab === 'stages' && (
+                  <div className="guide-stages-grid">
+                    {([0, 1, 2, 3] as const).map(stage => {
+                      const desc = STAGE_DESCRIPTORS[stage];
+                      return (
+                        <div key={stage} className={`guide-stage-card guide-stage-card--${stage}`}>
+                          <div className="guide-stage-card-head">
+                            <div className="guide-stage-num">{stage}</div>
+                            <h4>{desc.title[lang]}</h4>
+                          </div>
+                          <p className="guide-stage-subtitle">{desc.subtitle[lang]}</p>
+                          <p className="guide-stage-next">{desc.nextAction[lang]}</p>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <ul style={{ margin: 0, paddingLeft: '2.5rem', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>
-                    <li>{lang === 'en' ? 'Submit periodic metrics reports (CPC, CPA, ROI, etc.)' : 'Gửi báo cáo số liệu định kỳ (CPC, CPA, ROI, v.v.)'}</li>
-                    <li>{lang === 'en' ? 'AI analyzes performance trends and suggests adjustments' : 'AI phân tích xu hướng hiệu suất và đề xuất điều chỉnh'}</li>
-                    <li>{lang === 'en' ? 'Continuously improve your campaigns over time' : 'Liên tục cải thiện chiến dịch theo thời gian'}</li>
-                  </ul>
-                </div>
+                )}
+
+                {guideActiveTab === 'panes' && (
+                  <div className="guide-section">
+                    <h4>{lang === 'en' ? 'Strategy Analyst (left)' : 'Phan tich chien luoc (trai)'}</h4>
+                    <p>
+                      {lang === 'en'
+                        ? 'Discusses strategy, generates plan options, validates stage transitions. Plan selection happens here.'
+                        : 'Thao luan chien luoc, tao plan options, xac nhan chuyen giai doan. Chon plan o khung nay.'}
+                    </p>
+                    <h4>{lang === 'en' ? 'Content Writer (right)' : 'Tro ly Noi dung (phai)'}</h4>
+                    <p>
+                      {lang === 'en'
+                        ? 'Generates emails, ad copies, social posts. Disabled until you reach Stage 1 because the writer needs your selected plan as context.'
+                        : 'Tao email, ad copy, bai dang MXH. Tat o Giai doan 0 vi can plan da chon lam ngu canh.'}
+                    </p>
+                    <h4>{lang === 'en' ? 'Send to Content Writer' : 'Gui sang Content Writer'}</h4>
+                    <p>
+                      {lang === 'en'
+                        ? 'Click the arrow icon on any strategy message to push that text into the Content Writer composer as a prompt.'
+                        : 'Bam icon mui ten tren bat ky tin nhan strategy nao de gui noi dung sang composer cua Content Writer.'}
+                    </p>
+                  </div>
+                )}
+
+                {guideActiveTab === 'metrics' && (
+                  <div className="guide-section">
+                    <p>
+                      {lang === 'en'
+                        ? 'Open the Insights panel to log a metrics snapshot. Each snapshot captures impressions, clicks, conversions, CPC, CPA, CTR, conversion rate, ROAS, and any custom fields you add. AdVisor compares the latest snapshot to the previous one and flags trends.'
+                        : 'Mo Insights de luu mot snapshot du lieu. Moi snapshot ghi nhan impressions, clicks, conversions, CPC, CPA, CTR, conversion rate, ROAS, va cac field tuy chinh. AdVisor so sanh snapshot moi voi snapshot truoc va danh dau xu huong.'}
+                    </p>
+                    <ul className="guide-list">
+                      <li>{lang === 'en' ? 'Snapshots are tied to the campaign and labelled by date.' : 'Snapshot gan voi chien dich va ghi theo ngay.'}</li>
+                      <li>{lang === 'en' ? 'Upload metrics in bulk via CSV for legacy reports.' : 'Co the tai metrics hang loat qua CSV.'}</li>
+                      <li>{lang === 'en' ? 'Submit a snapshot at Stage 3 to trigger AI optimisation feedback.' : 'Gui snapshot o Giai doan 3 de AI dua phan hoi toi uu.'}</li>
+                    </ul>
+                  </div>
+                )}
+
+                {guideActiveTab === 'faq' && (
+                  <div className="guide-section">
+                    <h4>{lang === 'en' ? 'Can I redo a stage?' : 'Co the lam lai mot giai doan?'}</h4>
+                    <p>
+                      {lang === 'en'
+                        ? 'Yes. Click any earlier stage in the indicator to roll back. Activity log entries are preserved.'
+                        : 'Co. Bam vao giai doan truoc trong stage indicator de quay lai. Lich su van duoc giu.'}
+                    </p>
+                    <h4>{lang === 'en' ? 'Why is the Content Writer disabled?' : 'Tai sao Content Writer bi tat?'}</h4>
+                    <p>
+                      {lang === 'en'
+                        ? 'Until you select a plan in Stage 1 the Content Writer has no context. Finish Quick Setup, choose a plan, then it unlocks.'
+                        : 'Truoc khi ban chon plan o Giai doan 1, Content Writer chua co ngu canh. Hoan thanh Quick Setup va chon plan thi se mo khoa.'}
+                    </p>
+                    <h4>{lang === 'en' ? 'Where do I see my answers?' : 'Xem lai cau tra loi o dau?'}</h4>
+                    <p>
+                      {lang === 'en'
+                        ? 'Open Insights for the full activity log: every quiz answer, plan selection, stage transition, content generation, and metrics snapshot.'
+                        : 'Mo Insights de xem toan bo nhat ky: cau tra loi quiz, plan da chon, chuyen giai doan, content da tao, snapshot.'}
+                    </p>
+                  </div>
+                )}
               </div>
             </motion.div>
           </motion.div>
@@ -2876,10 +3052,53 @@ export default function Chat() {
                             })}
                           </div>
                         ) : (
-                          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{lang === 'en' ? 'Add a snapshot to see trends.' : 'Thêm dữ liệu để xem xu hướng.'}</p>
+                          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{lang === 'en' ? 'Add a snapshot to see trends.' : 'Them du lieu de xem xu huong.'}</p>
                         )}
                       </div>
                     </div>
+                </div>
+
+                {/* Activity Log: chronological list of every meaningful event
+                    in the campaign so the user has a clean audit trail of
+                    what happened and when. */}
+                <div className="activity-log">
+                  <div className="activity-log-header">
+                    <BookOpen size={16} style={{ color: 'var(--accent)' }} />
+                    <h3>{lang === 'en' ? 'Activity Log' : 'Nhat ky chien dich'}</h3>
+                  </div>
+                  {(() => {
+                    const events = buildActivityEvents();
+                    if (events.length === 0) {
+                      return (
+                        <p className="activity-log-empty">
+                          {lang === 'en'
+                            ? 'No activity yet. Complete the Quick Setup to get started.'
+                            : 'Chua co hoat dong. Hoan thanh Quick Setup de bat dau.'}
+                        </p>
+                      );
+                    }
+                    return (
+                      <ol className="activity-log-list">
+                        {events.map(ev => (
+                          <li key={ev.id} className={`activity-log-item activity-log-item--${ev.kind}`}>
+                            <div className="activity-log-bullet" aria-hidden="true" />
+                            <div className="activity-log-body">
+                              <div className="activity-log-title">{ev.title}</div>
+                              {ev.detail && <div className="activity-log-detail">{ev.detail}</div>}
+                              <div className="activity-log-time">
+                                {new Date(ev.when).toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ol>
+                    );
+                  })()}
                 </div>
               </div>
             </motion.div>
