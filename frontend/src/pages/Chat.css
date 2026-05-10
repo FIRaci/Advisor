@@ -1155,35 +1155,39 @@ body.chat-page-active {
 
 .typing-indicator {
   display: inline-flex;
-  gap: 0.28rem;
+  gap: 0.4rem;
+  padding: 0.2rem 0.5rem;
+  align-items: center;
 }
 
 .typing-indicator span {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: #c4b5fd;
-  animation: typing 1.3s infinite ease-in-out;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #3b82f6);
+  opacity: 0.4;
+  animation: typingBounce 1.4s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(1) {
+  animation-delay: 0s;
 }
 
 .typing-indicator span:nth-child(2) {
-  animation-delay: 0.18s;
+  animation-delay: 0.2s;
 }
 
 .typing-indicator span:nth-child(3) {
-  animation-delay: 0.36s;
+  animation-delay: 0.4s;
 }
 
-@keyframes typing {
-  0%,
-  70%,
-  100% {
-    transform: translateY(0);
-    opacity: 0.55;
+@keyframes typingBounce {
+  0%, 80%, 100% { 
+    transform: scale(0.6);
+    opacity: 0.4;
   }
-
-  35% {
-    transform: translateY(-4px);
+  40% { 
+    transform: scale(1.1);
     opacity: 1;
   }
 }
