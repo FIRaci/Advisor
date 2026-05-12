@@ -538,6 +538,18 @@
   margin-bottom: var(--space-lg);
 }
 
+.multi-select-hint {
+  margin-bottom: 0.8rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.multi-select-actions {
+  margin-top: 0.9rem;
+  display: flex;
+  justify-content: center;
+}
+
 .special-btn {
   display: flex;
   align-items: center;

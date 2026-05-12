@@ -83,22 +83,7 @@ function detectStrategyKind(content: string): { kind: string | null; metadata: R
   return { kind: null, metadata: null };
 }
 
-const vietnameseCharacterRegex = /[\u00C0-\u1EF9]/;
-
-function buildAiFallbackResponse(message: string): string {
-  const isVietnamese = vietnameseCharacterRegex.test(message);
-
-  if (isVietnamese) {
-    return [
-      'Xin loi, he thong AI dang tam thoi qua tai nen chua the tra loi day du ngay luc nay.',
-      '',
-      'Ban co the tiep tuc bang cach:',
-      '- Thu gui lai yeu cau sau it giay',
-      '- Dat cau hoi ngan gon hon (muc tieu, ngan sach, doi tuong)',
-      '- Neu can, toi co the dua khung chien luoc mau de ban bat dau ngay'
-    ].join('\n');
-  }
-
+function buildAiFallbackResponse(): string {
   return [
     'Sorry, the AI service is temporarily unavailable so I could not generate a full response right now.',
     '',
@@ -208,9 +193,11 @@ MANDATORY: You MUST provide exactly 3 or 4 selectable plan options using the [PL
 
 CRITICAL FORMATTING RULES:
 1. Start with 2-3 paragraphs of analysis.
-2. Then, you MUST provide the plans inside a [PLAN_OPTIONS] block.
+2. Then, you MUST provide the plans inside exactly ONE [PLAN_OPTIONS] block.
 3. EACH PLAN MUST BE WRAPPED IN [PLAN_X] AND [/PLAN_X] TAGS.
 4. DO NOT USE "Plan 1", "Plan 2". USE "[PLAN_A]", "[PLAN_B]", "[PLAN_C]".
+5. Never repeat plan blocks or duplicate the same plan ID.
+6. When showing structured comparisons, use valid markdown tables (| col | col |), not plain-text pseudo tables.
 5. Example of required format:
 **[PLAN_OPTIONS]**
 [PLAN_A]
@@ -230,7 +217,10 @@ If you do not include these tags, the user CANNOT select a plan and CANNOT move 
 You are currently in Stage 2 (Execution Plan).
 IMPORTANT INSTRUCTIONS:
 1. Provide a highly detailed execution plan based on the user's chosen plan from Stage 1. Break down the channel strategy, timeline, milestones, and budget. Explain why this execution plan will work.
-2. At the very end of your response, you MUST include this exact string to allow the user to transition to Stage 3:
+2. Use proper markdown tables for timeline, KPIs, and budget split where useful.
+3. If quizData includes Stage 2 targets (deadline, target_ctr, target_cvr, target_roas), include a "Target KPI Benchmarks" table and explicitly reference these targets in your recommendations.
+4. If latestMetrics are available, include a concise "Target vs Actual" table comparing actual values to target benchmarks.
+5. At the very end of your response, you MUST include this exact string to allow the user to transition to Stage 3:
 **[STAGE_TRANSITION]** You have completed Stage 2! You can now move to **Stage 3: Ongoing Optimization**.`;
         } else if (phase === '3') {
           stageInstructions = `
@@ -262,7 +252,7 @@ User: ${message}`;
       const phase = (quizData?.quizData as any)?.phase || '1';
       const selectedPlan = (quizData?.quizData as any)?.selectedPlan;
 
-      if (msgLower.includes('stage 3') || msgLower.includes('giai đoạn 3') || phase === '3' || msgLower.includes('report') || msgLower.includes('báo cáo')) {
+      if (msgLower.includes('stage 3') || phase === '3' || msgLower.includes('report')) {
         const goal = (quizData?.quizData as any)?.goal || 'your objectives';
         const productName = (quizData?.quizData as any)?.productName || 'your product';
         aiText = `## Stage 3: Ongoing Optimization for ${productName}
@@ -286,7 +276,7 @@ Thank you for your metrics report! I've conducted a deep dive into your recent p
 
 *Keep submitting periodic reports and I'll track your progress over time!*`;
       } else if (msgLower.includes('selected plan') || msgLower.includes('chốt plan') || msgLower.includes('chọn plan') || selectedPlan) {
-        if (phase === '2' || msgLower.includes('stage 2') || msgLower.includes('giai đoạn 2')) {
+        if (phase === '2' || msgLower.includes('stage 2')) {
           aiText = `## Stage 2: Refined Execution Plan
 
 I've reviewed your chosen plan and your specific preferences. The key to executing this plan successfully is strict budget allocation and a phased rollout to minimize risk. By focusing on your most engaged demographics first, we can secure early wins before scaling. 
@@ -364,7 +354,7 @@ Balance between paid acquisition and organic growth.
 
 Select a plan above to proceed to **Stage 2** where we'll refine the details!`;
         }
-      } else if (msgLower.includes('quiz') || msgLower.includes('plan') || msgLower.includes('strategy') || msgLower.includes('chiến lược')) {
+      } else if (msgLower.includes('quiz') || msgLower.includes('plan') || msgLower.includes('strategy')) {
         aiText = `## Your Personalized Marketing Strategy
 
 Based on your quiz responses, I've prepared **3 strategic plans** for you to choose from:

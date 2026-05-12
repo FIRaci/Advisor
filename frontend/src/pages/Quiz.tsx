@@ -25,6 +25,7 @@ interface Question {
   type: 'select' | 'text';
   options?: { value: string; label: string }[];
   placeholder?: string;
+  allowMultiple?: boolean;
 }
 
 interface QuizStage {
@@ -89,6 +90,7 @@ const questions: Question[] = [
     question: 'Who is your target audience?',
     shortLabel: 'Audience',
     type: 'select',
+    allowMultiple: true,
     options: [
       { value: 'b2b', label: 'B2B (Businesses)' },
       { value: 'b2c', label: 'B2C (Consumers)' },
@@ -111,6 +113,7 @@ const questions: Question[] = [
     question: 'What is your main marketing goal?',
     shortLabel: 'Goal',
     type: 'select',
+    allowMultiple: true,
     options: [
       { value: 'awareness', label: 'Brand Awareness' },
       { value: 'leads', label: 'Generate Leads' },
@@ -140,6 +143,7 @@ const questions: Question[] = [
     question: 'Which marketing channels interest you most?',
     shortLabel: 'Channels',
     type: 'select',
+    allowMultiple: true,
     options: [
       { value: 'social', label: 'Social Media (FB, IG, X)' },
       { value: 'search', label: 'Google Ads & SEO' },
@@ -231,6 +235,7 @@ const questions: Question[] = [
     question: 'Where do customers interact with you?',
     shortLabel: 'Platform',
     type: 'select',
+    allowMultiple: true,
     options: [
       { value: 'website', label: 'Website' },
       { value: 'app', label: 'Mobile App' },
@@ -295,6 +300,7 @@ const questions: Question[] = [
     question: 'What content format fits your brand best?',
     shortLabel: 'Content',
     type: 'select',
+    allowMultiple: true,
     options: [
       { value: 'short_video', label: 'Short videos (Reels/TikTok)' },
       { value: 'long_video', label: 'Long-form video' },
@@ -372,6 +378,7 @@ export default function Quiz() {
   const [isResuming, setIsResuming] = useState(false);
   const [customInputOpen, setCustomInputOpen] = useState(false);
   const [customInput, setCustomInput] = useState('');
+  const [multiSelections, setMultiSelections] = useState<string[]>([]);
 
   const currentStage = stages[Math.min(stageIndex, stages.length - 1)];
   const currentQuestion = currentStage.questions[Math.min(questionIndex, currentStage.questions.length - 1)];
@@ -431,6 +438,24 @@ export default function Quiz() {
     loadCampaign();
   }, [resumeCampaignId, token]);
 
+  const decodeMultiValue = (value?: string) => {
+    if (!value || value === 'not_sure' || value.startsWith('custom: ')) return [];
+    return value
+      .split('||')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  };
+
+  const encodeMultiValue = (values: string[]) => values.join('||');
+
+  useEffect(() => {
+    if (currentQuestion.type !== 'select' || !currentQuestion.allowMultiple) {
+      setMultiSelections([]);
+      return;
+    }
+    setMultiSelections(decodeMultiValue(answers[currentQuestion.id]));
+  }, [currentQuestion.id, currentQuestion.type, currentQuestion.allowMultiple, answers]);
+
   // Get display value for an answer
   const getAnswerDisplay = (questionId: string, value: string): string => {
     if (!value || value === 'not_sure') return 'Skipped';
@@ -440,6 +465,14 @@ export default function Quiz() {
     if (!question) return value;
 
     if (question.type === 'text') return value;
+
+    if (question.allowMultiple) {
+      const values = decodeMultiValue(value);
+      if (values.length === 0) return value;
+      return values
+        .map((item) => question.options?.find(o => o.value === item)?.label || item)
+        .join(', ');
+    }
 
     const option = question.options?.find(o => o.value === value);
     return option ? option.label : value;
@@ -584,6 +617,12 @@ export default function Quiz() {
   };
 
   const handleSelect = async (value: string) => {
+    if (currentQuestion.allowMultiple) {
+      setMultiSelections((prev) =>
+        prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+      );
+      return;
+    }
     // Ensure campaign exists on first interaction
     if (!campaignId && !loading && !savingStage) {
       const initialAnswers = { ...answers, [currentQuestion.id]: value };
@@ -618,6 +657,12 @@ export default function Quiz() {
     await handleSelect(`custom: ${value}`);
     setCustomInputOpen(false);
     setCustomInput('');
+  };
+
+  const handleMultiContinue = async () => {
+    if (!currentQuestion.allowMultiple) return;
+    if (multiSelections.length === 0) return;
+    await applyAnswer(encodeMultiValue(multiSelections));
   };
 
   const handleJumpToQuestion = (index: number) => {
@@ -708,7 +753,7 @@ export default function Quiz() {
 
     const res = await api.updateCampaign(existingCampaignId, {
       name: name.trim().replace(/\s+/g, ' ').slice(0, 120),
-      quizData: finalAnswers,
+      quizData: { ...finalAnswers, phase: '1' },
       status: 'ACTIVE'
     });
 
@@ -980,6 +1025,12 @@ export default function Quiz() {
                   </button>
                 </div>
 
+                {currentQuestion.allowMultiple && (
+                  <div className="multi-select-hint">
+                    {'You can choose multiple options, then press Continue.'}
+                  </div>
+                )}
+
                 {/* Custom Input */}
                 <AnimatePresence>
                   {customInputOpen && (
@@ -1009,7 +1060,9 @@ export default function Quiz() {
                   {currentQuestion.options?.map((option, index) => (
                     <motion.button
                       key={option.value}
-                      className={`option-btn ${answers[currentQuestion.id] === option.value ? 'selected' : ''}`}
+                      className={`option-btn ${currentQuestion.allowMultiple
+                        ? (multiSelections.includes(option.value) ? 'selected' : '')
+                        : (answers[currentQuestion.id] === option.value ? 'selected' : '')}`}
                       onClick={() => { handleSelect(option.value); setCustomInputOpen(false); }}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -1021,6 +1074,18 @@ export default function Quiz() {
                     </motion.button>
                   ))}
                 </div>
+                {currentQuestion.allowMultiple && (
+                  <div className="multi-select-actions">
+                    <button
+                      className="submit-text-btn"
+                      onClick={handleMultiContinue}
+                      disabled={multiSelections.length === 0}
+                    >
+                      {'Continue'}
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                )}
               </>
             )}
 

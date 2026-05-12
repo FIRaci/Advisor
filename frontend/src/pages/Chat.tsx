@@ -9,6 +9,7 @@ import {
   Mail, FileText, Palette, Upload, TrendingUp, TrendingDown
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useAuthStore } from '../store/authStore';
 import { api, Campaign as ApiCampaign, ChatMessage, MetricsSnapshot, QuizProgress } from '../hooks/useApi';
 import { findGlossaryMatches, summarizeGlossary, glossaryGroups, getGlossaryByGroup } from '../utils/marketingGlossary';
@@ -49,7 +50,16 @@ interface Campaign extends Pick<ApiCampaign, 'id' | 'name' | 'createdAt' | 'isFa
 
 
 
-const phase2Questions = [
+interface Phase2Question {
+  id: string;
+  icon: any;
+  question: string;
+  type: 'select' | 'text';
+  options?: { value: string; label: string }[];
+  placeholder?: string;
+}
+
+const phase2Questions: Phase2Question[] = [
   {
     id: 'channels',
     icon: Globe,
@@ -63,6 +73,13 @@ const phase2Questions = [
     ]
   },
   {
+    id: 'deadline',
+    icon: Clock,
+    question: 'What is your target deadline for this stage?',
+    type: 'text' as const,
+    placeholder: 'Example: End of Q3, 2026-09-30, in 8 weeks'
+  },
+  {
     id: 'budget_alloc',
     icon: DollarSign,
     question: 'Primary budget allocation?',
@@ -72,6 +89,27 @@ const phase2Questions = [
       { value: 'content', label: 'Content Production' },
       { value: 'influencer', label: 'Influencer Booking' }
     ]
+  },
+  {
+    id: 'target_ctr',
+    icon: TrendingUp,
+    question: 'Target CTR (%) you want to reach?',
+    type: 'text' as const,
+    placeholder: 'Example: 2.5'
+  },
+  {
+    id: 'target_cvr',
+    icon: Target,
+    question: 'Target Conversion Rate (%)?',
+    type: 'text' as const,
+    placeholder: 'Example: 4.0'
+  },
+  {
+    id: 'target_roas',
+    icon: BarChart3,
+    question: 'Target ROAS?',
+    type: 'text' as const,
+    placeholder: 'Example: 3.5'
   },
   {
     id: 'timeline',
@@ -138,10 +176,21 @@ export default function Chat() {
   const [phase2Answers, setPhase2Answers] = useState<Record<string, string>>({});
   const [phase2CustomOpen, setPhase2CustomOpen] = useState(false);
   const [phase2CustomInput, setPhase2CustomInput] = useState('');
+  const [phase2TextInput, setPhase2TextInput] = useState('');
+
+  useEffect(() => {
+    if (!phase2PopupOpen) return;
+    setPhase2TextInput('');
+  }, [phase2Step, phase2PopupOpen]);
 
   const glossaryMatches = useMemo(() => {
     if (!currentCampaign) return [];
-    return findGlossaryMatches(JSON.stringify(currentCampaign) + JSON.stringify(messages));
+    const quizContext = Object.values(currentCampaign.quizData || {}).join(' ');
+    const recentMessages = messages
+      .slice(-24)
+      .map((m) => m.content)
+      .join(' ');
+    return findGlossaryMatches(`${quizContext} ${recentMessages}`);
   }, [currentCampaign, messages]);
 
   const isLoggedIn = Boolean(token);
@@ -174,11 +223,15 @@ export default function Chat() {
     const normalized = normalizePlanContent(content);
     const planRegex = /\[PLAN[_\s]?([A-Z0-9]+)\]([\s\S]*?)\[\/PLAN[_\s]?\1\]/gi;
     const plans: { id: string; content: string }[] = [];
+    const seen = new Set<string>();
     let match;
     while ((match = planRegex.exec(normalized)) !== null) {
-      plans.push({ id: match[1].toUpperCase(), content: match[2].trim() });
+      const id = match[1].toUpperCase();
+      if (seen.has(id)) continue;
+      seen.add(id);
+      plans.push({ id, content: match[2].trim() });
     }
-    return plans;
+    return plans.slice(0, 6);
   };
 
   // Check if content has stage transition marker
@@ -197,12 +250,13 @@ export default function Chat() {
       .replace(/\[\/PLAN_OPTIONS\]/gi, '')
       .replace(/\*\*\[STAGE_TRANSITION\]\*\*/gi, '')
       .replace(/\[STAGE_TRANSITION\]/gi, '')
+      .replace(/^\s*\*\*\s*$/gm, '')
       .trim();
   };
 
   const CampaignProfileCard = () => {
     if (!currentCampaign?.quizData || Object.keys(currentCampaign.quizData).length === 0) return null;
-    const profile = getFullQuizProfile().slice(0, 8);
+    const profile = fullQuizProfile.slice(0, 8);
     if (profile.length === 0) return null;
 
     return (
@@ -713,6 +767,52 @@ export default function Chat() {
     setLoading(false);
   };
 
+  const handleSkipToStage3 = async () => {
+    if (!campaignId) return;
+    setPhase2PopupOpen(false);
+    const updatedQuizData = {
+      ...currentCampaign?.quizData,
+      phase: '3',
+      deadline: currentCampaign?.quizData?.deadline || 'not_sure',
+      target_ctr: currentCampaign?.quizData?.target_ctr || 'not_sure',
+      target_cvr: currentCampaign?.quizData?.target_cvr || 'not_sure',
+      target_roas: currentCampaign?.quizData?.target_roas || 'not_sure'
+    };
+    const updateRes = await api.updateCampaign(campaignId, { quizData: updatedQuizData });
+    if (!updateRes.success) {
+      appendAssistantMessage('Could not skip Stage 2 right now. Please retry.');
+      return;
+    }
+    appendSystemTransition(2);
+    appendSystemTransition(3);
+    fetchCurrentCampaign();
+    const msg = 'I skipped Stage 2 details for now. Please start Stage 3 optimization using current available data.';
+    setLoading(true);
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: 'USER',
+      pane: 'STRATEGY',
+      kind: null,
+      metadata: null,
+      content: msg,
+      createdAt: new Date().toISOString()
+    };
+    setMessages(prev => [...prev, userMsg]);
+    try {
+      const res = await api.sendMessage(msg, campaignId);
+      if (res.success && res.data) {
+        const { userMessage: savedUserMsg, assistantMessage } = res.data;
+        setMessages(prev => {
+          const filtered = prev.filter(m => m.id !== userMsg.id);
+          return [...filtered, savedUserMsg, assistantMessage];
+        });
+      }
+    } catch {
+      appendAssistantMessage('Stage 3 is ready. Send any message to begin optimization guidance.');
+    }
+    setLoading(false);
+  };
+
   const focusComposer = () => {
     textareaRef.current?.focus();
   };
@@ -720,7 +820,7 @@ export default function Chat() {
   const handleSelectPlan = async (planId: string, _planContent: string) => {
     if (!campaignId || loading) return;
     setSelectedPlanInChat(planId);
-    const updatedQuizData = { ...currentCampaign?.quizData, selectedPlan: planId };
+    const updatedQuizData = { ...currentCampaign?.quizData, selectedPlan: planId, phase: '2' };
     const updateRes = await api.updateCampaign(campaignId, { quizData: updatedQuizData });
     if (!updateRes.success) {
       // Roll back local optimistic plan selection so the UI does not lie about
@@ -731,10 +831,11 @@ export default function Chat() {
       );
       return;
     }
+    appendSystemTransition(2);
     fetchCurrentCampaign();
 
-    // Send message to AI about selection
-    const messageContent = `I have selected Plan ${planId}. Let's proceed to Stage 2 to refine the details.`;
+    // Send message to AI about selection and request immediate Stage 2 guidance.
+    const messageContent = `I selected Plan ${planId}. We are now in Stage 2. Please provide my next-step refinement guidance, including priorities, timeline, and KPIs in clear markdown tables where useful.`;
     setInput('');
     setLoading(true);
     const userMsg: Message = {
@@ -1234,7 +1335,7 @@ export default function Chat() {
   };
 
   // Get full quiz profile for detailed display
-  const getFullQuizProfile = () => {
+  const fullQuizProfile = useMemo(() => {
     if (!currentCampaign?.quizData) return [];
     const quizData = currentCampaign.quizData;
 
@@ -1344,6 +1445,10 @@ export default function Chat() {
     const getLabel = (value: string, labels: Record<string, string>) => {
       if (!value || value === 'not_sure') return null;
       if (value.startsWith('custom: ')) return value.replace('custom: ', '');
+      if (value.includes('||')) {
+        const values = value.split('||').map(v => v.trim()).filter(Boolean);
+        return values.map((item) => labels[item] || item).join(', ');
+      }
       return labels[value] || value;
     };
 
@@ -1405,23 +1510,54 @@ export default function Chat() {
     if (quizData.competitors && quizData.competitors !== 'not_sure') {
       items.push({ icon: <Briefcase size={16} />, label: 'Competitors', value: quizData.competitors });
     }
+    if (quizData.deadline && quizData.deadline !== 'not_sure') {
+      items.push({ icon: <Clock size={16} />, label: 'Deadline', value: quizData.deadline });
+    }
+    if (quizData.target_ctr && quizData.target_ctr !== 'not_sure') {
+      items.push({ icon: <TrendingUp size={16} />, label: 'Target CTR', value: `${quizData.target_ctr}%` });
+    }
+    if (quizData.target_cvr && quizData.target_cvr !== 'not_sure') {
+      items.push({ icon: <Target size={16} />, label: 'Target CVR', value: `${quizData.target_cvr}%` });
+    }
+    if (quizData.target_roas && quizData.target_roas !== 'not_sure') {
+      items.push({ icon: <BarChart3 size={16} />, label: 'Target ROAS', value: quizData.target_roas });
+    }
 
     return items;
-  };
+  }, [currentCampaign?.quizData]);
 
 
   const latestSnapshot = metricsSnapshots[0];
   const previousSnapshot = metricsSnapshots[1];
+  const targetCtr = Number(currentCampaign?.quizData?.target_ctr || 0);
+  const targetCvr = Number(currentCampaign?.quizData?.target_cvr || 0);
+  const targetRoas = Number(currentCampaign?.quizData?.target_roas || 0);
+  const actualCtr = Number(latestSnapshot?.metrics?.ctr || 0);
+  const actualCvr = Number(latestSnapshot?.metrics?.conversionRate || 0);
+  const actualRoas = Number(latestSnapshot?.metrics?.roas || 0);
+  const getKpiStatus = (actual: number, target: number) => {
+    if (!target || target <= 0) return { label: 'No target', tone: 'neutral' as const, pct: 0 };
+    const pct = Math.max(0, Math.min(140, (actual / target) * 100));
+    if (actual >= target) return { label: 'On track', tone: 'good' as const, pct };
+    if (actual >= target * 0.8) return { label: 'Close', tone: 'warn' as const, pct };
+    return { label: 'Behind', tone: 'bad' as const, pct };
+  };
+  const ctrStatus = getKpiStatus(actualCtr, targetCtr);
+  const cvrStatus = getKpiStatus(actualCvr, targetCvr);
+  const roasStatus = getKpiStatus(actualRoas, targetRoas);
   const progressPercent = Math.round((currentStage / 4) * 100);
   const completedStages = currentStage;
   const totalStages = 4;
 
   // Sort campaigns: favorites first, then by date
-  const sortedCampaigns = [...campaigns].sort((a, b) => {
-    if (a.isFavorite && !b.isFavorite) return -1;
-    if (!a.isFavorite && b.isFavorite) return 1;
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
+  const sortedCampaigns = useMemo(
+    () => [...campaigns].sort((a, b) => {
+      if (a.isFavorite && !b.isFavorite) return -1;
+      if (!a.isFavorite && b.isFavorite) return 1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }),
+    [campaigns]
+  );
 
   // Split messages by their `pane` field. Legacy data without a pane (returned
   // by older backend versions) is classified by content prefix as a fallback,
@@ -1539,6 +1675,11 @@ export default function Chat() {
 
     return events.sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime());
   };
+
+  const activityEvents = useMemo(
+    () => buildActivityEvents(),
+    [currentCampaign, messages, metricsSnapshots]
+  );
 
   // Strategy pane shows STRATEGY messages plus inline SYSTEM transition
   // markers so the user can see in-context when each stage advance happened.
@@ -1872,13 +2013,13 @@ export default function Chat() {
                   <p>{'Ask me anything about marketing strategy, ad copy, or campaign optimization.'}</p>
 
                   {/* Full Quiz Profile Card */}
-                  {currentCampaign && getFullQuizProfile().length > 0 && (
+                  {currentCampaign && fullQuizProfile.length > 0 && (
                     <div className="welcome-quiz-profile">
                       <div className="quiz-profile-header">
                         <h4>{'Your Campaign Profile'}</h4>
                       </div>
                       <div className="quiz-profile-grid">
-                        {getFullQuizProfile().map((item, i) => (
+                        {fullQuizProfile.map((item, i) => (
                           <div key={i} className="quiz-profile-item">
                             <span className="profile-icon">{item.icon}</span>
                             <div className="profile-content">
@@ -1979,12 +2120,15 @@ export default function Chat() {
                         <div className="message-content">
                           {msg.role === 'ASSISTANT' ? (
                             <>
-                              <ReactMarkdown>{cleanContent(msg.content)}</ReactMarkdown>
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanContent(msg.content)}</ReactMarkdown>
 
                               {/* Plan selection cards */}
-                              {parsePlanOptions(msg.content).length > 0 && (
+                              {(() => {
+                                const parsedPlans = parsePlanOptions(msg.content);
+                                if (parsedPlans.length === 0) return null;
+                                return (
                                 <div className="plan-cards">
-                                  {parsePlanOptions(msg.content).map(plan => (
+                                  {parsedPlans.map(plan => (
                                     <motion.button
                                       key={plan.id}
                                       className={`plan-card ${selectedPlanInChat === plan.id || currentCampaign?.quizData?.selectedPlan === plan.id ? 'selected' : ''}`}
@@ -1999,14 +2143,15 @@ export default function Chat() {
                                          plan.id === 'C' || plan.id === '3' ? <Award size={16} /> : 
                                          <Sparkles size={16} />}
                                       </div>
-                                      <ReactMarkdown>{plan.content}</ReactMarkdown>
+                                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{plan.content}</ReactMarkdown>
                                       {(selectedPlanInChat === plan.id || currentCampaign?.quizData?.selectedPlan === plan.id) && (
                                         <div className="plan-card-check"><Check size={16} /></div>
                                       )}
                                     </motion.button>
                                   ))}
                                 </div>
-                              )}
+                                );
+                              })()}
 
                               {/* Content Assistant offer - after plan selected, before Stage 2 */}
                               {i === analystMessages.length - 1 && currentCampaign?.quizData?.selectedPlan && currentStage === 1 && !hasStageTransition(msg.content) && (
@@ -2228,7 +2373,7 @@ export default function Chat() {
                           ) : null}
                         </div>
                         <div className="message-content">
-                          <ReactMarkdown>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
                             {msg.content.replace(/^\[Content Prompt\] |^\[Content Assistant - [^\]]+\]\n\n/, '')}
                           </ReactMarkdown>
                         </div>
@@ -2427,6 +2572,7 @@ export default function Chat() {
                       <li>{'Stage 1 - Strategy: Compare AI-generated plans. You must select one to proceed.'}</li>
                       <li>{'Stage 2 - Refinement: Answer follow-up questions to lock in audience, budget, and KPIs.'}</li>
                       <li>{'Stage 3 - Optimisation: Submit metrics periodically. AI will analyze trends and suggest fixes.'}</li>
+                      <li>{'Your selected plan and Stage 2 targets are automatically synced into Insights for ongoing comparison.'}</li>
                     </ul>
                     <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(124, 58, 237, 0.1)', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-border)' }}>
                       <p style={{ fontSize: '0.85rem', fontWeight: '500', color: 'var(--accent)', marginBottom: '0.25rem' }}>
@@ -2493,6 +2639,10 @@ export default function Chat() {
                     <p>
                       {'Look for interactive buttons in the chat: picking a Plan card in Stage 1, or clicking the "Go to Stage X" button that appears after AI finishes its analysis.'}
                     </p>
+                    <h4>{'Can I choose multiple answers in Discovery Quiz?'}</h4>
+                    <p>
+                      {'Yes. Some quiz questions support multi-select. Pick all relevant options, then click Continue.'}
+                    </p>
                     <h4>{'Can I redo a stage?'}</h4>
                     <p>
                       {'Yes. Click any completed stage in the header timeline to roll back. Note: Rolling back will reset your progress for all stages ahead of it.'}
@@ -2504,6 +2654,10 @@ export default function Chat() {
                     <h4>{'Where do I see my historical answers?'}</h4>
                     <p>
                       {'Open the Insights panel (Bar Chart icon) to see the full activity log, including every quiz answer and plan selection.'}
+                    </p>
+                    <h4>{'How are Stage 2 KPIs used?'}</h4>
+                    <p>
+                      {'Stage 2 goals (deadline, target CTR/CVR/ROAS) are shown in Insights and used by AI as benchmark context for Stage 3 optimisation advice.'}
                     </p>
                   </div>
                 )}
@@ -2530,60 +2684,25 @@ export default function Chat() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              style={{
-                background: 'rgba(18, 18, 22, 0.95)',
-                backdropFilter: 'blur(20px)',
-                borderRadius: 'var(--radius-xl)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                boxShadow: '0 0 40px rgba(124, 58, 237, 0.2), 0 0 80px rgba(0,0,0,0.8)',
-                width: '94%',
-                maxWidth: '1100px',
-                maxHeight: '85vh',
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden'
-              }}
             >
-              <div className="insights-modal-header" style={{
-                padding: '1.25rem 1.5rem',
-                borderBottom: '1px solid var(--border)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                background: 'rgba(255,255,255,0.02)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{
-                    width: '40px', height: '40px', borderRadius: '10px',
-                    background: 'linear-gradient(135deg, rgba(124,58,237,0.2), rgba(236,72,153,0.2))',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'var(--accent)'
-                  }}>
+              <div className="insights-modal-header">
+                <div className="insights-modal-header-left">
+                  <div className="insights-modal-icon">
                     <BarChart3 size={20} />
                   </div>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>
-                      {'Campaign Insights'}
-                    </h3>
+                    <h3>{'Campaign Insights'}</h3>
                   </div>
                 </div>
                 <button
                   onClick={() => setInsightsOpen(false)}
-                  style={{
-                    background: 'transparent', border: 'none', color: 'var(--text-muted)',
-                    cursor: 'pointer', padding: '0.5rem', borderRadius: '0.5rem',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                  }}
+                  className="insights-close-btn"
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="insights-modal-body" style={{
-                padding: '1.5rem',
-                overflowY: 'auto',
-                flex: 1
-              }}>
+              <div className="insights-modal-body">
                 <div className="insights-grid">
                   {/* Left Column - Quiz Progress */}
                   <div className="insights-card">
@@ -2617,12 +2736,12 @@ export default function Chat() {
                         {'Quiz Answers'}
                       </h4>
                       <div className="insights-stage-list">
-                        {getFullQuizProfile().length === 0 ? (
+                        {fullQuizProfile.length === 0 ? (
                           <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                             {'No data yet.'}
                           </p>
                         ) : (
-                          getFullQuizProfile().slice(0, 8).map((item, idx) => (
+                          fullQuizProfile.slice(0, 8).map((item, idx) => (
                             <div key={idx} className="insights-stage-item">
                               <span className="insights-stage-key" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                 {item.icon}
@@ -2634,6 +2753,58 @@ export default function Chat() {
                         )}
                       </div>
                     </div>
+                    {(targetCtr > 0 || targetCvr > 0 || targetRoas > 0 || currentCampaign.quizData?.deadline) && (
+                      <div className="insights-stage-compare" style={{ borderTop: '1px solid rgba(16,185,129,0.2)' }}>
+                        <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <Target size={14} style={{ color: '#34d399' }} />
+                          {'Stage 2 Targets vs Latest'}
+                        </h4>
+                        <div className="insights-stage-list">
+                          {currentCampaign.quizData?.deadline && currentCampaign.quizData.deadline !== 'not_sure' && (
+                            <div className="insights-stage-item">
+                              <span className="insights-stage-key">Deadline</span>
+                              <span className="insights-stage-value">{currentCampaign.quizData.deadline}</span>
+                            </div>
+                          )}
+                          {targetCtr > 0 && (
+                            <div className="insights-kpi-row">
+                              <div className="insights-kpi-head">
+                                <span className="insights-stage-key">CTR</span>
+                                <span className={`insights-kpi-status insights-kpi-status--${ctrStatus.tone}`}>{ctrStatus.label}</span>
+                              </div>
+                              <div className="insights-kpi-track">
+                                <div className={`insights-kpi-fill insights-kpi-fill--${ctrStatus.tone}`} style={{ width: `${Math.min(100, ctrStatus.pct)}%` }} />
+                              </div>
+                              <span className="insights-stage-value">{`${actualCtr.toFixed(2)}% / ${targetCtr.toFixed(2)}%`}</span>
+                            </div>
+                          )}
+                          {targetCvr > 0 && (
+                            <div className="insights-kpi-row">
+                              <div className="insights-kpi-head">
+                                <span className="insights-stage-key">Conversion Rate</span>
+                                <span className={`insights-kpi-status insights-kpi-status--${cvrStatus.tone}`}>{cvrStatus.label}</span>
+                              </div>
+                              <div className="insights-kpi-track">
+                                <div className={`insights-kpi-fill insights-kpi-fill--${cvrStatus.tone}`} style={{ width: `${Math.min(100, cvrStatus.pct)}%` }} />
+                              </div>
+                              <span className="insights-stage-value">{`${actualCvr.toFixed(2)}% / ${targetCvr.toFixed(2)}%`}</span>
+                            </div>
+                          )}
+                          {targetRoas > 0 && (
+                            <div className="insights-kpi-row">
+                              <div className="insights-kpi-head">
+                                <span className="insights-stage-key">ROAS</span>
+                                <span className={`insights-kpi-status insights-kpi-status--${roasStatus.tone}`}>{roasStatus.label}</span>
+                              </div>
+                              <div className="insights-kpi-track">
+                                <div className={`insights-kpi-fill insights-kpi-fill--${roasStatus.tone}`} style={{ width: `${Math.min(100, roasStatus.pct)}%` }} />
+                              </div>
+                              <span className="insights-stage-value">{`${actualRoas.toFixed(2)} / ${targetRoas.toFixed(2)}`}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Right Column - Metrics */}
@@ -2772,8 +2943,7 @@ export default function Chat() {
                     <h3>{'Activity Log'}</h3>
                   </div>
                   {(() => {
-                    const events = buildActivityEvents();
-                    if (events.length === 0) {
+                    if (activityEvents.length === 0) {
                       return (
                         <div className="activity-log-empty">
                           <p>
@@ -2787,7 +2957,7 @@ export default function Chat() {
                     }
                     return (
                       <ol className="activity-log-list">
-                        {events.map(ev => (
+                        {activityEvents.map(ev => (
                           <li key={ev.id} className={`activity-log-item activity-log-item--${ev.kind}`}>
                             <div className="activity-log-bullet" aria-hidden="true" />
                             <div className="activity-log-body">
@@ -2874,6 +3044,7 @@ export default function Chat() {
                   {(() => {
                     const q = phase2Questions[phase2Step];
                     const QIcon = q.icon;
+                    const isTextQuestion = q.type === 'text';
                     return (
                       <>
                         <div className="quiz-popup-question" style={{ color: '#10b981' }}>
@@ -2882,11 +3053,33 @@ export default function Chat() {
                         </div>
 
                         <div className="quiz-popup-options">
-                          {q.options?.map((opt, idx) => (
+                          {isTextQuestion ? (
+                            <div className="quiz-popup-text-area">
+                              <input
+                                type="text"
+                                placeholder={q.placeholder || 'Type your answer...'}
+                                value={phase2TextInput}
+                                onChange={(e) => setPhase2TextInput(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && phase2TextInput.trim() && handlePhase2Answer(phase2TextInput.trim())}
+                                className="quiz-popup-input"
+                                autoFocus
+                              />
+                              <div className="quiz-popup-text-actions">
+                                <button
+                                  className="quiz-popup-submit"
+                                  onClick={() => phase2TextInput.trim() && handlePhase2Answer(phase2TextInput.trim())}
+                                  disabled={!phase2TextInput.trim()}
+                                >
+                                  {'Continue'}
+                                  <ChevronRight size={16} />
+                                </button>
+                              </div>
+                            </div>
+                          ) : q.options?.map((opt, idx) => (
                             <motion.button
                               key={opt.value}
                               className={`quiz-popup-option ${phase2Answers[q.id] === opt.value ? 'selected' : ''}`}
-                              onClick={() => { handlePhase2Answer(opt.value); setPhase2CustomOpen(false); }}
+                              onClick={() => { handlePhase2Answer(opt.value); setPhase2CustomOpen(false); setPhase2TextInput(''); }}
                               initial={{ opacity: 0, y: 8 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: idx * 0.04 }}
@@ -2933,7 +3126,7 @@ export default function Chat() {
                             )}
                           </AnimatePresence>
 
-                          <button className="quiz-popup-skip-inline" onClick={handlePhase2SkipQuestion}>
+                          <button className="quiz-popup-skip-inline" onClick={() => { handlePhase2SkipQuestion(); setPhase2TextInput(''); }}>
                             <HelpCircle size={14} />
                             {'Skip this question'}
                           </button>
@@ -2943,6 +3136,14 @@ export default function Chat() {
                   })()}
                 </motion.div>
               </AnimatePresence>
+              <div className="quiz-popup-footer">
+                <button className="quiz-popup-skip-all" onClick={handleSkipToStage3}>
+                  {'Skip Stage 2 and continue to Stage 3'}
+                </button>
+                <span className="quiz-popup-hint">
+                  {'Tip: Targets in Stage 2 are used in Insights for KPI comparison.'}
+                </span>
+              </div>
             </motion.div>
           </motion.div>
         )}

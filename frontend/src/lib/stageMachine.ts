@@ -58,7 +58,9 @@ export function deriveStage(quizData?: QuizDataLike | null): Stage {
 
   if (phase === '3' && hasSelectedPlan) return 3;
   if (phase === '2' && hasSelectedPlan) return 2;
-  if (hasSelectedPlan || answerCount > 0) return 1;
+  // Backward compatibility: older campaigns may not have `phase` but still have quiz answers.
+  if (answerCount > 0) return 1;
+  if (hasSelectedPlan || phase === '1') return 1;
   return 0;
 }
 
@@ -75,7 +77,6 @@ export function inspectQuizData(quizData?: QuizDataLike | null): QuizDataIssue |
   const answerCount = Object.keys(quizData).filter(
     (k) => k !== 'phase' && k !== 'selectedPlan' && quizData[k] !== undefined && quizData[k] !== ''
   ).length;
-
   if ((phase === '2' || phase === '3') && !hasSelectedPlan) {
     return {
       code: 'phase_without_plan',
@@ -114,15 +115,12 @@ export function canAdvance(current: Stage, target: Stage, quizData?: QuizDataLik
 
   const qd = quizData || {};
   const hasSelectedPlan = typeof qd.selectedPlan === 'string' && qd.selectedPlan.length > 0;
-  const answerCount = Object.keys(qd).filter(
-    (k) => k !== 'phase' && k !== 'selectedPlan' && qd[k] !== undefined && qd[k] !== ''
-  ).length;
 
   if (target === 1) {
-    if (answerCount === 0) {
+    if (qd.phase !== '1') {
       return {
         ok: false,
-        reason: 'Answer at least one quiz question before advancing to Stage 1.'
+        reason: 'Complete the Discovery Quiz before advancing to Stage 1.'
       };
     }
   }
