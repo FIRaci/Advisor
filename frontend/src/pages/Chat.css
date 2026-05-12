@@ -30,13 +30,28 @@ body.chat-page-active {
 .chat-sidebar {
   position: relative;
   z-index: 3;
-  width: 290px;
   height: 100dvh;
   display: flex;
   flex-direction: column;
   background: rgba(15, 15, 17, 0.8);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(16px);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.chat-sidebar.collapsed {
+  border-right-color: transparent;
+}
+
+/* Fixed-width inner shell: parent animates width 0 ↔ 280 so text never reflow-squishes */
+.chat-sidebar-inner {
+  box-sizing: border-box;
+  width: 280px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .sidebar-header {
@@ -646,12 +661,14 @@ body.chat-page-active {
 }
 
 .insights-stage-item {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: minmax(100px, 36%) minmax(0, 1fr);
+  align-items: start;
+  column-gap: 0.65rem;
+  row-gap: 0.2rem;
   font-size: 0.75rem;
   color: var(--text-secondary);
-  padding: 0.3rem 0.5rem;
+  padding: 0.4rem 0.55rem;
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.02);
 }
@@ -659,6 +676,14 @@ body.chat-page-active {
 .insights-stage-key {
   font-weight: 600;
   color: var(--text-primary);
+  min-width: 0;
+}
+
+.insights-stage-value {
+  text-align: end;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.4;
 }
 
 .metrics-form {
@@ -1244,6 +1269,7 @@ body.chat-page-active {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+  min-width: 0;
 }
 
 .profile-label {
@@ -1258,6 +1284,9 @@ body.chat-page-active {
   font-size: 0.85rem;
   color: var(--text-primary);
   font-weight: 600;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.35;
 }
 
 .message-content table {
@@ -1826,7 +1855,8 @@ body.chat-page-active {
   .chat-sidebar {
     position: fixed;
     inset: 0 auto 0 0;
-    width: min(86vw, 320px);
+    z-index: 40;
+    max-width: min(86vw, 320px);
   }
 
   .chat-header {
@@ -2334,6 +2364,13 @@ body.chat-page-active {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+}
+
+.insights-kpi-row > .insights-stage-value {
+  text-align: end;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.4;
 }
 
 .insights-kpi-head {
@@ -2900,7 +2937,7 @@ body.chat-page-active {
 
 /* UI polish overrides */
 .chat-sidebar {
-  will-change: width, opacity, transform;
+  will-change: width;
 }
 
 .typing-indicator {

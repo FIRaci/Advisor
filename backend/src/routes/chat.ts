@@ -20,23 +20,90 @@ function shouldUseLiveAi(): boolean {
   return GEMINI_API_KEY.length > 30;
 }
 
-const planOpenTagRegex = /\[PLAN(?:_|\s)?[A-Z0-9]+\]/i;
-const planBlockRegex = /\[PLAN(?:_|\s)?([A-Z0-9]+)\]([\s\S]*?)\[\/PLAN(?:_|\s)?\1\]/gi;
-
+/** Keep parsing rules aligned with frontend `src/lib/planMarkers.ts`. */
 function normalizePlanContent(content: string): string {
-  return content
-    .replace(/[\u200B-\u200D\uFEFF]/g, '')
-    .replace(/\[(\/?)PLAN\s+([A-Z0-9]+)\]/gi, '[$1PLAN_$2]');
+  let s = content.replace(/[\u200B-\u200D\uFEFF]/g, '');
+  s = s.replace(/\*{1,3}\s*(?=\[\s*\/?\s*PLAN\b)/gi, '');
+  s = s.replace(/\[\s*(\/?)\s*PLAN\s+([A-Za-z0-9]+)\s*\]/gi, '[$1PLAN_$2]');
+  return s;
+}
+
+const PLAN_BRACKET_RE_BACKEND = /\[\s*(\/?)\s*PLAN\s*[_\s]?\s*([A-Za-z0-9]+)\s*\]/gi;
+
+type PlanBracketMatch = {
+  index: number;
+  end: number;
+  isClose: boolean;
+  id: string;
+};
+
+function scanPlanBrackets(normalized: string): PlanBracketMatch[] {
+  const out: PlanBracketMatch[] = [];
+  PLAN_BRACKET_RE_BACKEND.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = PLAN_BRACKET_RE_BACKEND.exec(normalized))) {
+    const isClose = m[1] === '/';
+    const id = m[2].toUpperCase();
+    out.push({ index: m.index, end: m.index + m[0].length, isClose, id });
+  }
+  return out;
+}
+
+function extractPlanBlocks(normalized: string): { id: string; content: string }[] {
+  const tags = scanPlanBrackets(normalized);
+  const plans: { id: string; content: string }[] = [];
+  const seen = new Set<string>();
+
+  let i = 0;
+  while (i < tags.length) {
+    const open = tags[i];
+    i += 1;
+    if (open.isClose) continue;
+    if (seen.has(open.id)) continue;
+
+    let closeIdx = -1;
+    for (let j = i; j < tags.length; j += 1) {
+      if (tags[j].isClose && tags[j].id === open.id) {
+        closeIdx = j;
+        break;
+      }
+    }
+
+    let body: string;
+    if (closeIdx >= 0) {
+      body = normalized.slice(open.end, tags[closeIdx].index).trim();
+      i = closeIdx + 1;
+    } else {
+      let nextOpenIdx = -1;
+      for (let j = i; j < tags.length; j += 1) {
+        if (!tags[j].isClose) {
+          nextOpenIdx = j;
+          break;
+        }
+      }
+      if (nextOpenIdx >= 0) {
+        body = normalized.slice(open.end, tags[nextOpenIdx].index).trim();
+        i = nextOpenIdx;
+      } else {
+        body = normalized.slice(open.end).trim();
+        i = tags.length;
+      }
+    }
+
+    if (!body) continue;
+    seen.add(open.id);
+    plans.push({ id: open.id, content: body });
+  }
+
+  return plans.slice(0, 6);
 }
 
 function countPlanBlocks(content: string): number {
-  const normalized = normalizePlanContent(content);
-  return Array.from(normalized.matchAll(planBlockRegex)).length;
+  return extractPlanBlocks(normalizePlanContent(content)).length;
 }
 
 function hasPlanTags(content: string): boolean {
-  const normalized = normalizePlanContent(content);
-  return planOpenTagRegex.test(normalized);
+  return scanPlanBrackets(normalizePlanContent(content)).some((t) => !t.isClose);
 }
 
 const PLAN_OPTIONS_FALLBACK = [

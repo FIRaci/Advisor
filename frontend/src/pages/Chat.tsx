@@ -6,7 +6,7 @@ import {
   Settings, LogOut, MoreHorizontal, Pencil, Star, Copy, Check, ListChecks,
   BarChart3, BookOpen, Package, Building, Users, RefreshCw, Zap, ArrowRight, Award,
   Target, Megaphone, DollarSign, Globe, Clock, Briefcase, X, HelpCircle,
-  Mail, FileText, Palette, Upload, TrendingUp, TrendingDown
+  Mail, FileText, Palette, Upload, TrendingUp, TrendingDown, Heart, Smartphone, ShoppingBag
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -21,6 +21,15 @@ import {
   canAdvance,
   getContentPaneMode
 } from '../lib/stageMachine';
+import { cleanStrategyIntroMarkdown as cleanContent, parsePlanOptions } from '../lib/planMarkers';
+import {
+  formatQuizAnswerForDisplay,
+  QUIZ_ACTIVITY_FIELDS,
+  quizActivityEventKind,
+  quizActivityLogHandledKeys,
+  quizActivityLogTitle,
+  quizFieldActivityTitle
+} from '../lib/quizDisplay';
 import './Chat.css';
 
 type Message = ChatMessage;
@@ -137,6 +146,24 @@ export default function Chat() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  /** Match mobile drawer width to CSS breakpoints so the clip animation stays smooth */
+  const [sidebarPanelWidth, setSidebarPanelWidth] = useState(280);
+
+  useEffect(() => {
+    const pick = () => {
+      const compact =
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(max-width: 768px)').matches;
+      const w =
+        compact
+          ? Math.min(320, Math.max(260, Math.round(window.innerWidth * 0.86)))
+          : 280;
+      setSidebarPanelWidth(w);
+    };
+    pick();
+    window.addEventListener('resize', pick);
+    return () => window.removeEventListener('resize', pick);
+  }, []);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -212,51 +239,12 @@ export default function Chat() {
   const stageDescriptor = STAGE_DESCRIPTORS[currentStage];
   const contentPaneMode = useMemo(() => getContentPaneMode(currentStage), [currentStage]);
 
-  const normalizePlanContent = (content: string) => {
-    return content
-      .replace(/[\u200B-\u200D\uFEFF]/g, '')
-      .replace(/\[(\/?)PLAN\s+([A-Z0-9]+)\]/gi, '[$1PLAN_$2]');
-  };
-
-  // Parse plan options from AI response
-  const parsePlanOptions = (content: string) => {
-    const normalized = normalizePlanContent(content);
-    const planRegex = /\[PLAN[_\s]?([A-Z0-9]+)\]([\s\S]*?)\[\/PLAN[_\s]?\1\]/gi;
-    const plans: { id: string; content: string }[] = [];
-    const seen = new Set<string>();
-    let match;
-    while ((match = planRegex.exec(normalized)) !== null) {
-      const id = match[1].toUpperCase();
-      if (seen.has(id)) continue;
-      seen.add(id);
-      plans.push({ id, content: match[2].trim() });
-    }
-    return plans.slice(0, 6);
-  };
-
   // Check if content has stage transition marker
   const hasStageTransition = (content: string) => content.includes('[STAGE_TRANSITION]');
 
-  // Clean content for display (remove markers)
-  const cleanContent = (content: string) => {
-    const normalized = normalizePlanContent(content);
-    const planStart = normalized.search(/\[PLAN[_\s]?[A-Z0-9]+\]/i);
-    const base = planStart >= 0 ? normalized.slice(0, planStart) : normalized;
-    return base
-      .replace(/\*\*\[PLAN_OPTIONS\]\*\*/gi, '')
-      .replace(/\[PLAN_OPTIONS\]/gi, '')
-      .replace(/\[PLAN[_\s]?([A-Z0-9]+)\][\s\S]*?\[\/PLAN[_\s]?\1\]/gi, '')
-      .replace(/\[\/?PLAN(?:_|\s)?[A-Z0-9]+\]/gi, '')
-      .replace(/\[\/PLAN_OPTIONS\]/gi, '')
-      .replace(/\*\*\[STAGE_TRANSITION\]\*\*/gi, '')
-      .replace(/\[STAGE_TRANSITION\]/gi, '')
-      .replace(/^\s*\*\*\s*$/gm, '')
-      .trim();
-  };
-
   const CampaignProfileCard = () => {
     if (!currentCampaign?.quizData || Object.keys(currentCampaign.quizData).length === 0) return null;
-    const profile = fullQuizProfile.slice(0, 8);
+    const profile = fullQuizProfile.slice(0, 12);
     if (profile.length === 0) return null;
 
     return (
@@ -427,6 +415,10 @@ export default function Chat() {
       }
     }
   }, [guidePopupOpen]);
+
+  useEffect(() => {
+    if (!sidebarOpen) setUserMenuOpen(false);
+  }, [sidebarOpen]);
 
   const fetchCampaigns = async () => {
     const res = await api.getCampaigns();
@@ -1337,190 +1329,54 @@ export default function Chat() {
   // Get full quiz profile for detailed display
   const fullQuizProfile = useMemo(() => {
     if (!currentCampaign?.quizData) return [];
-    const quizData = currentCampaign.quizData;
+    const qd = currentCampaign.quizData as Record<string, string>;
 
-    // Mapping values to display labels
-    const businessLabels: Record<string, string> = {
-      ecommerce: 'E-commerce',
-      saas: 'SaaS / Software',
-      service: 'Professional Services',
-      local: 'Local Business',
-      agency: 'Marketing Agency',
-      education: 'Education',
-      healthcare: 'Healthcare',
-      fintech: 'Fintech',
-      food: 'Food & Beverage',
-      travel: 'Travel',
-      realestate: 'Real Estate',
-      entertainment: 'Entertainment'
+    const icons: Record<string, ReactNode> = {
+      productName: <Package size={16} />,
+      business: <Building size={16} />,
+      stage: <Zap size={16} />,
+      audience: <Users size={16} />,
+      region: <Globe size={16} />,
+      platform: <Smartphone size={16} />,
+      priceRange: <ShoppingBag size={16} />,
+      goal: <Target size={16} />,
+      usp: <Heart size={16} />,
+      channels: <Megaphone size={16} />,
+      currentMarketing: <BarChart3 size={16} />,
+      experience: <TrendingUp size={16} />,
+      competitors: <Briefcase size={16} />,
+      timeline: <Clock size={16} />,
+      budget: <DollarSign size={16} />,
+      seasonality: <Clock size={16} />,
+      contentFormat: <BookOpen size={16} />,
+      offerType: <Star size={16} />,
+      deadline: <Clock size={16} />,
+      target_ctr: <TrendingUp size={16} />,
+      target_cvr: <Target size={16} />,
+      target_roas: <BarChart3 size={16} />
     };
 
-    const audienceLabels: Record<string, string> = {
-      b2b: 'B2B',
-      b2c: 'B2C',
-      both: 'B2B & B2C',
-      genz: 'Gen Z (18-25)',
-      millennials: 'Millennials (26-40)',
-      genx: 'Gen X+ (40+)',
-      enterprise: 'Enterprise',
-      startups: 'Startups & SMBs',
-      women: 'Women',
-      men: 'Men',
-      parents: 'Parents',
-      students: 'Students'
-    };
-
-    const goalLabels: Record<string, string> = {
-      awareness: 'Brand Awareness',
-      leads: 'Lead Generation',
-      sales: 'Increase Sales',
-      retention: 'Customer Retention',
-      traffic: 'Website Traffic',
-      engagement: 'Social Engagement',
-      launch: 'Product Launch',
-      reputation: 'Reputation',
-      appinstalls: 'App Installs',
-      community: 'Community'
-    };
-
-    const channelLabels: Record<string, string> = {
-      social: 'Social Media',
-      search: 'Google Ads & SEO',
-      email: 'Email Marketing',
-      content: 'Content / Blog',
-      video: 'YouTube / TikTok',
-      influencer: 'Influencer',
-      affiliate: 'Affiliate',
-      podcast: 'Podcast',
-      offline: 'Offline / Events',
-      all: 'Multi-channel'
-    };
-
-    const budgetLabels: Record<string, string> = {
-      minimal: '< $500',
-      small: '$500 - $1,000',
-      medium: '$1,000 - $5,000',
-      large: '$5,000 - $20,000',
-      enterprise: '$20,000 - $100,000',
-      unlimited: '$100,000+'
-    };
-
-    const regionLabels: Record<string, string> = {
-      local: 'Local',
-      national: 'National',
-      regional: 'Southeast Asia',
-      asia: 'Asia Pacific',
-      us: 'United States',
-      europe: 'Europe',
-      global: 'Global'
-    };
-
-    const seasonalityLabels: Record<string, string> = {
-      none: 'No seasonality',
-      holiday: 'Holiday-driven',
-      summer: 'Summer peak',
-      yearend: 'Year-end peak',
-      event: 'Event-driven',
-      always: 'Always-on demand'
-    };
-
-    const contentFormatLabels: Record<string, string> = {
-      short_video: 'Short videos',
-      long_video: 'Long-form video',
-      static_visual: 'Static visuals',
-      article: 'Articles/blog',
-      email: 'Email/newsletter',
-      mixed: 'Mixed format'
-    };
-
-    const offerTypeLabels: Record<string, string> = {
-      discount: 'Discount / flash sale',
-      bundle: 'Bundle package',
-      trial: 'Free trial / freemium',
-      gift: 'Gift with purchase',
-      consultation: 'Free consultation/demo',
-      custom_offer: 'Custom segment offers'
-    };
-
-    const getLabel = (value: string, labels: Record<string, string>) => {
-      if (!value || value === 'not_sure') return null;
-      if (value.startsWith('custom: ')) return value.replace('custom: ', '');
-      if (value.includes('||')) {
-        const values = value.split('||').map(v => v.trim()).filter(Boolean);
-        return values.map((item) => labels[item] || item).join(', ');
-      }
-      return labels[value] || value;
+    const labelOverride: Partial<Record<string, string>> = {
+      productName: 'Product',
+      goal: 'Goal',
+      audience: 'Audience',
+      channels: 'Channels',
+      usp: 'USP',
+      target_ctr: 'Target CTR',
+      target_cvr: 'Target CVR',
+      target_roas: 'Target ROAS'
     };
 
     const items: { icon: ReactNode; label: string; value: string }[] = [];
-
-    if (quizData.productName && quizData.productName !== 'not_sure') {
-      items.push({ icon: <Package size={16} />, label: 'Product', value: quizData.productName });
-    }
-
-    const businessValue = getLabel(quizData.business, businessLabels);
-    if (businessValue) {
-      items.push({ icon: <Building size={16} />, label: 'Business', value: businessValue });
-    }
-
-    const audienceValue = getLabel(quizData.audience, audienceLabels);
-    if (audienceValue) {
-      items.push({ icon: <Users size={16} />, label: 'Audience', value: audienceValue });
-    }
-
-    const goalValue = getLabel(quizData.goal, goalLabels);
-    if (goalValue) {
-      items.push({ icon: <Target size={16} />, label: 'Goal', value: goalValue });
-    }
-
-    const channelValue = getLabel(quizData.channels, channelLabels);
-    if (channelValue) {
-      items.push({ icon: <Megaphone size={16} />, label: 'Channels', value: channelValue });
-    }
-
-    const budgetValue = getLabel(quizData.budget, budgetLabels);
-    if (budgetValue) {
-      items.push({ icon: <DollarSign size={16} />, label: 'Budget', value: budgetValue });
-    }
-
-    const regionValue = getLabel(quizData.region, regionLabels);
-    if (regionValue) {
-      items.push({ icon: <Globe size={16} />, label: 'Region', value: regionValue });
-    }
-
-    const seasonalityValue = getLabel(quizData.seasonality, seasonalityLabels);
-    if (seasonalityValue) {
-      items.push({ icon: <Clock size={16} />, label: 'Seasonality', value: seasonalityValue });
-    }
-
-    const contentFormatValue = getLabel(quizData.contentFormat, contentFormatLabels);
-    if (contentFormatValue) {
-      items.push({ icon: <BookOpen size={16} />, label: 'Content Format', value: contentFormatValue });
-    }
-
-    const offerTypeValue = getLabel(quizData.offerType, offerTypeLabels);
-    if (offerTypeValue) {
-      items.push({ icon: <Star size={16} />, label: 'Offer Type', value: offerTypeValue });
-    }
-
-    if (quizData.usp && quizData.usp !== 'not_sure') {
-      items.push({ icon: <Pencil size={16} />, label: 'USP', value: quizData.usp });
-    }
-
-    if (quizData.competitors && quizData.competitors !== 'not_sure') {
-      items.push({ icon: <Briefcase size={16} />, label: 'Competitors', value: quizData.competitors });
-    }
-    if (quizData.deadline && quizData.deadline !== 'not_sure') {
-      items.push({ icon: <Clock size={16} />, label: 'Deadline', value: quizData.deadline });
-    }
-    if (quizData.target_ctr && quizData.target_ctr !== 'not_sure') {
-      items.push({ icon: <TrendingUp size={16} />, label: 'Target CTR', value: `${quizData.target_ctr}%` });
-    }
-    if (quizData.target_cvr && quizData.target_cvr !== 'not_sure') {
-      items.push({ icon: <Target size={16} />, label: 'Target CVR', value: `${quizData.target_cvr}%` });
-    }
-    if (quizData.target_roas && quizData.target_roas !== 'not_sure') {
-      items.push({ icon: <BarChart3 size={16} />, label: 'Target ROAS', value: quizData.target_roas });
+    for (const field of QUIZ_ACTIVITY_FIELDS) {
+      const raw = field.read(qd);
+      const value = formatQuizAnswerForDisplay(field.key, raw);
+      if (!value) continue;
+      items.push({
+        icon: icons[field.key] ?? <Sparkles size={16} />,
+        label: labelOverride[field.key] ?? field.label,
+        value
+      });
     }
 
     return items;
@@ -1587,29 +1443,21 @@ export default function Chat() {
     if (!currentCampaign) return [];
     const events: ActivityEvent[] = [];
 
-    // Quiz answers from quizData (the keys we know about).
-    const qd = currentCampaign.quizData ?? {};
-    const KNOWN_KEYS: Array<{ key: string; label: string }> = [
-      { key: 'business', label: 'Business type' },
-      { key: 'audience', label: 'Target audience' },
-      { key: 'goal', label: 'Primary goal' },
-      { key: 'channel', label: 'Preferred channel' },
-      { key: 'budget', label: 'Budget range' },
-      { key: 'region', label: 'Region' },
-      { key: 'productName', label: 'Product / service' },
-      { key: 'seasonality', label: 'Seasonality' }
-    ];
-    KNOWN_KEYS.forEach(({ key, label }) => {
-      const v = qd[key];
-      if (typeof v === 'string' && v.length > 0) {
-        events.push({
-          id: `quiz-${key}`,
-          kind: 'quiz',
-          title: `Quiz: ${label}`,
-          detail: v,
-          when: currentCampaign.createdAt
-        });
-      }
+    // Quiz answers — same formatter as Insights cards (multi-select, audience pruning, readable labels).
+    const qd = (currentCampaign.quizData ?? {}) as Record<string, string>;
+
+    QUIZ_ACTIVITY_FIELDS.forEach(({ key, label, read }) => {
+      const raw = read(qd);
+      if (!raw?.trim()) return;
+      const detail = formatQuizAnswerForDisplay(key, raw);
+      if (!detail) return;
+      events.push({
+        id: `quiz-${key}`,
+        kind: quizActivityEventKind(key),
+        title: quizActivityLogTitle(key, label),
+        detail,
+        when: currentCampaign.updatedAt ?? currentCampaign.createdAt
+      });
     });
 
     if (typeof qd.selectedPlan === 'string' && qd.selectedPlan) {
@@ -1621,18 +1469,18 @@ export default function Chat() {
       });
     }
 
-    // Stage 2 phase-specific answers (anything in quizData that is not in the
-    // base quiz keys above).
-    const baseKeySet = new Set(KNOWN_KEYS.map(k => k.key).concat(['selectedPlan', 'phase']));
-    Object.keys(qd).forEach(key => {
-      if (baseKeySet.has(key)) return;
+    const STRUCTURAL_QUIZ_KEYS = new Set<string>(['phase', 'selectedPlan']);
+    Object.keys(qd).forEach((key) => {
+      if (STRUCTURAL_QUIZ_KEYS.has(key)) return;
+      if (quizActivityLogHandledKeys.has(key)) return;
       const v = qd[key];
-      if (typeof v !== 'string' || !v) return;
+      if (typeof v !== 'string' || !v.trim()) return;
+      const detail = formatQuizAnswerForDisplay(key, v) || v;
       events.push({
-        id: `phase2-${key}`,
+        id: `other-${key}`,
         kind: 'phase2',
-        title: `Stage 2: ${key}`,
-        detail: v,
+        title: `Campaign: ${quizFieldActivityTitle(key)}`,
+        detail,
         when: currentCampaign.updatedAt ?? currentCampaign.createdAt
       });
     });
@@ -1737,115 +1585,110 @@ export default function Chat() {
 
   return (
     <div className="chat-layout">
-      {/* Sidebar */}
-      <AnimatePresence>
-        {sidebarOpen && (
-          <motion.aside
-            className="chat-sidebar"
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 280, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ type: 'tween', duration: 0.3, ease: 'easeInOut' }}
-          >
-            <div className="sidebar-header">
-              <Link to="/" className="sidebar-logo">
-                <Sparkles size={24} />
-              </Link>
-              <button
-                className="sidebar-toggle"
-                onClick={() => setSidebarOpen(false)}
-                aria-label={'Hide sidebar'}
-              >
-                <ChevronLeft size={18} />
-              </button>
-            </div>
-
-            <button className="new-chat-btn" onClick={handleNewChat}>
-              <Plus size={18} />
-              {'New Chat'}
+      {/* Sidebar: outer animates clipped width; inner stays fixed‑width — no squished/reflow typography */}
+      <motion.aside
+        className={`chat-sidebar ${sidebarOpen ? '' : 'collapsed'}`}
+        aria-hidden={!sidebarOpen}
+        initial={false}
+        animate={{ width: sidebarOpen ? sidebarPanelWidth : 0 }}
+        transition={{ duration: sidebarOpen ? 0.34 : 0.28, ease: [0.4, 0, 0.2, 1] }}
+        style={{ pointerEvents: sidebarOpen ? 'auto' : 'none' }}
+      >
+        <div className="chat-sidebar-inner" style={{ width: sidebarPanelWidth }}>
+          <div className="sidebar-header">
+            <Link to="/" className="sidebar-logo">
+              <Sparkles size={24} />
+            </Link>
+            <button
+              className="sidebar-toggle"
+              onClick={() => setSidebarOpen(false)}
+              aria-label={'Hide sidebar'}
+            >
+              <ChevronLeft size={18} />
             </button>
+          </div>
 
-            {/* All campaigns (favorites sorted to top) */}
-            <div className="sidebar-section">
-              <span className="section-label">{'Saved Campaigns'}</span>
-              <div className="campaigns-list">
-                {sortedCampaigns.map((campaign) => (
-                  <CampaignItem
-                    key={campaign.id}
-                    campaign={campaign}
-                    isActive={campaign.id === campaignId}
-                    isEditing={editingCampaignId === campaign.id}
-                    editingName={editingName}
-                    menuOpen={activeCampaignMenu === campaign.id}
-                    onNavigate={() => navigate(`/chat/${campaign.id}`)}
-                    onMenuToggle={() => setActiveCampaignMenu(activeCampaignMenu === campaign.id ? null : campaign.id)}
-                    onStartEdit={() => { setEditingCampaignId(campaign.id); setEditingName(campaign.name); }}
-                    onEditChange={setEditingName}
-                    onEditSubmit={() => handleRenameCampaign(campaign.id)}
-                    onEditCancel={() => setEditingCampaignId(null)}
-                    onDelete={() => openDeleteModal(campaign.id)}
-                    onToggleFavorite={() => handleToggleFavorite(campaign.id)}
-                  />
-                ))}
-                {sortedCampaigns.length === 0 && (
-                  <p className="no-campaigns">{'No campaigns yet'}</p>
+          <button type="button" className="new-chat-btn" onClick={handleNewChat}>
+            <Plus size={18} />
+            {'New Chat'}
+          </button>
+
+          <div className="sidebar-section">
+            <span className="section-label">{'Saved Campaigns'}</span>
+            <div className="campaigns-list">
+              {sortedCampaigns.map((campaign) => (
+                <CampaignItem
+                  key={campaign.id}
+                  campaign={campaign}
+                  isActive={campaign.id === campaignId}
+                  isEditing={editingCampaignId === campaign.id}
+                  editingName={editingName}
+                  menuOpen={activeCampaignMenu === campaign.id}
+                  onNavigate={() => navigate(`/chat/${campaign.id}`)}
+                  onMenuToggle={() => setActiveCampaignMenu(activeCampaignMenu === campaign.id ? null : campaign.id)}
+                  onStartEdit={() => {
+                    setEditingCampaignId(campaign.id);
+                    setEditingName(campaign.name);
+                  }}
+                  onEditChange={setEditingName}
+                  onEditSubmit={() => handleRenameCampaign(campaign.id)}
+                  onEditCancel={() => setEditingCampaignId(null)}
+                  onDelete={() => openDeleteModal(campaign.id)}
+                  onToggleFavorite={() => handleToggleFavorite(campaign.id)}
+                />
+              ))}
+              {sortedCampaigns.length === 0 && <p className="no-campaigns">{'No campaigns yet'}</p>}
+            </div>
+          </div>
+
+          <div className="sidebar-footer">
+            <div className="user-menu-wrapper" ref={userMenuRef}>
+              <button type="button" className="user-profile-btn" onClick={() => setUserMenuOpen(!userMenuOpen)}>
+                {user?.avatar ? (
+                  <img src={user.avatar} alt={user.name || 'User'} className="user-avatar-small" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                ) : (
+                  <div className="user-avatar-small">{user?.name?.charAt(0) || 'U'}</div>
                 )}
-              </div>
-            </div>
+                <span className="user-name-text">{user?.name || 'User'}</span>
+              </button>
 
-            {/* Sidebar footer - User profile only */}
-            <div className="sidebar-footer">
-              <div className="user-menu-wrapper" ref={userMenuRef}>
-                <button
-                  className="user-profile-btn"
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                >
-                  {user?.avatar ? (
-                    <img src={user.avatar} alt={user.name || 'User'} className="user-avatar-small" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
-                  ) : (
-                    <div className="user-avatar-small">{user?.name?.charAt(0) || 'U'}</div>
-                  )}
-                  <span className="user-name-text">{user?.name || 'User'}</span>
-                </button>
-
-                <AnimatePresence>
-                  {userMenuOpen && (
-                    <motion.div
-                      className="user-dropdown"
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      transition={{ duration: 0.15 }}
-                    >
-                      <div className="user-dropdown-header">
-                        {user?.avatar ? (
-                          <img src={user.avatar} alt={user.name || 'User'} className="user-avatar-large" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                        ) : (
-                          <div className="user-avatar-large">{user?.name?.charAt(0) || 'U'}</div>
-                        )}
-                        <div className="user-dropdown-info">
-                          <span className="user-dropdown-name">{user?.name || 'User'}</span>
-                          <span className="user-dropdown-email">{user?.email}</span>
-                        </div>
+              <AnimatePresence>
+                {userMenuOpen && (
+                  <motion.div
+                    className="user-dropdown"
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <div className="user-dropdown-header">
+                      {user?.avatar ? (
+                        <img src={user.avatar} alt={user.name || 'User'} className="user-avatar-large" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                      ) : (
+                        <div className="user-avatar-large">{user?.name?.charAt(0) || 'U'}</div>
+                      )}
+                      <div className="user-dropdown-info">
+                        <span className="user-dropdown-name">{user?.name || 'User'}</span>
+                        <span className="user-dropdown-email">{user?.email}</span>
                       </div>
-                      <div className="user-dropdown-divider" />
-                      <button className="user-dropdown-item" onClick={() => navigate('/settings')}>
-                        <Settings size={16} />
-                        {'Settings'}
-                      </button>
-                      <div className="user-dropdown-divider" />
-                      <button className="user-dropdown-item logout" onClick={handleLogout}>
-                        <LogOut size={16} />
-                        {'Logout'}
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                    </div>
+                    <div className="user-dropdown-divider" />
+                    <button type="button" className="user-dropdown-item" onClick={() => navigate('/settings')}>
+                      <Settings size={16} />
+                      {'Settings'}
+                    </button>
+                    <div className="user-dropdown-divider" />
+                    <button type="button" className="user-dropdown-item logout" onClick={handleLogout}>
+                      <LogOut size={16} />
+                      {'Logout'}
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-          </motion.aside>
-        )}
-      </AnimatePresence>
+          </div>
+        </div>
+      </motion.aside>
 
       {/* Main Chat Area */}
       <div className="chat-main">
@@ -2565,21 +2408,24 @@ export default function Chat() {
                 {guideActiveTab === 'overview' && (
                   <div className="guide-section">
                     <p>
-                      {'AdVisor turns a short quiz into a full marketing plan. The AI walks you through four stages: discovery, strategy & plan selection, refinement, and ongoing optimisation.'}
+                      {'AdVisor is a staged workflow: Discovery captures your situation, Strategy produces comparable plans you can pick from, Refinement locks targets the AI will measure against, and Optimisation turns live metrics into concrete next steps.'}
+                    </p>
+                    <p>
+                      {'Use the left sidebar to switch campaigns; the header shows which stage you are in. The Insights panel aggregates your quiz answers, plan choice, Stage 2 targets, and every metrics snapshot so nothing is scattered across threads.'}
                     </p>
                     <ul className="guide-list">
-                      <li>{'Stage 0 - Discovery: Answer the initial quiz to let AdVisor understand your business context.'}</li>
-                      <li>{'Stage 1 - Strategy: Compare AI-generated plans. You must select one to proceed.'}</li>
-                      <li>{'Stage 2 - Refinement: Answer follow-up questions to lock in audience, budget, and KPIs.'}</li>
-                      <li>{'Stage 3 - Optimisation: Submit metrics periodically. AI will analyze trends and suggest fixes.'}</li>
-                      <li>{'Your selected plan and Stage 2 targets are automatically synced into Insights for ongoing comparison.'}</li>
+                      <li>{'Stage 0 – Discovery: Full or partial quiz; some questions allow multiple selections so the model sees the real mix of audiences, goals, and channels.'}</li>
+                      <li>{'Stage 1 – Strategy: The assistant may return several plan cards. You must tap one plan to continue; optional content drafts can follow before you advance.'}</li>
+                      <li>{'Stage 2 – Refinement: Deadline and KPI targets (e.g. CTR, conversion rate, ROAS). You can skip straight to Stage 3 if you prefer; targets still help the AI benchmark later.'}</li>
+                      <li>{'Stage 3 – Optimisation: Enter metrics snapshots (or CSV import). Compare period over period and ask the strategist for remediation when trends slip.'}</li>
+                      <li>{'Rolling back via the timeline clears later stages but keeps chat history visible for context.'}</li>
                     </ul>
                     <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(124, 58, 237, 0.1)', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-border)' }}>
                       <p style={{ fontSize: '0.85rem', fontWeight: '500', color: 'var(--accent)', marginBottom: '0.25rem' }}>
-                        {'Pro Tip:'}
+                        {'Pro tip'}
                       </p>
                       <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        {'You can always return to a previous stage by clicking its name in the header timeline. Progress from later stages will be reset.'}
+                        {'Collapse the sidebar when you need horizontal room; the strip animates by clipping a fixed inner panel so labels do not jitter. Reopen it from the chevron in the header.'}
                       </p>
                     </div>
                   </div>
@@ -2605,17 +2451,25 @@ export default function Chat() {
 
                 {guideActiveTab === 'panes' && (
                   <div className="guide-section">
-                    <h4>{'Strategy Analyst (left)'}</h4>
+                    <h4>{'Campaign sidebar'}</h4>
                     <p>
-                      {'Discusses strategy, generates plan options, validates stage transitions. Plan selection happens here.'}
+                      {'Start a new thread, open saved campaigns, and access your account menu. Favorites float to the top; row actions rename, delete, or star a campaign. On small screens the drawer sits above the chat and uses the same smooth width animation as desktop.'}
                     </p>
-                    <h4>{'Content Writer (right)'}</h4>
+                    <h4>{'Strategy Analyst (left pane)'}</h4>
                     <p>
-                      {'Generates emails, ad copies, social posts. Disabled until you reach Stage 1 because the writer needs your selected plan as context.'}
+                      {'This is where plans are generated, compared, and selected. System messages mark stage advances. After you pick a plan you may see shortcuts to draft content or jump to Stage 2.'}
+                    </p>
+                    <h4>{'Content Writer (right pane)'}</h4>
+                    <p>
+                      {'Drafts channel-specific copy once a plan exists so the model can align tone and offer with your chosen direction. If the pane is empty, finish Discovery or open the split view from the resizer.'}
                     </p>
                     <h4>{'Send to Content Writer'}</h4>
                     <p>
-                      {'Click the arrow icon on any strategy message to push that text into the Content Writer composer as a prompt.'}
+                      {'Use the arrow on a strategy message to copy that block into the writer’s input. Edit the prompt before sending if you need a tighter brief.'}
+                    </p>
+                    <h4>{'Resizable split'}</h4>
+                    <p>
+                      {'Drag the vertical handle between panes to rebalance reading space. Both columns stay scrollable independently.'}
                     </p>
                   </div>
                 )}
@@ -2623,12 +2477,16 @@ export default function Chat() {
                 {guideActiveTab === 'metrics' && (
                   <div className="guide-section">
                     <p>
-                      {'Open the Insights panel to log a metrics snapshot. Each snapshot captures impressions, clicks, conversions, CPC, CPA, CTR, conversion rate, ROAS, and any custom fields you add. AdVisor compares the latest snapshot to the previous one and flags trends.'}
+                      {'Campaign Insights is the single place to review structured inputs and outputs: the Quiz Answers card wraps long multi-select values across lines, Stage 2 targets sit beside your latest snapshot, and the activity log lists chronologically—with Profile rows for Discovery answers, Targets rows for deadline and KPIs, plus plans, stages, content, metrics, and any extra campaign fields.'}
+                    </p>
+                    <p>
+                      {'When you file a snapshot, capture impressions, clicks, conversions, CPC, CPA, CTR, conversion rate, ROAS, plus any custom columns you rely on. The mini chart highlights the first six core fields so you can sanity-check direction before saving.'}
                     </p>
                     <ul className="guide-list">
-                      <li>{'Snapshots are tied to the campaign and labelled by date.'}</li>
-                      <li>{'Upload metrics in bulk via CSV for legacy reports.'}</li>
-                      <li>{'Submit a snapshot at Stage 3 to trigger AI optimisation feedback.'}</li>
+                      <li>{'Each snapshot is stored per campaign with its label and timestamp for easy audits.'}</li>
+                      <li>{'CSV import helps backfill historical rows; download a template from your analytics stack and map headers consistently.'}</li>
+                      <li>{'At Stage 3, mention the newest snapshot when you ask for optimisations so the AI can contrast targets vs actuals.'}</li>
+                      <li>{'KPI bands (on track / close / behind) compare the latest reading to the Stage 2 targets you entered.'}</li>
                     </ul>
                   </div>
                 )}
@@ -2637,27 +2495,35 @@ export default function Chat() {
                   <div className="guide-section">
                     <h4>{'How do I advance to the next stage?'}</h4>
                     <p>
-                      {'Look for interactive buttons in the chat: picking a Plan card in Stage 1, or clicking the "Go to Stage X" button that appears after AI finishes its analysis.'}
+                      {'Use the in-chat controls: select a plan card in Stage 1, confirm Stage 2 questions (or skip where offered), then use the stage transition prompt when the assistant finishes a milestone summary.'}
                     </p>
-                    <h4>{'Can I choose multiple answers in Discovery Quiz?'}</h4>
+                    <h4>{'Can I choose multiple answers in Discovery?'}</h4>
                     <p>
-                      {'Yes. Some quiz questions support multi-select. Pick all relevant options, then click Continue.'}
+                      {'Yes. Where you see multi-select, tap every option that applies, then Continue. Values are stored as a combined list and shown with wrapping in Insights so long channel or audience mixes stay readable.'}
+                    </p>
+                    <h4>{'Why does “B2B & B2C” sometimes hide extra B2B/B2C chips?'}</h4>
+                    <p>
+                      {'Choosing the combined audience preset already implies both sides, so redundant individual B2B/B2C tokens are dropped when we render the profile to avoid duplicate labels.'}
                     </p>
                     <h4>{'Can I redo a stage?'}</h4>
                     <p>
-                      {'Yes. Click any completed stage in the header timeline to roll back. Note: Rolling back will reset your progress for all stages ahead of it.'}
+                      {'Yes. Click a completed stage in the header timeline. Anything after that stage is reset so the AI does not mix obsolete plans with new answers.'}
                     </p>
                     <h4>{'Why is the Content Writer disabled?'}</h4>
                     <p>
-                      {'The Content Writer needs a selected plan for context. It unlocks automatically as soon as you choose a Plan in Stage 1.'}
+                      {'It unlocks after Stage 1 because copy drafts need your selected plan and positioning context.'}
                     </p>
-                    <h4>{'Where do I see my historical answers?'}</h4>
+                    <h4>{'Where do I see historical answers?'}</h4>
                     <p>
-                      {'Open the Insights panel (Bar Chart icon) to see the full activity log, including every quiz answer and plan selection.'}
+                      {'Open Insights (bar chart icon). Quiz Answers summarises the latest profile; the activity log prefixes rows as Profile vs Targets vs Campaign so timestamps stay easy to scan.'}
                     </p>
                     <h4>{'How are Stage 2 KPIs used?'}</h4>
                     <p>
-                      {'Stage 2 goals (deadline, target CTR/CVR/ROAS) are shown in Insights and used by AI as benchmark context for Stage 3 optimisation advice.'}
+                      {'Targets appear beside your latest metrics and feed the status chips (on track / close / behind). Mention them when asking for tactical fixes in Stage 3.'}
+                    </p>
+                    <h4>{'The sidebar animation looks odd on slow devices.'}</h4>
+                    <p>
+                      {'We animate the outer rail width while keeping the interior layout fixed width, then clip overflow. If you still notice hitches, try closing the sidebar before resizing the browser drastically.'}
                     </p>
                   </div>
                 )}
@@ -2741,9 +2607,9 @@ export default function Chat() {
                             {'No data yet.'}
                           </p>
                         ) : (
-                          fullQuizProfile.slice(0, 8).map((item, idx) => (
+                          fullQuizProfile.slice(0, 14).map((item, idx) => (
                             <div key={idx} className="insights-stage-item">
-                              <span className="insights-stage-key" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <span className="insights-stage-key" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
                                 {item.icon}
                                 {item.label}
                               </span>
