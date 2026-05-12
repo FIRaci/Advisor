@@ -163,12 +163,19 @@ export default function Chat() {
   const stageDescriptor = STAGE_DESCRIPTORS[currentStage];
   const contentPaneMode = useMemo(() => getContentPaneMode(currentStage), [currentStage]);
 
+  const normalizePlanContent = (content: string) => {
+    return content
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      .replace(/\[(\/?)PLAN\s+([A-Z0-9]+)\]/gi, '[$1PLAN_$2]');
+  };
+
   // Parse plan options from AI response
   const parsePlanOptions = (content: string) => {
+    const normalized = normalizePlanContent(content);
     const planRegex = /\[PLAN[_\s]?([A-Z0-9]+)\]([\s\S]*?)\[\/PLAN[_\s]?\1\]/gi;
     const plans: { id: string; content: string }[] = [];
     let match;
-    while ((match = planRegex.exec(content)) !== null) {
+    while ((match = planRegex.exec(normalized)) !== null) {
       plans.push({ id: match[1].toUpperCase(), content: match[2].trim() });
     }
     return plans;
@@ -179,7 +186,10 @@ export default function Chat() {
 
   // Clean content for display (remove markers)
   const cleanContent = (content: string) => {
-    return content
+    const normalized = normalizePlanContent(content);
+    const planStart = normalized.search(/\[PLAN[_\s]?[A-Z0-9]+\]/i);
+    const base = planStart >= 0 ? normalized.slice(0, planStart) : normalized;
+    return base
       .replace(/\*\*\[PLAN_OPTIONS\]\*\*/gi, '')
       .replace(/\[PLAN_OPTIONS\]/gi, '')
       .replace(/\[PLAN[_\s]?([A-Z0-9]+)\][\s\S]*?\[\/PLAN[_\s]?\1\]/gi, '')

@@ -23,12 +23,20 @@ function shouldUseLiveAi(): boolean {
 const planOpenTagRegex = /\[PLAN(?:_|\s)?[A-Z0-9]+\]/i;
 const planBlockRegex = /\[PLAN(?:_|\s)?([A-Z0-9]+)\]([\s\S]*?)\[\/PLAN(?:_|\s)?\1\]/gi;
 
+function normalizePlanContent(content: string): string {
+  return content
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/\[(\/?)PLAN\s+([A-Z0-9]+)\]/gi, '[$1PLAN_$2]');
+}
+
 function countPlanBlocks(content: string): number {
-  return Array.from(content.matchAll(planBlockRegex)).length;
+  const normalized = normalizePlanContent(content);
+  return Array.from(normalized.matchAll(planBlockRegex)).length;
 }
 
 function hasPlanTags(content: string): boolean {
-  return planOpenTagRegex.test(content);
+  const normalized = normalizePlanContent(content);
+  return planOpenTagRegex.test(normalized);
 }
 
 const PLAN_OPTIONS_FALLBACK = [
@@ -58,8 +66,9 @@ const PLAN_OPTIONS_FALLBACK = [
 ].join('\n');
 
 function appendPlanOptionsIfMissing(content: string): string {
-  if (countPlanBlocks(content) >= 3) return content;
-  const trimmed = content.trim();
+  const normalized = normalizePlanContent(content);
+  if (countPlanBlocks(normalized) >= 3) return normalized;
+  const trimmed = normalized.trim();
   if (!trimmed) return PLAN_OPTIONS_FALLBACK;
   return `${trimmed}\n\n${PLAN_OPTIONS_FALLBACK}`;
 }
@@ -400,6 +409,8 @@ Select a plan above to proceed to **Stage 2** where we'll refine the details!`;
 How can I assist you with your campaign today? Try completing the **Quiz** first for a tailored strategy!`;
       }
     }
+
+    aiText = normalizePlanContent(aiText);
 
     if (effectivePhase === '1') {
       aiText = appendPlanOptionsIfMissing(aiText);
