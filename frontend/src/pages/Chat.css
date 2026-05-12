@@ -1154,32 +1154,78 @@ body.chat-page-active {
 }
 
 .typing-indicator {
-  display: inline-flex;
-  gap: 0.4rem;
-  padding: 0.4rem 0.8rem;
+  display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 1rem;
+  justify-content: center;
+  padding: 0.6rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.typing-indicator span {
-  width: 6px;
-  height: 6px;
+.typing-indicator-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(124, 58, 237, 0.1);
+  border-top-color: var(--accent);
   border-radius: 50%;
-  background: var(--accent);
-  opacity: 0.4;
-  animation: typingBounce 1s infinite ease-in-out;
-  box-shadow: 0 0 10px var(--accent-muted);
+  animation: typingRotate 0.8s linear infinite, typingColor 2s ease-in-out infinite;
 }
 
-.typing-indicator span:nth-child(1) { animation-delay: 0s; }
-.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typingRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 
-@keyframes typingBounce {
-  0%, 100% { transform: scale(1); opacity: 0.4; }
-  50% { transform: scale(1.4); opacity: 1; filter: blur(0.5px); }
+@keyframes typingColor {
+  0%, 100% { border-top-color: #000; }
+  50% { border-top-color: #7c3aed; }
+}
+
+.message-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.85rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.message-content th {
+  background: rgba(124, 58, 237, 0.15);
+  color: var(--text-primary);
+  text-align: left;
+  padding: 0.75rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+}
+
+.message-content td {
+  padding: 0.75rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.message-content tr:last-child td {
+  border-bottom: none;
+}
+
+.message-content tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.message-content blockquote {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid var(--accent);
+  background: rgba(124, 58, 237, 0.05);
+  color: var(--text-secondary);
+  font-style: italic;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
 .stage-step {

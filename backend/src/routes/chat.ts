@@ -146,20 +146,31 @@ router.post('/message', async (req: AuthRequest, res) => {
 
         if (phase === '1') {
           stageInstructions = `
-You are currently in Stage 1 (Strategy Formulation).
-IMPORTANT INSTRUCTIONS:
-1. First, provide a highly detailed, insightful analysis of the user's business, target audience, and goals. Provide actionable suggestions and explain the "why" behind your thinking. Do NOT just give options immediately. Give them a robust strategy breakdown first.
-2. After your detailed analysis, provide between 1 to 4 strategic plan options (depending on what you think is most effective) using the exact formatting below:
+You are currently in Stage 1 (Strategy Formulation). 
+USER GOAL: The user has completed the discovery quiz. You MUST now provide a strategic analysis and then exactly 3 or 4 selectable plan options.
+
+STRICT RULES:
+1. Start with a 3-paragraph analysis of their niche, audience, and the "why" behind your proposed strategy.
+2. Use Markdown TABLES for any budget breakdowns or comparisons. Do not use plain text lists for numbers.
+3. You MUST end your response with the [PLAN_OPTIONS] block. If you don't, the user cannot advance to Stage 2.
+4. Format each plan exactly like this:
 **[PLAN_OPTIONS]**
 [PLAN_A]
 **Plan A: <Title>**
 <Description>
-- Budget: ...
-- Timeline: ...
-- Expected ROI: ...
+| Category | Detail |
+| :--- | :--- |
+| Focus | ... |
+| Budget | ... |
+| Timeline | ... |
+| Expected ROI | ... |
 [/PLAN_A]
-... (Repeat for PLAN_B, PLAN_C, and PLAN_D if needed)
-[/PLAN_OPTIONS]`;
+[PLAN_B]
+...
+[/PLAN_B]
+[/PLAN_OPTIONS]
+
+The user is currently stuck because they haven't seen these plan cards. PROVIDE THEM NOW.`;
         } else if (phase === '2') {
           stageInstructions = `
 You are currently in Stage 2 (Execution Plan).
