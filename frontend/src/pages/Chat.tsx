@@ -181,6 +181,12 @@ export default function Chat() {
   const [metricsPeriodStart, setMetricsPeriodStart] = useState('');
   const [metricsPeriodEnd, setMetricsPeriodEnd] = useState('');
   const [metricsInputs, setMetricsInputs] = useState<Record<string, string>>({});
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmModalData, setConfirmModalData] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -994,48 +1000,51 @@ export default function Chat() {
     if (targetStage >= currentStage) return;
 
     const confirmText = lang === 'en'
-      ? `Warning: You are about to return to Stage ${targetStage} (${STAGE_DESCRIPTORS[targetStage].title.en}). \n\nThis will permanently delete all strategy decisions, selected plans, and execution details made after this stage. Your chat history will remain, but the AI's current context will be reset to this earlier point. \n\nAre you sure you want to proceed?`
-      : `Cảnh báo: Bạn chuẩn bị quay lại Giai đoạn ${targetStage} (${STAGE_DESCRIPTORS[targetStage].title.vi}). \n\nHành động này sẽ xoá vĩnh viễn các quyết định chiến lược, kế hoạch đã chọn và chi tiết thực thi sau giai đoạn này. Lịch sử chat vẫn được giữ lại, nhưng ngữ cảnh hiện tại của AI sẽ bị quay về thời điểm đó. \n\nBạn có chắc chắn muốn tiếp tục không?`;
+      ? `You are about to return to Stage ${targetStage} (${STAGE_DESCRIPTORS[targetStage].title.en}). This will permanently delete all strategy decisions, selected plans, and execution details made after this stage. Your chat history will remain, but the AI's current context will be reset to this earlier point.`
+      : `Bạn chuẩn bị quay lại Giai đoạn ${targetStage} (${STAGE_DESCRIPTORS[targetStage].title.vi}). Hành động này sẽ xoá vĩnh viễn các quyết định chiến lược, kế hoạch đã chọn và chi tiết thực thi sau giai đoạn này. Lịch sử chat vẫn được giữ lại, nhưng ngữ cảnh hiện tại của AI sẽ bị quay về thời điểm đó.`;
 
-    if (!window.confirm(confirmText)) return;
+    setConfirmModalData({
+      title: lang === 'en' ? 'Confirm Reset' : 'Xác nhận đặt lại',
+      message: confirmText,
+      onConfirm: async () => {
+        setStageTransitionPending(true);
+        setStageTransitionError(null);
+        setShowConfirmModal(false);
 
-    setStageTransitionPending(true);
-    setStageTransitionError(null);
+        const previous = currentCampaign?.quizData ?? {};
+        const next: Record<string, string> = { ...previous };
 
-    const previous = currentCampaign?.quizData ?? {};
-    const next: Record<string, string> = { ...previous };
+        // Clear progression markers based on target stage
+        if (targetStage < 3) {
+          delete next.phase;
+        }
+        if (targetStage < 2) {
+          delete next.selectedPlan;
+          delete next.phase;
+        }
+        
+        if (targetStage === 0) {
+          Object.keys(next).forEach(k => { delete next[k]; });
+        } else if (targetStage === 1) {
+          delete next.selectedPlan;
+          delete next.phase;
+        }
 
-    // Clear progression markers based on target stage
-    if (targetStage < 3) {
-      delete next.phase;
-    }
-    if (targetStage < 2) {
-      delete next.selectedPlan;
-      // Also clear phase just in case, though handled above
-      delete next.phase;
-    }
-    
-    if (targetStage === 0) {
-      // Wipe all quiz answers but keep the campaign so logs survive.
-      Object.keys(next).forEach(k => { delete next[k]; });
-    } else if (targetStage === 1) {
-      // We are in Stage 1: Keep quiz answers, but clear selectedPlan to allow re-selection.
-      delete next.selectedPlan;
-      delete next.phase;
-    }
-
-    const updateRes = await api.updateCampaign(campaignId, { quizData: next });
-    if (!updateRes.success) {
-      setStageTransitionPending(false);
-      setStageTransitionError(
-        lang === 'en' ? 'Could not reset stage. Please retry.' : 'Khong the dat lai giai doan. Vui long thu lai.'
-      );
-      return;
-    }
-    setSelectedPlanInChat(null);
-    fetchCurrentCampaign();
-    appendSystemTransition(targetStage, 'rollback');
-    setStageTransitionPending(false);
+        const updateRes = await api.updateCampaign(campaignId, { quizData: next });
+        if (!updateRes.success) {
+          setStageTransitionPending(false);
+          setStageTransitionError(
+            lang === 'en' ? 'Could not reset stage. Please retry.' : 'Không thể đặt lại giai đoạn. Vui lòng thử lại.'
+          );
+          return;
+        }
+        setSelectedPlanInChat(null);
+        fetchCurrentCampaign();
+        appendSystemTransition(targetStage, 'rollback');
+        setStageTransitionPending(false);
+      }
+    });
+    setShowConfirmModal(true);
   };
 
   // Build a temporary CONTENT-pane error message that always lands in the
@@ -1715,6 +1724,53 @@ export default function Chat() {
   });
   const contentMessages = messages.filter(m => classifyPane(m) === 'CONTENT');
   const showContentPane = currentStage > 0 || analystMessages.length > 0;
+
+  const ConfirmationModal = ({ 
+    isOpen, 
+    data, 
+    onClose, 
+    lang 
+  }: { 
+    isOpen: boolean; 
+    data: { title: string; message: string; onConfirm: () => void } | null; 
+    onClose: () => void;
+    lang: 'en' | 'vi';
+  }) => {
+    if (!isOpen || !data) return null;
+    return (
+      <div className="modal-overlay" onClick={onClose} style={{ zIndex: 2000 }}>
+        <motion.div 
+          className="modal-container" 
+          onClick={e => e.stopPropagation()}
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          style={{ maxWidth: '450px', background: 'rgba(18, 18, 22, 0.98)', border: '1px solid rgba(255,255,255,0.1)' }}
+        >
+          <div className="modal-header" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '1.25rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff' }}>{data.title}</h3>
+            <button className="modal-close" onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>
+              <X size={20} />
+            </button>
+          </div>
+          <div className="modal-body" style={{ padding: '1.5rem', color: '#ccc', lineHeight: 1.6 }}>
+            <p>{data.message}</p>
+          </div>
+          <div className="modal-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '1.25rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+            <button className="btn btn-secondary" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '0.6rem 1.2rem', borderRadius: '0.5rem', cursor: 'pointer' }}>
+              {lang === 'en' ? 'Cancel' : 'Hủy'}
+            </button>
+            <button 
+              className="btn btn-primary" 
+              onClick={data.onConfirm} 
+              style={{ background: '#ef4444', border: 'none', color: '#fff', padding: '0.6rem 1.2rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600 }}
+            >
+              {lang === 'en' ? 'Reset Stage' : 'Đặt lại'}
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
 
   return (
     <div className="chat-layout">
@@ -3149,6 +3205,12 @@ export default function Chat() {
           </motion.div>
         )}
       </AnimatePresence>
+      <ConfirmationModal 
+        isOpen={showConfirmModal} 
+        data={confirmModalData} 
+        onClose={() => setShowConfirmModal(false)} 
+        lang={lang} 
+      />
 
       {/* Phase 2 Quiz Popup */}
       <AnimatePresence>

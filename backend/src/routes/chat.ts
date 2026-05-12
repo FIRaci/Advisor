@@ -21,7 +21,7 @@ function shouldUseLiveAi(): boolean {
 }
 
 function detectStrategyKind(content: string): { kind: string | null; metadata: Record<string, unknown> | null } {
-  if (content.includes('[PLAN_OPTIONS]')) {
+  if (content.includes('[PLAN_OPTIONS]') || content.includes('[PLAN_A]') || content.includes('[PLAN A]')) {
     return { kind: 'plan_options', metadata: null };
   }
   if (content.includes('[STAGE_TRANSITION]')) {
