@@ -20,8 +20,47 @@ function shouldUseLiveAi(): boolean {
   return GEMINI_API_KEY.length > 30;
 }
 
+const planTagRegex = /\[PLAN(?:_|\s)?[A-Z0-9]+\]/i;
+
+function hasPlanTags(content: string): boolean {
+  return planTagRegex.test(content);
+}
+
+const PLAN_OPTIONS_FALLBACK = [
+  '**[PLAN_OPTIONS]**',
+  '[PLAN_A]',
+  '**Plan A: Growth Accelerator**',
+  '- Focus: Rapid acquisition with paid channels',
+  '- Budget mix: 70% Paid, 20% Content, 10% Email',
+  '- Timeline: 3 months',
+  '- Best for: Fast results',
+  '[/PLAN_A]',
+  '[PLAN_B]',
+  '**Plan B: Organic Builder**',
+  '- Focus: Content, community, and long-term trust',
+  '- Budget mix: 30% Paid, 50% Content, 20% Community',
+  '- Timeline: 6 months',
+  '- Best for: Low-cost, steady growth',
+  '[/PLAN_B]',
+  '[PLAN_C]',
+  '**Plan C: Hybrid Strategy**',
+  '- Focus: Balanced paid and organic growth',
+  '- Budget mix: 50% Paid, 30% Content, 20% Email/Community',
+  '- Timeline: 4 months',
+  '- Best for: Balanced risk and ROI',
+  '[/PLAN_C]',
+  '[/PLAN_OPTIONS]'
+].join('\n');
+
+function appendPlanOptionsIfMissing(content: string): string {
+  if (hasPlanTags(content)) return content;
+  const trimmed = content.trim();
+  if (!trimmed) return PLAN_OPTIONS_FALLBACK;
+  return `${trimmed}\n\n${PLAN_OPTIONS_FALLBACK}`;
+}
+
 function detectStrategyKind(content: string): { kind: string | null; metadata: Record<string, unknown> | null } {
-  if (content.includes('[PLAN_OPTIONS]') || content.includes('[PLAN_A]') || content.includes('[PLAN A]')) {
+  if (content.includes('[PLAN_OPTIONS]') || hasPlanTags(content)) {
     return { kind: 'plan_options', metadata: null };
   }
   if (content.includes('[STAGE_TRANSITION]')) {
@@ -133,6 +172,10 @@ router.post('/message', async (req: AuthRequest, res) => {
       }
     }
 
+    const effectivePhase = typeof (aiContext.quizData as any)?.phase === 'string'
+      ? (aiContext.quizData as any).phase
+      : '1';
+
     // Call AI service with timeout and graceful fallback
     let aiText = '';
     let usedFallback = false;
@@ -141,7 +184,7 @@ router.post('/message', async (req: AuthRequest, res) => {
       if (shouldUseLiveAi()) {
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const phase = (aiContext.quizData as any)?.phase || '1';
+        const phase = effectivePhase;
         let stageInstructions = '';
 
         if (phase === '1') {
@@ -351,6 +394,10 @@ Select a plan above to proceed to **Stage 2** where we'll refine the details!`;
 
 How can I assist you with your campaign today? Try completing the **Quiz** first for a tailored strategy!`;
       }
+    }
+
+    if (effectivePhase === '1' && !hasPlanTags(aiText)) {
+      aiText = appendPlanOptionsIfMissing(aiText);
     }
 
     // Save AI response (Strategy pane). Tag well-known marker kinds so the frontend

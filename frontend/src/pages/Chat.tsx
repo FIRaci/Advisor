@@ -349,26 +349,6 @@ export default function Chat() {
     }
   }, [initialLoading]);
 
-  // Autostart analysis when returning from Quiz
-  useEffect(() => {
-    if (searchParams.get('autostart') === 'true' && !initialLoading && messages.length === 0 && currentCampaign && !loading) {
-      const startAnalysis = async () => {
-        const initialText = "I've completed the quiz. Please analyze my data and propose strategic plans.";
-        
-        setLoading(true);
-        const res = await api.sendMessage(initialText, campaignId!);
-        if (res.success && res.data) {
-          const { userMessage, assistantMessage } = res.data;
-          setMessages([userMessage, assistantMessage]);
-        }
-        setLoading(false);
-        // Clear param
-        navigate(`/chat/${campaignId}`, { replace: true });
-      };
-      startAnalysis();
-    }
-  }, [searchParams, initialLoading, messages.length, currentCampaign, loading]);
-
   // Persist the "seen" flag whenever the guide is dismissed via close button
   // or overlay click. Gated on the ref so we never write before auto-show ran.
   useEffect(() => {
@@ -553,7 +533,7 @@ export default function Chat() {
     }
 
     setLoading(false);
-    if (!campaignId) {
+    if (searchParams.get('autostart') === 'true' || !campaignId) {
       navigate(`/chat/${effectiveCampaignId}`, { replace: true });
     }
   };
