@@ -2269,7 +2269,7 @@ export default function Chat() {
                     </div>
                     <div className="message-content typing-bubble">
                       <div className="typing-indicator">
-                        <div className="typing-indicator-spinner" />
+                        <span /><span /><span />
                       </div>
                     </div>
                   </div>
@@ -2395,7 +2395,7 @@ export default function Chat() {
                     <div className="message-avatar assistant-avatar" style={{ background: 'linear-gradient(135deg, #10b981, #3b82f6)' }}><FileText size={16} /></div>
                     <div className="message-main">
                       <div className="message-content typing-bubble">
-                        <div className="typing-indicator"><div className="typing-indicator-spinner" /></div>
+                        <div className="typing-indicator"><span /><span /><span /></div>
                       </div>
                     </div>
                   </div>
