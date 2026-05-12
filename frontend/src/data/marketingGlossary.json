@@ -2,199 +2,186 @@
   {
     "id": "cpc",
     "term": "CPC",
-    "name": { "en": "Cost Per Click", "vi": "Chi phi cho moi luot nhap chuot" },
-    "definition": {
-      "en": "The cost paid for each ad click.",
-      "vi": "Chi phi tra cho moi luot nhap vao quang cao."
-    },
+    "name": "Cost Per Click",
+    "definition": "The cost paid for each ad click.",
     "group": "cost",
-    "aliases": ["Cost Per Click"]
+    "aliases": [
+      "Cost Per Click"
+    ]
   },
   {
     "id": "cpm",
     "term": "CPM",
-    "name": { "en": "Cost Per Mille", "vi": "Chi phi tren 1.000 luot hien thi" },
-    "definition": {
-      "en": "The cost for 1,000 ad impressions.",
-      "vi": "Chi phi cho 1.000 luot hien thi quang cao."
-    },
+    "name": "Cost Per Mille",
+    "definition": "The cost for 1,000 ad impressions.",
     "group": "cost",
-    "aliases": ["Cost Per Thousand Impressions", "Cost Per Mille"]
+    "aliases": [
+      "Cost Per Thousand Impressions",
+      "Cost Per Mille"
+    ]
   },
   {
     "id": "cpa",
     "term": "CPA",
-    "name": { "en": "Cost Per Action", "vi": "Chi phi cho moi hanh dong" },
-    "definition": {
-      "en": "The cost for a defined conversion action (signup, download, purchase).",
-      "vi": "Chi phi cho mot hanh dong chuyen doi (dang ky, tai app, mua hang)."
-    },
+    "name": "Cost Per Action",
+    "definition": "The cost for a defined conversion action (signup, download, purchase).",
     "group": "cost",
-    "aliases": ["Cost Per Action"]
+    "aliases": [
+      "Cost Per Action"
+    ]
   },
   {
     "id": "cpl",
     "term": "CPL",
-    "name": { "en": "Cost Per Lead", "vi": "Chi phi cho moi khach hang tiem nang" },
-    "definition": {
-      "en": "The cost to acquire a lead (contact info, form submission).",
-      "vi": "Chi phi de co mot lead (thong tin lien he, form)."
-    },
+    "name": "Cost Per Lead",
+    "definition": "The cost to acquire a lead (contact info, form submission).",
     "group": "cost",
-    "aliases": ["Cost Per Lead"]
+    "aliases": [
+      "Cost Per Lead"
+    ]
   },
   {
     "id": "cac",
     "term": "CAC",
-    "name": { "en": "Customer Acquisition Cost", "vi": "Chi phi thu hut khach hang" },
-    "definition": {
-      "en": "Total cost to acquire a new customer, including ads and sales.",
-      "vi": "Tong chi phi de co mot khach hang moi, gom quang cao va ban hang."
-    },
+    "name": "Customer Acquisition Cost",
+    "definition": "Total cost to acquire a new customer, including ads and sales.",
     "group": "cost",
-    "aliases": ["Customer Acquisition Cost"]
+    "aliases": [
+      "Customer Acquisition Cost"
+    ]
   },
   {
     "id": "reach",
     "term": "Reach",
-    "name": { "en": "Reach", "vi": "Luong tiep can" },
-    "definition": {
-      "en": "The number of unique people who saw an ad or content.",
-      "vi": "So nguoi doc nhat da nhin thay quang cao hoac noi dung."
-    },
+    "name": "Reach",
+    "definition": "The number of unique people who saw an ad or content.",
     "group": "engagement",
-    "aliases": ["Unique Reach"]
+    "aliases": [
+      "Unique Reach"
+    ]
   },
   {
     "id": "impressions",
     "term": "Impressions",
-    "name": { "en": "Impressions", "vi": "So luot hien thi" },
-    "definition": {
-      "en": "Total number of times an ad is shown, including repeat views.",
-      "vi": "Tong so lan quang cao duoc hien thi, co the lap lai tren cung mot nguoi."
-    },
+    "name": "Impressions",
+    "definition": "Total number of times an ad is shown, including repeat views.",
     "group": "engagement",
-    "aliases": ["Impression"]
+    "aliases": [
+      "Impression"
+    ]
   },
   {
     "id": "engagement-rate",
     "term": "Engagement Rate",
-    "name": { "en": "Engagement Rate", "vi": "Ty le tuong tac" },
-    "definition": {
-      "en": "Engagements (likes, shares, comments, clicks) divided by impressions.",
-      "vi": "Tong tuong tac (like, share, comment, click) chia cho impression."
-    },
+    "name": "Engagement Rate",
+    "definition": "Engagements (likes, shares, comments, clicks) divided by impressions.",
     "group": "engagement",
-    "aliases": ["ER", "Engagement"]
+    "aliases": [
+      "ER",
+      "Engagement"
+    ]
   },
   {
     "id": "bounce-rate",
     "term": "Bounce Rate",
-    "name": { "en": "Bounce Rate", "vi": "Ty le thoat" },
-    "definition": {
-      "en": "Percent of visitors who leave after viewing only one page.",
-      "vi": "Phan tram khach roi di sau khi chi xem mot trang."
-    },
+    "name": "Bounce Rate",
+    "definition": "Percent of visitors who leave after viewing only one page.",
     "group": "engagement",
-    "aliases": ["Bounce"]
+    "aliases": [
+      "Bounce"
+    ]
   },
   {
     "id": "session-duration",
     "term": "Session Duration",
-    "name": { "en": "Session Duration", "vi": "Thoi gian phien" },
-    "definition": {
-      "en": "Average time users spend on the site in a session.",
-      "vi": "Thoi gian trung binh nguoi dung o lai tren web trong mot phien."
-    },
+    "name": "Session Duration",
+    "definition": "Average time users spend on the site in a session.",
     "group": "engagement",
-    "aliases": ["Avg Session Duration"]
+    "aliases": [
+      "Avg Session Duration"
+    ]
   },
   {
     "id": "ltv",
     "term": "LTV",
-    "name": { "en": "Lifetime Value", "vi": "Gia tri vong doi khach hang" },
-    "definition": {
-      "en": "Total profit a customer generates over their lifetime.",
-      "vi": "Tong loi nhuan mot khach hang tao ra trong toan bo vong doi."
-    },
+    "name": "Lifetime Value",
+    "definition": "Total profit a customer generates over their lifetime.",
     "group": "lifecycle",
-    "aliases": ["CLV", "Customer Lifetime Value"]
+    "aliases": [
+      "CLV",
+      "Customer Lifetime Value"
+    ]
   },
   {
     "id": "retention-rate",
     "term": "Retention Rate",
-    "name": { "en": "Retention Rate", "vi": "Ty le giu chan" },
-    "definition": {
-      "en": "Percent of customers who return for repeat purchases or renewals.",
-      "vi": "Phan tram khach hang quay lai mua hoac gia han."
-    },
+    "name": "Retention Rate",
+    "definition": "Percent of customers who return for repeat purchases or renewals.",
     "group": "lifecycle",
-    "aliases": ["Retention"]
+    "aliases": [
+      "Retention"
+    ]
   },
   {
     "id": "churn-rate",
     "term": "Churn Rate",
-    "name": { "en": "Churn Rate", "vi": "Ty le roi bo" },
-    "definition": {
-      "en": "Percent of customers who stop using a product or service.",
-      "vi": "Phan tram khach hang ngung su dung san pham hoac dich vu."
-    },
+    "name": "Churn Rate",
+    "definition": "Percent of customers who stop using a product or service.",
     "group": "lifecycle",
-    "aliases": ["Churn"]
+    "aliases": [
+      "Churn"
+    ]
   },
   {
     "id": "landing-page",
     "term": "Landing Page",
-    "name": { "en": "Landing Page", "vi": "Trang dich" },
-    "definition": {
-      "en": "A page focused on one goal: conversion or lead capture.",
-      "vi": "Trang tap trung mot muc tieu: chuyen doi hoac thu lead."
-    },
+    "name": "Landing Page",
+    "definition": "A page focused on one goal: conversion or lead capture.",
     "group": "tools",
-    "aliases": ["LP"]
+    "aliases": [
+      "LP"
+    ]
   },
   {
     "id": "cta",
     "term": "CTA",
-    "name": { "en": "Call To Action", "vi": "Loi keu goi hanh dong" },
-    "definition": {
-      "en": "A prompt that tells users what action to take next.",
-      "vi": "Cau hoac nut yeu cau nguoi dung thuc hien hanh dong tiep theo."
-    },
+    "name": "Call To Action",
+    "definition": "A prompt that tells users what action to take next.",
     "group": "tools",
-    "aliases": ["Call to Action"]
+    "aliases": [
+      "Call to Action"
+    ]
   },
   {
     "id": "lead",
     "term": "Lead",
-    "name": { "en": "Lead", "vi": "Khach hang tiem nang" },
-    "definition": {
-      "en": "A potential customer who has shown interest and shared contact details.",
-      "vi": "Nguoi quan tam va da de lai thong tin lien he."
-    },
+    "name": "Lead",
+    "definition": "A potential customer who has shown interest and shared contact details.",
     "group": "tools",
-    "aliases": ["Lead Gen", "Lead Generation"]
+    "aliases": [
+      "Lead Gen",
+      "Lead Generation"
+    ]
   },
   {
     "id": "ab-testing",
     "term": "A/B Testing",
-    "name": { "en": "A/B Testing", "vi": "Thu nghiem A/B" },
-    "definition": {
-      "en": "Comparing two variants to see which performs better.",
-      "vi": "Thu nghiem hai phien ban de chon phien ban hieu qua hon."
-    },
+    "name": "A/B Testing",
+    "definition": "Comparing two variants to see which performs better.",
     "group": "tools",
-    "aliases": ["Split Test", "AB Test"]
+    "aliases": [
+      "Split Test",
+      "AB Test"
+    ]
   },
   {
     "id": "target-audience",
     "term": "Target Audience",
-    "name": { "en": "Target Audience", "vi": "Doi tuong muc tieu" },
-    "definition": {
-      "en": "The group most likely to buy based on needs and behaviors.",
-      "vi": "Nhom khach hang co kha nang mua cao nhat dua tren nhu cau va hanh vi."
-    },
+    "name": "Target Audience",
+    "definition": "The group most likely to buy based on needs and behaviors.",
     "group": "tools",
-    "aliases": ["Target Market"]
+    "aliases": [
+      "Target Market"
+    ]
   }
 ]

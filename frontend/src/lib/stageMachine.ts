@@ -4,88 +4,49 @@
 // of an AdVisor campaign. The stage is *derived* from the campaign's
 // quizData; this module also validates whether a transition is allowed and
 // produces UI metadata (titles, descriptions, next-action prompts).
-//
-// Stages:
-//   0 - Discovery       : user has not completed the initial quick quiz yet
-//   1 - Strategy & Plan : quiz answered, AI has produced 3 plans, user picks one
-//   2 - Refinement      : selected plan + phase 2 details answered
-//   3 - Optimisation    : ongoing metrics tracking and AI-assisted iteration
 
 export type Stage = 0 | 1 | 2 | 3;
-
-export type Lang = 'en' | 'vi';
 
 export interface QuizDataLike {
   selectedPlan?: string;
   phase?: string;
-  // any answer keys (business, audience, goal, ...)
   [key: string]: unknown;
 }
 
 export interface StageDescriptor {
   stage: Stage;
-  title: { en: string; vi: string };
-  subtitle: { en: string; vi: string };
-  nextAction: { en: string; vi: string };
+  title: string;
+  subtitle: string;
+  nextAction: string;
 }
 
 export const STAGE_DESCRIPTORS: Record<Stage, StageDescriptor> = {
   0: {
     stage: 0,
-    title: { en: 'Discovery', vi: 'Khám phá' },
-    subtitle: {
-      en: 'Tell AdVisor about your business so it can build a strategy that fits.',
-      vi: 'Cung cấp thông tin doanh nghiệp để AdVisor xây dựng chiến lược phù hợp.'
-    },
-    nextAction: {
-      en: 'Complete the 5-question Quick Setup or the Full Quiz to unlock your Strategy options.',
-      vi: 'Hoàn thành Quick Setup (5 câu) hoặc Quiz đầy đủ để mở khóa các lựa chọn Chiến lược.'
-    }
+    title: 'Discovery',
+    subtitle: 'Tell AdVisor about your business so it can build a strategy that fits.',
+    nextAction: 'Complete the Discovery Quiz to unlock your Strategy options.'
   },
   1: {
     stage: 1,
-    title: { en: 'Strategy & Plan', vi: 'Chiến lược & Kế hoạch' },
-    subtitle: {
-      en: 'Review the AI-generated plans. Once you select a plan, you can move to Stage 2.',
-      vi: 'Xem các kế hoạch do AI tạo. Sau khi chọn một kế hoạch, bạn có thể sang Giai đoạn 2.'
-    },
-    nextAction: {
-      en: 'Select a plan card (Plan A, B, C...) then click "Go to Stage 2" to continue.',
-      vi: 'Chọn một thẻ kế hoạch (Plan A, B, C...) sau đó nhấn "Sang Giai đoạn 2" để tiếp tục.'
-    }
+    title: 'Strategy & Plan',
+    subtitle: 'Review the AI-generated plans. Once you select a plan, you can move to Stage 2.',
+    nextAction: 'Select a plan card (Plan A, B, C...) then click "Go to Stage 2" to continue.'
   },
   2: {
     stage: 2,
-    title: { en: 'Refinement', vi: 'Chi tiết hoá' },
-    subtitle: {
-      en: 'Define your audience, KPIs, and budget. AI will confirm once everything is locked.',
-      vi: 'Xác định đối tượng, KPI và ngân sách. AI sẽ xác nhận khi mọi thứ đã sẵn sàng.'
-    },
-    nextAction: {
-      en: 'Complete the follow-up questions from AI, then click the "Go to Stage 3" prompt.',
-      vi: 'Trả lời các câu hỏi bổ sung từ AI, sau đó nhấn nút "Sang Giai đoạn 3" khi xuất hiện.'
-    }
+    title: 'Refinement',
+    subtitle: 'Define your audience, KPIs, and budget. AI will confirm once everything is locked.',
+    nextAction: 'Complete the follow-up questions from AI, then click the "Go to Stage 3" prompt.'
   },
   3: {
     stage: 3,
-    title: { en: 'Optimisation', vi: 'Tối ưu' },
-    subtitle: {
-      en: 'Track performance and iterate. Upload metrics to get AI optimization advice.',
-      vi: 'Theo dõi hiệu suất và tinh chỉnh. Tải số liệu để nhận tư vấn tối ưu từ AI.'
-    },
-    nextAction: {
-      en: 'Add a Metrics Snapshot in the Insights panel to get periodic analysis.',
-      vi: 'Thêm Snapshot số liệu trong phần Insights để nhận phân tích định kỳ.'
-    }
+    title: 'Optimisation',
+    subtitle: 'Track performance and iterate. Upload metrics to get AI optimization advice.',
+    nextAction: 'Add a Metrics Snapshot in the Insights panel to get periodic analysis.'
   }
 };
 
-/**
- * Derive the current stage from quizData. Validates internal consistency: a
- * campaign that claims phase = '3' but has no selectedPlan is treated as
- * Stage 0 (the user must restart). Use `inspectQuizData` to detect such cases
- * and surface a recovery banner.
- */
 export function deriveStage(quizData?: QuizDataLike | null): Stage {
   if (!quizData) return 0;
 
@@ -95,11 +56,8 @@ export function deriveStage(quizData?: QuizDataLike | null): Stage {
     (k) => k !== 'phase' && k !== 'selectedPlan' && quizData[k] !== undefined && quizData[k] !== ''
   ).length;
 
-  // Stage 3 requires phase=3 and selectedPlan
   if (phase === '3' && hasSelectedPlan) return 3;
-  // Stage 2 requires phase=2 and selectedPlan
   if (phase === '2' && hasSelectedPlan) return 2;
-  // Stage 1 means quiz answered (or selectedPlan present even without phase)
   if (hasSelectedPlan || answerCount > 0) return 1;
   return 0;
 }
@@ -107,12 +65,9 @@ export function deriveStage(quizData?: QuizDataLike | null): Stage {
 export interface QuizDataIssue {
   code: 'phase_without_plan' | 'phase_without_answers';
   current: Stage;
-  message: { en: string; vi: string };
+  message: string;
 }
 
-/**
- * Detect inconsistent quiz data states so the UI can offer recovery.
- */
 export function inspectQuizData(quizData?: QuizDataLike | null): QuizDataIssue | null {
   if (!quizData) return null;
   const phase = typeof quizData.phase === 'string' ? quizData.phase : undefined;
@@ -125,10 +80,8 @@ export function inspectQuizData(quizData?: QuizDataLike | null): QuizDataIssue |
     return {
       code: 'phase_without_plan',
       current: deriveStage(quizData),
-      message: {
-        en: 'Campaign data is inconsistent: a later stage is set without a selected plan. Reselect a plan to continue.',
-        vi: 'Dữ liệu chiến dịch không nhất quán: giai đoạn sau đã được đặt nhưng chưa chọn plan. Hãy chọn lại plan để tiếp tục.'
-      }
+      message:
+        'Campaign data is inconsistent: a later stage is set without a selected plan. Reselect a plan to continue.'
     };
   }
 
@@ -136,10 +89,8 @@ export function inspectQuizData(quizData?: QuizDataLike | null): QuizDataIssue |
     return {
       code: 'phase_without_answers',
       current: deriveStage(quizData),
-      message: {
-        en: 'Campaign data is inconsistent: a later stage is set with no quiz answers. Restart the discovery quiz.',
-        vi: 'Dữ liệu chiến dịch không nhất quán: giai đoạn sau đã đặt nhưng chưa có câu trả lời quiz. Hãy làm lại quiz khám phá.'
-      }
+      message:
+        'Campaign data is inconsistent: a later stage is set with no quiz answers. Restart the discovery quiz.'
     };
   }
 
@@ -148,26 +99,16 @@ export function inspectQuizData(quizData?: QuizDataLike | null): QuizDataIssue |
 
 export interface AdvanceCheck {
   ok: boolean;
-  reason?: { en: string; vi: string };
+  reason?: string;
 }
 
-/**
- * Validate whether the user can move from `current` to `target`. Pure function
- * — never mutates state. The Chat page should call this before triggering any
- * stage transition and surface `reason` as an inline error when blocked.
- */
 export function canAdvance(current: Stage, target: Stage, quizData?: QuizDataLike | null): AdvanceCheck {
-  // Allow rollback to any earlier stage (handled by handleResetStage).
   if (target <= current) return { ok: true };
 
-  // Cannot skip: must advance one step at a time.
   if (target !== current + 1) {
     return {
       ok: false,
-      reason: {
-        en: `You must complete Stage ${current + 1} before reaching Stage ${target}.`,
-        vi: `Bạn phải hoàn thành Giai đoạn ${current + 1} trước khi tới Giai đoạn ${target}.`
-      }
+      reason: `You must complete Stage ${current + 1} before reaching Stage ${target}.`
     };
   }
 
@@ -181,10 +122,7 @@ export function canAdvance(current: Stage, target: Stage, quizData?: QuizDataLik
     if (answerCount === 0) {
       return {
         ok: false,
-        reason: {
-          en: 'Answer at least one quiz question before advancing to Stage 1.',
-          vi: 'Trả lời ít nhất một câu quiz trước khi sang Giai đoạn 1.'
-        }
+        reason: 'Answer at least one quiz question before advancing to Stage 1.'
       };
     }
   }
@@ -193,10 +131,7 @@ export function canAdvance(current: Stage, target: Stage, quizData?: QuizDataLik
     if (!hasSelectedPlan) {
       return {
         ok: false,
-        reason: {
-          en: 'Select a plan (A, B, or C) before advancing to Stage 2.',
-          vi: 'Chọn một plan (A, B hoặc C) trước khi sang Giai đoạn 2.'
-        }
+        reason: 'Select a plan (A, B, or C) before advancing to Stage 2.'
       };
     }
   }
@@ -205,10 +140,7 @@ export function canAdvance(current: Stage, target: Stage, quizData?: QuizDataLik
     if (!hasSelectedPlan || qd.phase !== '2') {
       return {
         ok: false,
-        reason: {
-          en: 'Complete the Stage 2 follow-up questions before advancing to Stage 3.',
-          vi: 'Hoàn thành các câu hỏi Giai đoạn 2 trước khi sang Giai đoạn 3.'
-        }
+        reason: 'Complete the Stage 2 follow-up questions before advancing to Stage 3.'
       };
     }
   }
@@ -218,81 +150,56 @@ export function canAdvance(current: Stage, target: Stage, quizData?: QuizDataLik
 
 export interface ContentPaneMode {
   enabled: boolean;
-  placeholder: { en: string; vi: string };
-  emptyTitle: { en: string; vi: string };
-  emptyHint: { en: string; vi: string };
+  placeholder: string;
+  emptyTitle: string;
+  emptyHint: string;
 }
 
-/**
- * Returns the per-stage configuration for the right-hand Content Assistant
- * pane. The pane is intentionally disabled until Stage 1 to keep the user
- * focused on the quiz first.
- */
 export function getContentPaneMode(stage: Stage): ContentPaneMode {
   switch (stage) {
     case 0:
       return {
         enabled: false,
-        placeholder: {
-          en: 'Complete Stage 0 (Discovery) to unlock the Content Writer.',
-          vi: 'Hoàn thành Giai đoạn 0 (Khám phá) để mở khoá Trợ lý Nội dung.'
-        },
-        emptyTitle: { en: 'Locked', vi: 'Đang khoá' },
-        emptyHint: {
-          en: 'Finish the quiz first; the Content Writer activates as soon as a plan is generated.',
-          vi: 'Hoàn thành quiz trước; Trợ lý Nội dung sẽ kích hoạt khi đã có plan.'
-        }
+        placeholder: 'Complete Stage 0 (Discovery) to unlock the Content Writer.',
+        emptyTitle: 'Locked',
+        emptyHint:
+          'Finish the quiz first; the Content Writer activates as soon as a plan is generated.'
       };
     case 1:
       return {
         enabled: true,
-        placeholder: {
-          en: 'Try: "Draft a Facebook ad for the selected plan"',
-          vi: 'Ví dụ: "Viết quảng cáo Facebook cho plan đã chọn"'
-        },
-        emptyTitle: { en: 'Draft your first ad copy', vi: 'Viết bài quảng cáo đầu tiên' },
-        emptyHint: {
-          en: 'Pick a plan in the left pane, then ask for headlines, ad copy, or social posts here.',
-          vi: 'Chọn plan ở khung trái, rồi yêu cầu headlines, bài quảng cáo hoặc post mạng xã hội tại đây.'
-        }
+        placeholder: 'Try: "Draft a Facebook ad for the selected plan"',
+        emptyTitle: 'Draft your first ad copy',
+        emptyHint:
+          'Pick a plan in the left pane, then ask for headlines, ad copy, or social posts here.'
       };
     case 2:
       return {
         enabled: true,
-        placeholder: {
-          en: 'Try: "Write a landing page hero for the refined plan"',
-          vi: 'Ví dụ: "Viết hero landing page cho plan đã chốt"'
-        },
-        emptyTitle: { en: 'Produce launch-ready content', vi: 'Tạo nội dung sẵn sàng triển khai' },
-        emptyHint: {
-          en: 'With the plan refined, generate emails, landing-page copy, and full ad sets ready to ship.',
-          vi: 'Sau khi chốt chi tiết, tạo email, nội dung landing page và bộ quảng cáo sẵn để chạy.'
-        }
+        placeholder: 'Try: "Write a landing page hero for the refined plan"',
+        emptyTitle: 'Produce launch-ready content',
+        emptyHint:
+          'With the plan refined, generate emails, landing-page copy, and full ad sets ready to ship.'
       };
     case 3:
       return {
         enabled: true,
-        placeholder: {
-          en: 'Try: "Summarise this week\u2019s metrics for the team"',
-          vi: 'Ví dụ: "Tóm tắt số liệu tuần này cho team"'
-        },
-        emptyTitle: { en: 'Iterate on what is working', vi: 'Tinh chỉnh dựa trên hiệu suất' },
-        emptyHint: {
-          en: 'Generate optimisation reports, retargeting copy, and creative refresh ideas based on the latest metrics.',
-          vi: 'Tạo báo cáo tối ưu, nội dung retargeting và ý tưởng làm mới sáng tạo dựa trên số liệu mới nhất.'
-        }
+        placeholder: 'Try: "Summarise this week\u2019s metrics for the team"',
+        emptyTitle: 'Iterate on what is working',
+        emptyHint:
+          'Generate optimisation reports, retargeting copy, and creative refresh ideas based on the latest metrics.'
       };
   }
 }
 
-export function stageLabel(stage: Stage, lang: Lang): string {
-  return STAGE_DESCRIPTORS[stage].title[lang];
+export function stageLabel(stage: Stage): string {
+  return STAGE_DESCRIPTORS[stage].title;
 }
 
-export function stageSubtitle(stage: Stage, lang: Lang): string {
-  return STAGE_DESCRIPTORS[stage].subtitle[lang];
+export function stageSubtitle(stage: Stage): string {
+  return STAGE_DESCRIPTORS[stage].subtitle;
 }
 
-export function stageNextAction(stage: Stage, lang: Lang): string {
-  return STAGE_DESCRIPTORS[stage].nextAction[lang];
+export function stageNextAction(stage: Stage): string {
+  return STAGE_DESCRIPTORS[stage].nextAction;
 }

@@ -45,8 +45,8 @@ export default function Landing() {
   const howItWorks: Array<{ icon: typeof ListChecks; title: string; desc: string }> = [
     {
       icon: ListChecks,
-      title: 'Quick Setup quiz',
-      desc: 'Answer a short quiz about your product, audience, goal, and budget.'
+      title: 'Discovery quiz',
+      desc: 'Answer the full questionnaire about your product, audience, goal, and budget.'
     },
     {
       icon: Target,

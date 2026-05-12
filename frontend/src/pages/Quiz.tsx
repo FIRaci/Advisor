@@ -20,17 +20,17 @@ import './Quiz.css';
 interface Question {
   id: string;
   icon: any;
-  question: { en: string; vi: string };
-  shortLabel: { en: string; vi: string };
+  question: string;
+  shortLabel: string;
   type: 'select' | 'text';
-  options?: { value: string; label: { en: string; vi: string } }[];
-  placeholder?: { en: string; vi: string };
+  options?: { value: string; label: string }[];
+  placeholder?: string;
 }
 
 interface QuizStage {
   id: string;
-  title: { en: string; vi: string };
-  description: { en: string; vi: string };
+  title: string;
+  description: string;
   questions: Question[];
 }
 
@@ -39,285 +39,285 @@ const questions: Question[] = [
   {
     id: 'productName',
     icon: Package,
-    question: { en: 'What is your product or service name?', vi: 'Tên sản phẩm hoặc dịch vụ của bạn là gì?' },
-    shortLabel: { en: 'Product Name', vi: 'Tên sản phẩm' },
+    question: 'What is your product or service name?',
+    shortLabel: 'Product Name',
     type: 'text',
-    placeholder: { en: 'Enter product/service name (or skip if unsure)', vi: 'Nhập tên sản phẩm/dịch vụ (hoặc bỏ qua nếu chưa biết)' }
+    placeholder: 'Enter product/service name (or skip if unsure)'
   },
   // 2. Business Type
   {
     id: 'business',
     icon: Building,
-    question: { en: 'What type of business do you have?', vi: 'Doanh nghiệp của bạn thuộc loại nào?' },
-    shortLabel: { en: 'Business Type', vi: 'Loại hình' },
+    question: 'What type of business do you have?',
+    shortLabel: 'Business Type',
     type: 'select',
     options: [
-      { value: 'ecommerce', label: { en: 'E-commerce / Online Store', vi: 'Thương mại điện tử' } },
-      { value: 'saas', label: { en: 'SaaS / Software', vi: 'SaaS / Phần mềm' } },
-      { value: 'service', label: { en: 'Professional Services', vi: 'Dịch vụ chuyên nghiệp' } },
-      { value: 'local', label: { en: 'Local Business / Retail', vi: 'Kinh doanh địa phương' } },
-      { value: 'agency', label: { en: 'Marketing Agency', vi: 'Công ty Marketing' } },
-      { value: 'education', label: { en: 'Education / Courses', vi: 'Giáo dục / Khóa học' } },
-      { value: 'healthcare', label: { en: 'Healthcare / Wellness', vi: 'Y tế / Sức khỏe' } },
-      { value: 'fintech', label: { en: 'Fintech / Finance', vi: 'Fintech / Tài chính' } },
-      { value: 'food', label: { en: 'Food & Beverage', vi: 'Thực phẩm & Đồ uống' } },
-      { value: 'travel', label: { en: 'Travel / Hospitality', vi: 'Du lịch / Khách sạn' } },
-      { value: 'realestate', label: { en: 'Real Estate', vi: 'Bất động sản' } },
-      { value: 'entertainment', label: { en: 'Entertainment / Media', vi: 'Giải trí / Truyền thông' } }
+      { value: 'ecommerce', label: 'E-commerce / Online Store' },
+      { value: 'saas', label: 'SaaS / Software' },
+      { value: 'service', label: 'Professional Services' },
+      { value: 'local', label: 'Local Business / Retail' },
+      { value: 'agency', label: 'Marketing Agency' },
+      { value: 'education', label: 'Education / Courses' },
+      { value: 'healthcare', label: 'Healthcare / Wellness' },
+      { value: 'fintech', label: 'Fintech / Finance' },
+      { value: 'food', label: 'Food & Beverage' },
+      { value: 'travel', label: 'Travel / Hospitality' },
+      { value: 'realestate', label: 'Real Estate' },
+      { value: 'entertainment', label: 'Entertainment / Media' }
     ]
   },
   // 3. Business Stage
   {
     id: 'stage',
     icon: Zap,
-    question: { en: 'What stage is your business at?', vi: 'Doanh nghiệp của bạn đang ở giai đoạn nào?' },
-    shortLabel: { en: 'Stage', vi: 'Giai đoạn' },
+    question: 'What stage is your business at?',
+    shortLabel: 'Stage',
     type: 'select',
     options: [
-      { value: 'idea', label: { en: 'Idea / Pre-launch', vi: 'Ý tưởng / Trước ra mắt' } },
-      { value: 'startup', label: { en: 'Startup (< 1 year)', vi: 'Khởi nghiệp (< 1 năm)' } },
-      { value: 'growing', label: { en: 'Growing (1-3 years)', vi: 'Đang phát triển (1-3 năm)' } },
-      { value: 'established', label: { en: 'Established (3-5 years)', vi: 'Ổn định (3-5 năm)' } },
-      { value: 'mature', label: { en: 'Mature (5+ years)', vi: 'Trưởng thành (5+ năm)' } },
-      { value: 'scaling', label: { en: 'Scaling / Expanding', vi: 'Mở rộng quy mô' } }
+      { value: 'idea', label: 'Idea / Pre-launch' },
+      { value: 'startup', label: 'Startup (< 1 year)' },
+      { value: 'growing', label: 'Growing (1-3 years)' },
+      { value: 'established', label: 'Established (3-5 years)' },
+      { value: 'mature', label: 'Mature (5+ years)' },
+      { value: 'scaling', label: 'Scaling / Expanding' }
     ]
   },
   // 4. Target Audience
   {
     id: 'audience',
     icon: Users,
-    question: { en: 'Who is your target audience?', vi: 'Đối tượng khách hàng mục tiêu?' },
-    shortLabel: { en: 'Audience', vi: 'Đối tượng' },
+    question: 'Who is your target audience?',
+    shortLabel: 'Audience',
     type: 'select',
     options: [
-      { value: 'b2b', label: { en: 'B2B (Businesses)', vi: 'B2B (Doanh nghiệp)' } },
-      { value: 'b2c', label: { en: 'B2C (Consumers)', vi: 'B2C (Người tiêu dùng)' } },
-      { value: 'both', label: { en: 'Both B2B and B2C', vi: 'Cả B2B và B2C' } },
-      { value: 'genz', label: { en: 'Gen Z (18-25)', vi: 'Gen Z (18-25)' } },
-      { value: 'millennials', label: { en: 'Millennials (26-40)', vi: 'Millennials (26-40)' } },
-      { value: 'genx', label: { en: 'Gen X & Older (40+)', vi: 'Gen X trở lên (40+)' } },
-      { value: 'enterprise', label: { en: 'Enterprise Companies', vi: 'Doanh nghiệp lớn' } },
-      { value: 'startups', label: { en: 'Startups & SMBs', vi: 'Startup & SMB' } },
-      { value: 'women', label: { en: 'Women-focused', vi: 'Phụ nữ' } },
-      { value: 'men', label: { en: 'Men-focused', vi: 'Nam giới' } },
-      { value: 'parents', label: { en: 'Parents / Families', vi: 'Phụ huynh / Gia đình' } },
-      { value: 'students', label: { en: 'Students', vi: 'Sinh viên' } }
+      { value: 'b2b', label: 'B2B (Businesses)' },
+      { value: 'b2c', label: 'B2C (Consumers)' },
+      { value: 'both', label: 'Both B2B and B2C' },
+      { value: 'genz', label: 'Gen Z (18-25)' },
+      { value: 'millennials', label: 'Millennials (26-40)' },
+      { value: 'genx', label: 'Gen X & Older (40+)' },
+      { value: 'enterprise', label: 'Enterprise Companies' },
+      { value: 'startups', label: 'Startups & SMBs' },
+      { value: 'women', label: 'Women-focused' },
+      { value: 'men', label: 'Men-focused' },
+      { value: 'parents', label: 'Parents / Families' },
+      { value: 'students', label: 'Students' }
     ]
   },
   // 5. Marketing Goal
   {
     id: 'goal',
     icon: Target,
-    question: { en: 'What is your main marketing goal?', vi: 'Mục tiêu marketing chính của bạn?' },
-    shortLabel: { en: 'Goal', vi: 'Mục tiêu' },
+    question: 'What is your main marketing goal?',
+    shortLabel: 'Goal',
     type: 'select',
     options: [
-      { value: 'awareness', label: { en: 'Brand Awareness', vi: 'Nhận diện thương hiệu' } },
-      { value: 'leads', label: { en: 'Generate Leads', vi: 'Tạo khách hàng tiềm năng' } },
-      { value: 'sales', label: { en: 'Increase Sales', vi: 'Tăng doanh số' } },
-      { value: 'retention', label: { en: 'Customer Retention', vi: 'Giữ chân khách hàng' } },
-      { value: 'traffic', label: { en: 'Website Traffic', vi: 'Lưu lượng website' } },
-      { value: 'engagement', label: { en: 'Social Engagement', vi: 'Tương tác mạng xã hội' } },
-      { value: 'launch', label: { en: 'Product Launch', vi: 'Ra mắt sản phẩm' } },
-      { value: 'reputation', label: { en: 'Reputation Management', vi: 'Quản lý danh tiếng' } },
-      { value: 'appinstalls', label: { en: 'App Installs', vi: 'Cài đặt ứng dụng' } },
-      { value: 'community', label: { en: 'Community Building', vi: 'Xây dựng cộng đồng' } }
+      { value: 'awareness', label: 'Brand Awareness' },
+      { value: 'leads', label: 'Generate Leads' },
+      { value: 'sales', label: 'Increase Sales' },
+      { value: 'retention', label: 'Customer Retention' },
+      { value: 'traffic', label: 'Website Traffic' },
+      { value: 'engagement', label: 'Social Engagement' },
+      { value: 'launch', label: 'Product Launch' },
+      { value: 'reputation', label: 'Reputation Management' },
+      { value: 'appinstalls', label: 'App Installs' },
+      { value: 'community', label: 'Community Building' }
     ]
   },
   // 6. USP / Unique Selling Point (text input)
   {
     id: 'usp',
     icon: Heart,
-    question: { en: 'What makes your product/service unique?', vi: 'Điều gì khiến sản phẩm/dịch vụ của bạn độc đáo?' },
-    shortLabel: { en: 'USP', vi: 'Điểm nổi bật' },
+    question: 'What makes your product/service unique?',
+    shortLabel: 'USP',
     type: 'text',
-    placeholder: { en: 'Describe your unique selling point...', vi: 'Mô tả điểm bán hàng độc đáo của bạn...' }
+    placeholder: 'Describe your unique selling point...'
   },
   // 7. Marketing Channels
   {
     id: 'channels',
     icon: Megaphone,
-    question: { en: 'Which marketing channels interest you most?', vi: 'Kênh marketing nào bạn quan tâm nhất?' },
-    shortLabel: { en: 'Channels', vi: 'Kênh' },
+    question: 'Which marketing channels interest you most?',
+    shortLabel: 'Channels',
     type: 'select',
     options: [
-      { value: 'social', label: { en: 'Social Media (FB, IG, X)', vi: 'Mạng xã hội (FB, IG, X)' } },
-      { value: 'search', label: { en: 'Google Ads & SEO', vi: 'Google Ads & SEO' } },
-      { value: 'email', label: { en: 'Email Marketing', vi: 'Email Marketing' } },
-      { value: 'content', label: { en: 'Content / Blog', vi: 'Content / Blog' } },
-      { value: 'video', label: { en: 'YouTube / TikTok', vi: 'YouTube / TikTok' } },
-      { value: 'influencer', label: { en: 'Influencer / KOL', vi: 'Influencer / KOL' } },
-      { value: 'affiliate', label: { en: 'Affiliate Marketing', vi: 'Affiliate Marketing' } },
-      { value: 'podcast', label: { en: 'Podcast / Audio', vi: 'Podcast / Audio' } },
-      { value: 'offline', label: { en: 'Offline / Events', vi: 'Offline / Sự kiện' } },
-      { value: 'all', label: { en: 'Multi-channel', vi: 'Đa kênh' } }
+      { value: 'social', label: 'Social Media (FB, IG, X)' },
+      { value: 'search', label: 'Google Ads & SEO' },
+      { value: 'email', label: 'Email Marketing' },
+      { value: 'content', label: 'Content / Blog' },
+      { value: 'video', label: 'YouTube / TikTok' },
+      { value: 'influencer', label: 'Influencer / KOL' },
+      { value: 'affiliate', label: 'Affiliate Marketing' },
+      { value: 'podcast', label: 'Podcast / Audio' },
+      { value: 'offline', label: 'Offline / Events' },
+      { value: 'all', label: 'Multi-channel' }
     ]
   },
   // 8. Current Situation
   {
     id: 'currentMarketing',
     icon: BarChart3,
-    question: { en: 'What is your current marketing situation?', vi: 'Tình hình marketing hiện tại của bạn?' },
-    shortLabel: { en: 'Current', vi: 'Hiện tại' },
+    question: 'What is your current marketing situation?',
+    shortLabel: 'Current',
     type: 'select',
     options: [
-      { value: 'none', label: { en: 'No marketing yet', vi: 'Chưa có marketing' } },
-      { value: 'basic', label: { en: 'Basic social media', vi: 'Mạng xã hội cơ bản' } },
-      { value: 'active', label: { en: 'Active on multiple channels', vi: 'Hoạt động nhiều kênh' } },
-      { value: 'paid', label: { en: 'Running paid ads', vi: 'Đang chạy quảng cáo trả phí' } },
-      { value: 'team', label: { en: 'Have marketing team', vi: 'Có đội ngũ marketing' } },
-      { value: 'agency', label: { en: 'Working with agency', vi: 'Làm việc với agency' } }
+      { value: 'none', label: 'No marketing yet' },
+      { value: 'basic', label: 'Basic social media' },
+      { value: 'active', label: 'Active on multiple channels' },
+      { value: 'paid', label: 'Running paid ads' },
+      { value: 'team', label: 'Have marketing team' },
+      { value: 'agency', label: 'Working with agency' }
     ]
   },
   // 9. Experience Level
   {
     id: 'experience',
     icon: TrendingUp,
-    question: { en: 'Your marketing experience level?', vi: 'Kinh nghiệm marketing của bạn?' },
-    shortLabel: { en: 'Experience', vi: 'Kinh nghiệm' },
+    question: 'Your marketing experience level?',
+    shortLabel: 'Experience',
     type: 'select',
     options: [
-      { value: 'beginner', label: { en: 'Beginner', vi: 'Người mới bắt đầu' } },
-      { value: 'intermediate', label: { en: 'Intermediate', vi: 'Trung bình' } },
-      { value: 'advanced', label: { en: 'Advanced', vi: 'Nâng cao' } },
-      { value: 'expert', label: { en: 'Expert', vi: 'Chuyên gia' } }
+      { value: 'beginner', label: 'Beginner' },
+      { value: 'intermediate', label: 'Intermediate' },
+      { value: 'advanced', label: 'Advanced' },
+      { value: 'expert', label: 'Expert' }
     ]
   },
   // 10. Competitors (text input)
   {
     id: 'competitors',
     icon: Briefcase,
-    question: { en: 'Who are your main competitors?', vi: 'Đối thủ cạnh tranh chính của bạn là ai?' },
-    shortLabel: { en: 'Competitors', vi: 'Đối thủ' },
+    question: 'Who are your main competitors?',
+    shortLabel: 'Competitors',
     type: 'text',
-    placeholder: { en: 'List 1-3 competitors (or skip)', vi: 'Liệt kê 1-3 đối thủ (hoặc bỏ qua)' }
+    placeholder: 'List 1-3 competitors (or skip)'
   },
   // 11. Timeline
   {
     id: 'timeline',
     icon: Clock,
-    question: { en: 'Expected timeline for results?', vi: 'Bạn mong đợi kết quả trong bao lâu?' },
-    shortLabel: { en: 'Timeline', vi: 'Thời gian' },
+    question: 'Expected timeline for results?',
+    shortLabel: 'Timeline',
     type: 'select',
     options: [
-      { value: 'immediate', label: { en: '1-2 weeks', vi: '1-2 tuần' } },
-      { value: 'short', label: { en: '1-3 months', vi: '1-3 tháng' } },
-      { value: 'medium', label: { en: '3-6 months', vi: '3-6 tháng' } },
-      { value: 'long', label: { en: '6-12 months', vi: '6-12 tháng' } },
-      { value: 'longterm', label: { en: '1+ year', vi: '1+ năm' } }
+      { value: 'immediate', label: '1-2 weeks' },
+      { value: 'short', label: '1-3 months' },
+      { value: 'medium', label: '3-6 months' },
+      { value: 'long', label: '6-12 months' },
+      { value: 'longterm', label: '1+ year' }
     ]
   },
   // 12. Target Region
   {
     id: 'region',
     icon: Globe,
-    question: { en: 'Target market region?', vi: 'Khu vực thị trường mục tiêu?' },
-    shortLabel: { en: 'Region', vi: 'Khu vực' },
+    question: 'Target market region?',
+    shortLabel: 'Region',
     type: 'select',
     options: [
-      { value: 'local', label: { en: 'Local / City', vi: 'Địa phương' } },
-      { value: 'national', label: { en: 'National (Vietnam)', vi: 'Toàn quốc (Việt Nam)' } },
-      { value: 'regional', label: { en: 'Southeast Asia', vi: 'Đông Nam Á' } },
-      { value: 'asia', label: { en: 'Asia Pacific', vi: 'Châu Á TBD' } },
-      { value: 'us', label: { en: 'United States', vi: 'Hoa Kỳ' } },
-      { value: 'europe', label: { en: 'Europe', vi: 'Châu Âu' } },
-      { value: 'global', label: { en: 'Global', vi: 'Toàn cầu' } }
+      { value: 'local', label: 'Local / City' },
+      { value: 'national', label: 'National (Vietnam)' },
+      { value: 'regional', label: 'Southeast Asia' },
+      { value: 'asia', label: 'Asia Pacific' },
+      { value: 'us', label: 'United States' },
+      { value: 'europe', label: 'Europe' },
+      { value: 'global', label: 'Global' }
     ]
   },
   // 13. Platform Focus
   {
     id: 'platform',
     icon: Smartphone,
-    question: { en: 'Where do customers interact with you?', vi: 'Khách hàng tương tác với bạn ở đâu?' },
-    shortLabel: { en: 'Platform', vi: 'Nền tảng' },
+    question: 'Where do customers interact with you?',
+    shortLabel: 'Platform',
     type: 'select',
     options: [
-      { value: 'website', label: { en: 'Website', vi: 'Website' } },
-      { value: 'app', label: { en: 'Mobile App', vi: 'Ứng dụng di động' } },
-      { value: 'social', label: { en: 'Social Media', vi: 'Mạng xã hội' } },
-      { value: 'marketplace', label: { en: 'Marketplace (Shopee, Lazada)', vi: 'Sàn TMĐT (Shopee, Lazada)' } },
-      { value: 'store', label: { en: 'Physical Store', vi: 'Cửa hàng' } },
-      { value: 'multiple', label: { en: 'Multiple platforms', vi: 'Nhiều nền tảng' } }
+      { value: 'website', label: 'Website' },
+      { value: 'app', label: 'Mobile App' },
+      { value: 'social', label: 'Social Media' },
+      { value: 'marketplace', label: 'Marketplace (Shopee, Lazada)' },
+      { value: 'store', label: 'Physical Store' },
+      { value: 'multiple', label: 'Multiple platforms' }
     ]
   },
   // 14. Price Range
   {
     id: 'priceRange',
     icon: ShoppingBag,
-    question: { en: 'What is your product/service price range?', vi: 'Mức giá sản phẩm/dịch vụ của bạn?' },
-    shortLabel: { en: 'Price', vi: 'Giá' },
+    question: 'What is your product/service price range?',
+    shortLabel: 'Price',
     type: 'select',
     options: [
-      { value: 'free', label: { en: 'Free / Freemium', vi: 'Miễn phí / Freemium' } },
-      { value: 'low', label: { en: 'Low-cost (< $50)', vi: 'Giá thấp (< $50)' } },
-      { value: 'mid', label: { en: 'Mid-range ($50-$500)', vi: 'Trung bình ($50-$500)' } },
-      { value: 'premium', label: { en: 'Premium ($500-$5,000)', vi: 'Cao cấp ($500-$5,000)' } },
-      { value: 'luxury', label: { en: 'Luxury ($5,000+)', vi: 'Xa xỉ ($5,000+)' } },
-      { value: 'varies', label: { en: 'Varies by product', vi: 'Tùy sản phẩm' } }
+      { value: 'free', label: 'Free / Freemium' },
+      { value: 'low', label: 'Low-cost (< $50)' },
+      { value: 'mid', label: 'Mid-range ($50-$500)' },
+      { value: 'premium', label: 'Premium ($500-$5,000)' },
+      { value: 'luxury', label: 'Luxury ($5,000+)' },
+      { value: 'varies', label: 'Varies by product' }
     ]
   },
   // 15. Budget
   {
     id: 'budget',
     icon: DollarSign,
-    question: { en: 'Monthly marketing budget?', vi: 'Ngân sách marketing hàng tháng?' },
-    shortLabel: { en: 'Budget', vi: 'Ngân sách' },
+    question: 'Monthly marketing budget?',
+    shortLabel: 'Budget',
     type: 'select',
     options: [
-      { value: 'minimal', label: { en: 'Under $500', vi: 'Dưới $500' } },
-      { value: 'small', label: { en: '$500 - $1,000', vi: '$500 - $1,000' } },
-      { value: 'medium', label: { en: '$1,000 - $5,000', vi: '$1,000 - $5,000' } },
-      { value: 'large', label: { en: '$5,000 - $20,000', vi: '$5,000 - $20,000' } },
-      { value: 'enterprise', label: { en: '$20,000 - $100,000', vi: '$20,000 - $100,000' } },
-      { value: 'unlimited', label: { en: '$100,000+', vi: '$100,000+' } }
+      { value: 'minimal', label: 'Under $500' },
+      { value: 'small', label: '$500 - $1,000' },
+      { value: 'medium', label: '$1,000 - $5,000' },
+      { value: 'large', label: '$5,000 - $20,000' },
+      { value: 'enterprise', label: '$20,000 - $100,000' },
+      { value: 'unlimited', label: '$100,000+' }
     ]
   },
   // 16. Seasonal impact
   {
     id: 'seasonality',
     icon: Clock,
-    question: { en: 'Does your business have seasonal peaks?', vi: 'Doanh nghiệp của bạn có mùa cao điểm không?' },
-    shortLabel: { en: 'Seasonality', vi: 'Mùa vụ' },
+    question: 'Does your business have seasonal peaks?',
+    shortLabel: 'Seasonality',
     type: 'select',
     options: [
-      { value: 'none', label: { en: 'No major seasonality', vi: 'Không có mùa vụ rõ ràng' } },
-      { value: 'holiday', label: { en: 'Holiday-driven', vi: 'Theo dip le tet' } },
-      { value: 'summer', label: { en: 'Summer peak', vi: 'Cao diem mua he' } },
-      { value: 'yearend', label: { en: 'Year-end peak', vi: 'Cao diem cuoi nam' } },
-      { value: 'event', label: { en: 'Event/campaign driven', vi: 'Theo su kien/chien dich' } },
-      { value: 'always', label: { en: 'Always-on demand', vi: 'Nhu cau on dinh quanh nam' } }
+      { value: 'none', label: 'No major seasonality' },
+      { value: 'holiday', label: 'Holiday-driven' },
+      { value: 'summer', label: 'Summer peak' },
+      { value: 'yearend', label: 'Year-end peak' },
+      { value: 'event', label: 'Event/campaign driven' },
+      { value: 'always', label: 'Always-on demand' }
     ]
   },
   // 17. Preferred content format
   {
     id: 'contentFormat',
     icon: Megaphone,
-    question: { en: 'What content format fits your brand best?', vi: 'Định dạng nội dung nào phù hợp với thương hiệu nhất?' },
-    shortLabel: { en: 'Content', vi: 'Noi dung' },
+    question: 'What content format fits your brand best?',
+    shortLabel: 'Content',
     type: 'select',
     options: [
-      { value: 'short_video', label: { en: 'Short videos (Reels/TikTok)', vi: 'Video ngan (Reels/TikTok)' } },
-      { value: 'long_video', label: { en: 'Long-form video', vi: 'Video dai' } },
-      { value: 'static_visual', label: { en: 'Static visuals/carousels', vi: 'Hinh anh/carousel' } },
-      { value: 'article', label: { en: 'Articles/blog posts', vi: 'Bai viet/blog' } },
-      { value: 'email', label: { en: 'Email/newsletter', vi: 'Email/newsletter' } },
-      { value: 'mixed', label: { en: 'Mixed format', vi: 'Kết hợp nhiều định dạng' } }
+      { value: 'short_video', label: 'Short videos (Reels/TikTok)' },
+      { value: 'long_video', label: 'Long-form video' },
+      { value: 'static_visual', label: 'Static visuals/carousels' },
+      { value: 'article', label: 'Articles/blog posts' },
+      { value: 'email', label: 'Email/newsletter' },
+      { value: 'mixed', label: 'Mixed format' }
     ]
   },
   // 18. Offer type
   {
     id: 'offerType',
     icon: Target,
-    question: { en: 'What offer do you usually run?', vi: 'Loai uu dai ban thuong chay la gi?' },
-    shortLabel: { en: 'Offer', vi: 'Uu dai' },
+    question: 'What offer do you usually run?',
+    shortLabel: 'Offer',
     type: 'select',
     options: [
-      { value: 'discount', label: { en: 'Discount / flash sale', vi: 'Giảm giá / flash sale' } },
-      { value: 'bundle', label: { en: 'Bundle package', vi: 'Goi combo' } },
-      { value: 'trial', label: { en: 'Free trial / freemium', vi: 'Dùng thử miễn phí / freemium' } },
-      { value: 'gift', label: { en: 'Gift with purchase', vi: 'Tặng quà kèm' } },
-      { value: 'consultation', label: { en: 'Free consultation/demo', vi: 'Tư vấn/demo miễn phí' } },
-      { value: 'custom_offer', label: { en: 'Custom by customer segment', vi: 'Cá nhân hóa theo nhóm khách hàng' } }
+      { value: 'discount', label: 'Discount / flash sale' },
+      { value: 'bundle', label: 'Bundle package' },
+      { value: 'trial', label: 'Free trial / freemium' },
+      { value: 'gift', label: 'Gift with purchase' },
+      { value: 'consultation', label: 'Free consultation/demo' },
+      { value: 'custom_offer', label: 'Custom by customer segment' }
     ]
   }
 ];
@@ -325,20 +325,20 @@ const questions: Question[] = [
 const stageBlueprints = [
   {
     id: 'basics',
-    title: { en: 'Business Basics', vi: 'Tổng quan doanh nghiệp' },
-    description: { en: 'Core business profile and audience', vi: 'Thông tin cơ bản và đối tượng' },
+    title: 'Business Basics',
+    description: 'Core business profile and audience',
     questionIds: ['productName', 'business', 'stage', 'audience', 'region', 'platform', 'priceRange']
   },
   {
     id: 'goals',
-    title: { en: 'Goals & Channels', vi: 'Mục tiêu & Kênh' },
-    description: { en: 'Objectives and current marketing setup', vi: 'Mục tiêu và tình hình marketing' },
+    title: 'Goals & Channels',
+    description: 'Objectives and current marketing setup',
     questionIds: ['goal', 'usp', 'channels', 'currentMarketing', 'experience', 'competitors', 'timeline']
   },
   {
     id: 'execution',
-    title: { en: 'Budget & Execution', vi: 'Ngan sach & Thuc thi' },
-    description: { en: 'Budget, seasonality, content, offers', vi: 'Ngan sach, mua vu, noi dung, uu dai' },
+    title: 'Budget & Execution',
+    description: 'Budget, seasonality, content, offers',
     questionIds: ['budget', 'seasonality', 'contentFormat', 'offerType']
   }
 ];
@@ -373,7 +373,6 @@ export default function Quiz() {
   const [customInputOpen, setCustomInputOpen] = useState(false);
   const [customInput, setCustomInput] = useState('');
 
-  let lang: 'en' | 'vi' = 'en';
   const currentStage = stages[Math.min(stageIndex, stages.length - 1)];
   const currentQuestion = currentStage.questions[Math.min(questionIndex, currentStage.questions.length - 1)];
   const Icon = currentQuestion.icon;
@@ -434,7 +433,7 @@ export default function Quiz() {
 
   // Get display value for an answer
   const getAnswerDisplay = (questionId: string, value: string): string => {
-    if (!value || value === 'not_sure') return lang === 'en' ? 'Skipped' : 'Bỏ qua';
+    if (!value || value === 'not_sure') return 'Skipped';
     if (value.startsWith('custom: ')) return value.replace('custom: ', '');
 
     const question = questions.find(q => q.id === questionId);
@@ -443,7 +442,7 @@ export default function Quiz() {
     if (question.type === 'text') return value;
 
     const option = question.options?.find(o => o.value === value);
-    return option ? option.label[lang] : value;
+    return option ? option.label : value;
   };
 
   const handleBack = () => {
@@ -495,7 +494,7 @@ export default function Quiz() {
       stageSnapshots: [
         {
           stageIndex: index,
-          stageLabel: stage.title[lang],
+          stageLabel: stage.title,
           completedAt: nowIso,
           answers: stageAnswers
         }
@@ -525,9 +524,7 @@ export default function Quiz() {
 
     alert(
       res.error ||
-      (lang === 'en'
-        ? 'Failed to create campaign. Please try again.'
-        : 'Không thể tạo chiến dịch. Vui lòng thử lại.')
+      'Failed to create campaign. Please try again.'
     );
     return null;
   };
@@ -543,7 +540,7 @@ export default function Quiz() {
     const stageAnswers = buildStageAnswers(payload, stage);
     const updateRes = await api.updateQuizProgress(targetCampaignId, {
       stageIndex: index,
-      stageLabel: stage.title[lang],
+      stageLabel: stage.title,
       totalStages: stages.length,
       answers: stageAnswers,
       completed: true
@@ -722,9 +719,7 @@ export default function Quiz() {
 
     alert(
       res.error ||
-      (lang === 'en'
-        ? 'Failed to finalize campaign. Please try again.'
-        : 'Không thể hoàn tất chiến dịch. Vui lòng thử lại.')
+      'Failed to finalize campaign. Please try again.'
     );
     setLoading(false);
   };
@@ -732,7 +727,7 @@ export default function Quiz() {
   // Count answered questions
   const answeredCount = Object.keys(answers).filter(k => answers[k] && answers[k] !== 'not_sure').length;
   const glossaryMatches = findGlossaryMatches(
-    `${currentQuestion.question[lang]} ${Object.values(answers).join(' ')}`,
+    `${currentQuestion.question} ${Object.values(answers).join(' ')}`,
     6
   );
 
@@ -747,8 +742,8 @@ export default function Quiz() {
           >
             <Sparkles size={48} />
           </motion.div>
-          <h2>{lang === 'en' ? 'Loading your progress...' : 'Dang tai tien do...'}</h2>
-          <p>{lang === 'en' ? 'Preparing the next stage' : 'Dang chuan bi buoc tiep theo'}</p>
+          <h2>Loading your progress...</h2>
+          <p>Preparing the next stage</p>
           <div className="loading-dots">
             <span /><span /><span />
           </div>
@@ -764,14 +759,14 @@ export default function Quiz() {
         <button
           className="header-back-btn"
           onClick={handleBack}
-          aria-label={lang === 'en' ? 'Go back' : 'Quay lại'}
+          aria-label="Go back"
         >
           <ArrowLeft size={20} />
         </button>
         <div className="header-progress">
           <div className="stage-indicator">
-            <span className="stage-title">{currentStage.title[lang]}</span>
-            <span className="stage-subtitle">{currentStage.description[lang]}</span>
+            <span className="stage-title">{currentStage.title}</span>
+            <span className="stage-subtitle">{currentStage.description}</span>
           </div>
           <div className="progress-indicator">
             <span className="progress-current">{flatQuestionIndex + 1}</span>
@@ -794,8 +789,8 @@ export default function Quiz() {
             setGlossaryOpen(next);
             if (next) setSummaryOpen(false);
           }}
-          title={lang === 'en' ? 'Open glossary' : 'Mở từ điển thuật ngữ'}
-          aria-label={lang === 'en' ? 'Open glossary' : 'Mở từ điển thuật ngữ'}
+          title="Open glossary"
+          aria-label="Open glossary"
         >
           <BookOpen size={18} />
         </button>
@@ -806,8 +801,8 @@ export default function Quiz() {
             setSummaryOpen(next);
             if (next) setGlossaryOpen(false);
           }}
-          title={lang === 'en' ? 'View summary' : 'Xem tóm tắt'}
-          aria-label={lang === 'en' ? 'View summary' : 'Xem tóm tắt'}
+          title="View summary"
+          aria-label="View summary"
         >
           <ListChecks size={18} />
           {answeredCount > 0 && <span className="answered-badge">{answeredCount}</span>}
@@ -826,8 +821,8 @@ export default function Quiz() {
           >
             <div className="summary-header">
               <div>
-                <h3>{lang === 'en' ? 'Marketing Glossary' : 'Tu dien marketing'}</h3>
-                <p className="summary-subtitle">{lang === 'en' ? 'Key terms used by marketers' : 'Thuat ngu hay gap trong marketing'}</p>
+                <h3>Marketing Glossary</h3>
+                <p className="summary-subtitle">Key terms used by marketers</p>
               </div>
               <button className="summary-close" onClick={() => setGlossaryOpen(false)}>
                 <ChevronRight size={20} />
@@ -836,24 +831,24 @@ export default function Quiz() {
             <div className="summary-list">
               {glossaryMatches.length > 0 && (
                 <div className="glossary-section">
-                  <span className="glossary-section-title">{lang === 'en' ? 'Suggested for you' : 'Goi y lien quan'}</span>
+                  <span className="glossary-section-title">Suggested for you</span>
                   {glossaryMatches.map((entry) => (
                     <div key={entry.id} className="glossary-item">
                       <div className="glossary-term">{entry.term}</div>
-                      <div className="glossary-name">{entry.name[lang]}</div>
-                      <p className="glossary-definition">{entry.definition[lang]}</p>
+                      <div className="glossary-name">{entry.name}</div>
+                      <p className="glossary-definition">{entry.definition}</p>
                     </div>
                   ))}
                 </div>
               )}
               {glossaryGroups.map((group) => (
                 <div key={group.id} className="glossary-section">
-                  <span className="glossary-section-title">{group.label[lang]}</span>
+                  <span className="glossary-section-title">{group.label}</span>
                   {getGlossaryByGroup(group.id).map((entry) => (
                     <div key={entry.id} className="glossary-item">
                       <div className="glossary-term">{entry.term}</div>
-                      <div className="glossary-name">{entry.name[lang]}</div>
-                      <p className="glossary-definition">{entry.definition[lang]}</p>
+                      <div className="glossary-name">{entry.name}</div>
+                      <p className="glossary-definition">{entry.definition}</p>
                     </div>
                   ))}
                 </div>
@@ -875,8 +870,8 @@ export default function Quiz() {
           >
             <div className="summary-header">
               <div>
-                <h3>{lang === 'en' ? 'Your Answers' : 'Câu trả lời của bạn'}</h3>
-                <p className="summary-subtitle">{lang === 'en' ? 'Jump to any question' : 'Chuyen den bat ky cau nao'}</p>
+                <h3>Your Answers</h3>
+                <p className="summary-subtitle">Jump to any question</p>
               </div>
               <button className="summary-close" onClick={() => setSummaryOpen(false)}>
                 <ChevronRight size={20} />
@@ -887,7 +882,7 @@ export default function Quiz() {
                 const answer = answers[q.id];
                 const hasAnswer = answer && answer !== 'not_sure';
                 const QIcon = q.icon;
-                const stageLabel = stages[questionStageLookup[q.id]]?.title[lang];
+                const stageLabel = stages[questionStageLookup[q.id]]?.title;
 
                 return (
                   <button
@@ -907,7 +902,7 @@ export default function Quiz() {
                         <QIcon size={14} />
                       </div>
                       <div className="summary-item-text">
-                        <span className="summary-item-label">{q.shortLabel[lang]}</span>
+                        <span className="summary-item-label">{q.shortLabel}</span>
                         <span className="summary-item-stage">{stageLabel}</span>
                       </div>
                     </div>
@@ -939,7 +934,7 @@ export default function Quiz() {
             </div>
 
             {/* Question */}
-            <h1 className="question-title">{currentQuestion.question[lang]}</h1>
+            <h1 className="question-title">{currentQuestion.question}</h1>
 
             {/* Text Input Type */}
             {currentQuestion.type === 'text' ? (
@@ -947,7 +942,7 @@ export default function Quiz() {
                 <div className="text-input-box">
                   <input
                     type="text"
-                    placeholder={currentQuestion.placeholder?.[lang] || ''}
+                    placeholder={currentQuestion.placeholder || ''}
                     value={textInput}
                     onChange={(e) => setTextInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleTextSubmit()}
@@ -957,10 +952,10 @@ export default function Quiz() {
                 <div className="text-input-actions">
                   <button className="skip-text-btn" onClick={handleSkip}>
                     <HelpCircle size={16} />
-                    {lang === 'en' ? 'Skip' : 'Bỏ qua'}
+                    Skip
                   </button>
                   <button className="submit-text-btn" onClick={handleTextSubmit}>
-                    {savingStage ? (lang === 'en' ? 'Saving...' : 'Dang luu...') : (lang === 'en' ? 'Continue' : 'Tiếp tục')}
+                    {savingStage ? 'Saving...' : 'Continue'}
                     <ChevronRight size={18} />
                   </button>
                 </div>
@@ -974,14 +969,14 @@ export default function Quiz() {
                     onClick={handleSkip}
                   >
                     <HelpCircle size={16} />
-                    <span>{lang === 'en' ? "Skip" : 'Bỏ qua'}</span>
+                    <span>Skip</span>
                   </button>
                   <button
                     className={`special-btn ${customInputOpen ? 'active' : ''}`}
                     onClick={() => { setCustomInputOpen(!customInputOpen); setCustomInput(''); }}
                   >
                     <Pencil size={16} />
-                    <span>{lang === 'en' ? 'Other' : 'Tự điền'}</span>
+                    <span>Other</span>
                   </button>
                 </div>
 
@@ -996,14 +991,14 @@ export default function Quiz() {
                     >
                       <input
                         type="text"
-                        placeholder={lang === 'en' ? 'Type your own answer...' : 'Nhập câu trả lời của bạn...'}
+                        placeholder="Type your own answer..."
                         value={customInput}
                         onChange={(e) => setCustomInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleCustomSubmit()}
                         autoFocus
                       />
                       <button onClick={handleCustomSubmit}>
-                        {lang === 'en' ? 'Submit' : 'Gửi'}
+                        Submit
                       </button>
                     </motion.div>
                   )}
@@ -1022,7 +1017,7 @@ export default function Quiz() {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      {option.label[lang]}
+                      {option.label}
                     </motion.button>
                   ))}
                 </div>
@@ -1033,7 +1028,7 @@ export default function Quiz() {
             {(stageIndex > 0 || questionIndex > 0) && (
               <button className="prev-step-btn" onClick={handlePrevStep}>
                 <ChevronLeft size={18} />
-                <span>{lang === 'en' ? 'Previous' : 'Quay lại'}</span>
+                <span>Previous</span>
               </button>
             )}
           </motion.div>

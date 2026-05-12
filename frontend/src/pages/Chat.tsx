@@ -25,18 +25,18 @@ import './Chat.css';
 type Message = ChatMessage;
 
 const metricsFields = [
-  { key: 'cpc', label: { en: 'CPC', vi: 'CPC' } },
-  { key: 'cpm', label: { en: 'CPM', vi: 'CPM' } },
-  { key: 'cpa', label: { en: 'CPA', vi: 'CPA' } },
-  { key: 'cpl', label: { en: 'CPL', vi: 'CPL' } },
-  { key: 'cac', label: { en: 'CAC', vi: 'CAC' } },
-  { key: 'ltv', label: { en: 'LTV', vi: 'LTV' } },
-  { key: 'retentionRate', label: { en: 'Retention Rate (%)', vi: 'Ty le giu chan (%)' } },
-  { key: 'churnRate', label: { en: 'Churn Rate (%)', vi: 'Ty le roi bo (%)' } },
-  { key: 'engagementRate', label: { en: 'Engagement Rate (%)', vi: 'Ty le tuong tac (%)' } },
-  { key: 'bounceRate', label: { en: 'Bounce Rate (%)', vi: 'Ty le thoat (%)' } },
-  { key: 'sessionDuration', label: { en: 'Session Duration (sec)', vi: 'Thoi gian phien (giay)' } },
-  { key: 'roas', label: { en: 'ROAS', vi: 'ROAS' } }
+  { key: 'cpc', label: 'CPC' },
+  { key: 'cpm', label: 'CPM' },
+  { key: 'cpa', label: 'CPA' },
+  { key: 'cpl', label: 'CPL' },
+  { key: 'cac', label: 'CAC' },
+  { key: 'ltv', label: 'LTV' },
+  { key: 'retentionRate', label: 'Retention Rate (%)' },
+  { key: 'churnRate', label: 'Churn Rate (%)' },
+  { key: 'engagementRate', label: 'Engagement Rate (%)' },
+  { key: 'bounceRate', label: 'Bounce Rate (%)' },
+  { key: 'sessionDuration', label: 'Session Duration (sec)' },
+  { key: 'roas', label: 'ROAS' }
 ];
 
 interface Campaign extends Pick<ApiCampaign, 'id' | 'name' | 'createdAt' | 'isFavorite'> {
@@ -47,102 +47,41 @@ interface Campaign extends Pick<ApiCampaign, 'id' | 'name' | 'createdAt' | 'isFa
   strategy?: Record<string, unknown>;
 }
 
-// Quick quiz questions for the inline popup (subset of full quiz)
-const quickQuizQuestions = [
-  {
-    id: 'productName',
-    icon: Package,
-    question: { en: 'What is your product or service name?', vi: 'Tên sản phẩm hoặc dịch vụ của bạn?' },
-    type: 'text' as const,
-    placeholder: { en: 'Enter product/service name...', vi: 'Nhập tên sản phẩm/dịch vụ...' }
-  },
-  {
-    id: 'business',
-    icon: Building,
-    question: { en: 'What type of business?', vi: 'Loại hình doanh nghiệp?' },
-    type: 'select' as const,
-    options: [
-      { value: 'ecommerce', label: { en: 'E-commerce', vi: 'Thương mại điện tử' } },
-      { value: 'saas', label: { en: 'SaaS / Software', vi: 'SaaS / Phần mềm' } },
-      { value: 'service', label: { en: 'Professional Services', vi: 'Dịch vụ chuyên nghiệp' } },
-      { value: 'local', label: { en: 'Local Business', vi: 'Kinh doanh địa phương' } },
-      { value: 'education', label: { en: 'Education', vi: 'Giáo dục' } },
-      { value: 'food', label: { en: 'Food & Beverage', vi: 'Thực phẩm & Đồ uống' } },
-    ]
-  },
-  {
-    id: 'audience',
-    icon: Users,
-    question: { en: 'Target audience?', vi: 'Đối tượng khách hàng?' },
-    type: 'select' as const,
-    options: [
-      { value: 'b2b', label: { en: 'B2B (Businesses)', vi: 'B2B (Doanh nghiệp)' } },
-      { value: 'b2c', label: { en: 'B2C (Consumers)', vi: 'B2C (Người tiêu dùng)' } },
-      { value: 'both', label: { en: 'Both B2B and B2C', vi: 'Cả B2B và B2C' } },
-      { value: 'genz', label: { en: 'Gen Z (18-25)', vi: 'Gen Z (18-25)' } },
-      { value: 'millennials', label: { en: 'Millennials (26-40)', vi: 'Millennials (26-40)' } },
-    ]
-  },
-  {
-    id: 'goal',
-    icon: Target,
-    question: { en: 'Main marketing goal?', vi: 'Mục tiêu marketing chính?' },
-    type: 'select' as const,
-    options: [
-      { value: 'awareness', label: { en: 'Brand Awareness', vi: 'Nhận diện thương hiệu' } },
-      { value: 'leads', label: { en: 'Generate Leads', vi: 'Tạo khách hàng tiềm năng' } },
-      { value: 'sales', label: { en: 'Increase Sales', vi: 'Tăng doanh số' } },
-      { value: 'traffic', label: { en: 'Website Traffic', vi: 'Lưu lượng website' } },
-      { value: 'engagement', label: { en: 'Social Engagement', vi: 'Tương tác MXH' } },
-    ]
-  },
-  {
-    id: 'budget',
-    icon: DollarSign,
-    question: { en: 'Monthly budget?', vi: 'Ngân sách hàng tháng?' },
-    type: 'select' as const,
-    options: [
-      { value: 'minimal', label: { en: 'Under $500', vi: 'Dưới $500' } },
-      { value: 'small', label: { en: '$500 - $1,000', vi: '$500 - $1,000' } },
-      { value: 'medium', label: { en: '$1,000 - $5,000', vi: '$1,000 - $5,000' } },
-      { value: 'large', label: { en: '$5,000+', vi: '$5,000+' } },
-    ]
-  }
-];
+
 
 const phase2Questions = [
   {
     id: 'channels',
     icon: Globe,
-    question: { en: 'Which channels to focus on?', vi: 'Tập trung vào kênh nào?' },
+    question: 'Which channels to focus on?',
     type: 'select' as const,
     options: [
-      { value: 'social', label: { en: 'Social Media', vi: 'Mạng xã hội' } },
-      { value: 'search', label: { en: 'Search (SEO/SEM)', vi: 'Tìm kiếm' } },
-      { value: 'email', label: { en: 'Email Marketing', vi: 'Email' } },
-      { value: 'offline', label: { en: 'Offline / OOH', vi: 'Offline / OOH' } }
+      { value: 'social', label: 'Social Media' },
+      { value: 'search', label: 'Search (SEO/SEM)' },
+      { value: 'email', label: 'Email Marketing' },
+      { value: 'offline', label: 'Offline / OOH' }
     ]
   },
   {
     id: 'budget_alloc',
     icon: DollarSign,
-    question: { en: 'Primary budget allocation?', vi: 'Ngân sách chủ yếu cho?' },
+    question: 'Primary budget allocation?',
     type: 'select' as const,
     options: [
-      { value: 'ads', label: { en: 'Paid Ads', vi: 'Quảng cáo trả phí' } },
-      { value: 'content', label: { en: 'Content Production', vi: 'Sản xuất nội dung' } },
-      { value: 'influencer', label: { en: 'Influencer Booking', vi: 'KOLs/Influencers' } }
+      { value: 'ads', label: 'Paid Ads' },
+      { value: 'content', label: 'Content Production' },
+      { value: 'influencer', label: 'Influencer Booking' }
     ]
   },
   {
     id: 'timeline',
     icon: Clock,
-    question: { en: 'Expected campaign duration?', vi: 'Thời gian chạy dự kiến?' },
+    question: 'Expected campaign duration?',
     type: 'select' as const,
     options: [
-      { value: 'short', label: { en: '1-3 months', vi: '1-3 tháng' } },
-      { value: 'medium', label: { en: '3-6 months', vi: '3-6 tháng' } },
-      { value: 'long', label: { en: '6+ months', vi: 'Hơn 6 tháng' } }
+      { value: 'short', label: '1-3 months' },
+      { value: 'medium', label: '3-6 months' },
+      { value: 'long', label: '6+ months' }
     ]
   }
 ];
@@ -191,13 +130,7 @@ export default function Chat() {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Inline quiz popup state
-  const [quizPopupOpen, setQuizPopupOpen] = useState(false);
-  const [quizStep, setQuizStep] = useState(0);
-  const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({});
-  const [quizTextInput, setQuizTextInput] = useState('');
-  const [quizCustomOpen, setQuizCustomOpen] = useState(false);
-  const [quizCustomInput, setQuizCustomInput] = useState('');
+
 
   const [glossaryOpen, setGlossaryOpen] = useState(false);
   const [phase2PopupOpen, setPhase2PopupOpen] = useState(false);
@@ -211,7 +144,6 @@ export default function Chat() {
     return findGlossaryMatches(JSON.stringify(currentCampaign) + JSON.stringify(messages));
   }, [currentCampaign, messages]);
 
-  let lang: 'en' | 'vi' = 'en';
   const isLoggedIn = Boolean(token);
 
   // Compute current stage from quizData using the shared state-machine helper.
@@ -255,6 +187,36 @@ export default function Chat() {
       .replace(/\*\*\[STAGE_TRANSITION\]\*\*/gi, '')
       .replace(/\[STAGE_TRANSITION\]/gi, '')
       .trim();
+  };
+
+  const CampaignProfileCard = () => {
+    if (!currentCampaign?.quizData || Object.keys(currentCampaign.quizData).length === 0) return null;
+    const profile = getFullQuizProfile().slice(0, 8);
+    if (profile.length === 0) return null;
+
+    return (
+      <motion.div 
+        className="campaign-profile-card"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="profile-card-header">
+          <Sparkles size={16} className="text-accent" />
+          <h3>{'Campaign Discovery Profile'}</h3>
+        </div>
+        <div className="profile-grid">
+          {profile.map((item, idx) => (
+            <div key={idx} className="profile-item">
+              <span className="profile-icon">{item.icon}</span>
+              <div className="profile-info">
+                <span className="profile-label">{item.label}</span>
+                <span className="profile-value">{item.value}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    );
   };
 
   // Close menus when clicking outside
@@ -387,6 +349,26 @@ export default function Chat() {
     }
   }, [initialLoading]);
 
+  // Autostart analysis when returning from Quiz
+  useEffect(() => {
+    if (searchParams.get('autostart') === 'true' && !initialLoading && messages.length === 0 && currentCampaign && !loading) {
+      const startAnalysis = async () => {
+        const initialText = "I've completed the quiz. Please analyze my data and propose strategic plans.";
+        
+        setLoading(true);
+        const res = await api.sendMessage(initialText, campaignId!);
+        if (res.success && res.data) {
+          const { userMessage, assistantMessage } = res.data;
+          setMessages([userMessage, assistantMessage]);
+        }
+        setLoading(false);
+        // Clear param
+        navigate(`/chat/${campaignId}`, { replace: true });
+      };
+      startAnalysis();
+    }
+  }, [searchParams, initialLoading, messages.length, currentCampaign, loading]);
+
   // Persist the "seen" flag whenever the guide is dismissed via close button
   // or overlay click. Gated on the ref so we never write before auto-show ran.
   useEffect(() => {
@@ -455,8 +437,7 @@ export default function Chat() {
 
   // Insert a synthetic SYSTEM-pane message that records a stage transition.
   // The metadata stores the target stage and the direction (advance vs
-  // rollback) so the activity log can render a localised, unambiguous label
-  // even after the user toggles the language.
+  // rollback) so the activity log can render an unambiguous label.
   const appendSystemTransition = (
     toStage: Stage,
     direction: 'advance' | 'rollback' = 'advance'
@@ -474,9 +455,7 @@ export default function Chat() {
   };
 
   const getGenericAiErrorMessage = () =>
-    lang === 'en'
-      ? 'Sorry, I encountered an error. Please try again.'
-      : 'Xin loi, da xay ra loi. Vui long thu lai.';
+    'Sorry, I encountered an error. Please try again.';
 
   const buildCampaignNameFromMessage = (message: string) => {
     const normalized = message.trim().replace(/\s+/g, ' ');
@@ -527,8 +506,8 @@ export default function Chat() {
     return createdCampaign.id;
   };
 
-  // Trigger the initial strategy generation. Used both by the autostart query
-  // param (after a Quick Setup) and as a recovery option when a campaign has
+  // Trigger the initial strategy generation. Used by the `autostart` query
+  // param after the Full Quiz and as a recovery option when a campaign has
   // quizData but no AI response yet. Accepts an explicit campaign id so the
   // caller can use it before the URL has been updated.
   const generateInitialStrategy = async (targetCampaignId?: string) => {
@@ -537,9 +516,8 @@ export default function Chat() {
 
     setLoading(true);
 
-    const initialPrompt = lang === 'en'
-      ? "Based on the quiz answers I provided, please create a comprehensive marketing strategy for my business. Include specific recommendations for channels, content, budget allocation, and timeline."
-      : "Dua tren cac cau tra loi quiz toi da cung cap, hay tao mot chien luoc marketing toan dien cho doanh nghiep cua toi. Bao gom cac khuyen nghi cu the ve kenh, noi dung, phan bo ngan sach va thoi gian.";
+    const initialPrompt =
+      "Based on the quiz answers I provided, please create a comprehensive marketing strategy for my business. Include specific recommendations for channels, content, budget allocation, and timeline.";
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -557,7 +535,7 @@ export default function Chat() {
       `${initialPrompt} ${Object.values(currentCampaign?.quizData || {}).join(' ')}`,
       6
     );
-    const glossaryContext = summarizeGlossary(glossaryMatches, lang);
+    const glossaryContext = summarizeGlossary(glossaryMatches);
     const context = glossaryContext.length > 0 ? { glossary: glossaryContext } : undefined;
 
     const res = await api.sendMessage(initialPrompt, effectiveCampaignId, context);
@@ -570,9 +548,7 @@ export default function Chat() {
       });
     } else {
       appendAssistantMessage(
-        lang === 'en'
-          ? 'Sorry, I encountered an error generating your strategy. Please try sending a message.'
-          : 'Xin loi, da xay ra loi khi tao chien luoc. Vui long thu gui tin nhan.'
+        'Sorry, I encountered an error generating your strategy. Please try sending a message.'
       );
     }
 
@@ -610,9 +586,7 @@ export default function Chat() {
       }
 
       appendAssistantMessage(
-        lang === 'en'
-          ? 'Unable to initialize a new conversation. Please try again.'
-          : 'Khong the khoi tao cuoc tro chuyen moi. Vui long thu lai.'
+        'Unable to initialize a new conversation. Please try again.'
       );
       setLoading(false);
       return;
@@ -622,7 +596,7 @@ export default function Chat() {
       `${nextInput} ${Object.values(currentCampaign?.quizData || {}).join(' ')}`,
       6
     );
-    const glossaryContext = summarizeGlossary(glossaryMatches, lang);
+    const glossaryContext = summarizeGlossary(glossaryMatches);
     const context = glossaryContext.length > 0 ? { glossary: glossaryContext } : undefined;
 
     const res = await api.sendMessage(nextInput, targetCampaignId, context);
@@ -670,127 +644,9 @@ export default function Chat() {
     navigate('/chat');
   };
 
-  const handleOpenQuiz = () => {
-    setQuizPopupOpen(true);
-    setQuizStep(0);
-    setQuizTextInput('');
-  };
-
   const handleOpenFullQuiz = () => {
     const query = campaignId ? `?campaignId=${campaignId}` : '';
     navigate(`/quiz${query}`, { state: { from: campaignId ? `/chat/${campaignId}` : '/chat' } });
-  };
-
-  // Build a default campaign name from the Quick Setup answers so the new
-  // campaign in the sidebar is recognisable instead of "Campaign Apr 12".
-  const buildCampaignNameFromQuiz = (answers: Record<string, string>): string => {
-    const product = (answers.productName || '').trim();
-    if (product) return product;
-    const business = answers.business;
-    if (business) {
-      return lang === 'en' ? `${business} campaign` : `Chien dich ${business}`;
-    }
-    return buildCampaignNameFromMessage('');
-  };
-
-  // Persist Quick Setup answers, creating a new campaign first if necessary.
-  // Returns the campaign id used, or null on failure.
-  const persistQuickSetupAnswers = async (
-    answers: Record<string, string>
-  ): Promise<string | null> => {
-    let targetCampaignId = campaignId ?? currentCampaign?.id ?? null;
-
-    if (!targetCampaignId) {
-      const createRes = await api.createCampaign({ name: buildCampaignNameFromQuiz(answers) });
-      if (!createRes.success || !createRes.data) {
-        if (createRes.error === 'Session expired. Please log in again.') {
-          navigate('/login');
-        }
-        return null;
-      }
-      const createdCampaign: Campaign = {
-        id: createRes.data.id,
-        name: createRes.data.name,
-        createdAt: createRes.data.createdAt,
-        isFavorite: createRes.data.isFavorite,
-        status: createRes.data.status,
-        quizData: createRes.data.quizData
-      };
-      setCampaigns(prev => [createdCampaign, ...prev.filter(c => c.id !== createdCampaign.id)]);
-      setCurrentCampaign(createdCampaign);
-      targetCampaignId = createdCampaign.id;
-      navigate(`/chat/${targetCampaignId}`, { replace: true });
-    }
-
-    const updateRes = await api.updateCampaign(targetCampaignId, {
-      quizData: answers,
-      status: 'ACTIVE'
-    });
-
-    if (!updateRes.success) return null;
-
-    fetchCurrentCampaign();
-    fetchCampaigns();
-    return targetCampaignId;
-  };
-
-  const handleQuizSkipAll = async () => {
-    setQuizPopupOpen(false);
-    if (Object.keys(quizAnswers).length > 0) {
-      await persistQuickSetupAnswers(quizAnswers);
-    }
-    focusComposer();
-  };
-
-  const handleQuizAnswer = async (value: string) => {
-    const currentQ = quickQuizQuestions[quizStep];
-    const newAnswers = { ...quizAnswers, [currentQ.id]: value };
-    setQuizAnswers(newAnswers);
-
-    if (quizStep < quickQuizQuestions.length - 1) {
-      setTimeout(() => {
-        setQuizStep(quizStep + 1);
-        setQuizTextInput(newAnswers[quickQuizQuestions[quizStep + 1]?.id] || '');
-      }, 200);
-      return;
-    }
-
-    // All quick questions answered. Persist (create campaign if needed) and
-    // auto-trigger the initial strategy generation so the user immediately
-    // sees an AI response instead of an empty chat.
-    setQuizPopupOpen(false);
-
-    const targetCampaignId = await persistQuickSetupAnswers(newAnswers);
-    if (!targetCampaignId) {
-      appendAssistantMessage(
-        lang === 'en'
-          ? 'We saved your answers locally but could not sync them to the server. Please retry.'
-          : 'Da luu cau tra loi cuc bo nhung khong dong bo voi server duoc. Vui long thu lai.'
-      );
-      return;
-    }
-
-    appendSystemTransition(1);
-    generateInitialStrategy(targetCampaignId);
-  };
-
-  const handleQuizTextSubmit = () => {
-    const value = quizTextInput.trim() || 'not_sure';
-    handleQuizAnswer(value);
-  };
-
-  const handleQuizSkipQuestion = () => {
-    handleQuizAnswer('not_sure');
-    setQuizCustomOpen(false);
-    setQuizCustomInput('');
-  };
-
-  const handleQuizCustomSubmit = () => {
-    const value = quizCustomInput.trim();
-    if (!value) return;
-    handleQuizAnswer(`custom: ${value}`);
-    setQuizCustomOpen(false);
-    setQuizCustomInput('');
   };
 
   const handlePhase2Answer = async (value: string) => {
@@ -829,9 +685,7 @@ export default function Chat() {
     const updateRes = await api.updateCampaign(campaignId, { quizData: updatedQuizData });
     if (!updateRes.success) {
       appendAssistantMessage(
-        lang === 'en'
-          ? 'We could not save your Stage 2 details. Please retry.'
-          : 'Khong the luu chi tiet Giai doan 2. Vui long thu lai.'
+        'We could not save your Stage 2 details. Please retry.'
       );
       return;
     }
@@ -842,9 +696,7 @@ export default function Chat() {
       .map(([k, v]) => `${k}: ${v}`)
       .join(', ');
 
-    const messageContent = lang === 'en'
-      ? `I have selected my plan details: ${planText}. Let's proceed with execution and tracking setup.`
-      : `Toi da chot chi tiet ke hoach: ${planText}. Hay tien hanh buoc trien khai va thiet lap.`;
+    const messageContent = `I have selected my plan details: ${planText}. Let's proceed with execution and tracking setup.`;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -884,18 +736,14 @@ export default function Chat() {
       // the server state.
       setSelectedPlanInChat(null);
       appendAssistantMessage(
-        lang === 'en'
-          ? 'We could not record your plan selection. Please retry.'
-          : 'Khong the luu lua chon plan. Vui long thu lai.'
+        'We could not record your plan selection. Please retry.'
       );
       return;
     }
     fetchCurrentCampaign();
 
     // Send message to AI about selection
-    const messageContent = lang === 'en'
-      ? `I have selected Plan ${planId}. Let's proceed to Stage 2 to refine the details.`
-      : `Toi da chon Plan ${planId}. Hay chuyen sang Giai doan 2 de chi tiet hoa ke hoach.`;
+    const messageContent = `I have selected Plan ${planId}. Let's proceed to Stage 2 to refine the details.`;
     setInput('');
     setLoading(true);
     const userMsg: Message = {
@@ -932,7 +780,7 @@ export default function Chat() {
     const target = targetStage as Stage;
     const guard = canAdvance(currentStage, target, currentCampaign?.quizData);
     if (!guard.ok && guard.reason) {
-      setStageTransitionError(guard.reason[lang]);
+      setStageTransitionError(guard.reason);
       return;
     }
 
@@ -954,18 +802,15 @@ export default function Chat() {
       if (!updateRes.success) {
         setStageTransitionPending(false);
         setStageTransitionError(
-          lang === 'en'
-            ? 'Could not advance to Stage 3 (network or server error). Please retry.'
-            : 'Khong the chuyen sang Giai doan 3 (loi mang hoac server). Vui long thu lai.'
+          'Could not advance to Stage 3 (network or server error). Please retry.'
         );
         return;
       }
       fetchCurrentCampaign();
       appendSystemTransition(3);
 
-      const msg = lang === 'en'
-        ? 'Moving to Stage 3: Ongoing Optimization. I will submit periodic reports for AI analysis.'
-        : 'Chuyen sang Giai doan 3: Toi uu hoa lien tuc. Toi se gui bao cao dinh ky de AI phan tich.';
+      const msg =
+        'Moving to Stage 3: Ongoing Optimization. I will submit periodic reports for AI analysis.';
       setLoading(true);
       const userMsg: Message = {
         id: Date.now().toString(),
@@ -999,12 +844,10 @@ export default function Chat() {
     if (!campaignId || stageTransitionPending) return;
     if (targetStage >= currentStage) return;
 
-    const confirmText = lang === 'en'
-      ? `You are about to return to Stage ${targetStage} (${STAGE_DESCRIPTORS[targetStage].title.en}). This will permanently delete all strategy decisions, selected plans, and execution details made after this stage. Your chat history will remain, but the AI's current context will be reset to this earlier point.`
-      : `Bạn chuẩn bị quay lại Giai đoạn ${targetStage} (${STAGE_DESCRIPTORS[targetStage].title.vi}). Hành động này sẽ xoá vĩnh viễn các quyết định chiến lược, kế hoạch đã chọn và chi tiết thực thi sau giai đoạn này. Lịch sử chat vẫn được giữ lại, nhưng ngữ cảnh hiện tại của AI sẽ bị quay về thời điểm đó.`;
+    const confirmText = `You are about to return to Stage ${targetStage} (${STAGE_DESCRIPTORS[targetStage].title}). This will permanently delete all strategy decisions, selected plans, and execution details made after this stage. Your chat history will remain, but the AI's current context will be reset to this earlier point.`;
 
     setConfirmModalData({
-      title: lang === 'en' ? 'Confirm Reset' : 'Xác nhận đặt lại',
+      title: 'Confirm Reset',
       message: confirmText,
       onConfirm: async () => {
         setStageTransitionPending(true);
@@ -1034,7 +877,7 @@ export default function Chat() {
         if (!updateRes.success) {
           setStageTransitionPending(false);
           setStageTransitionError(
-            lang === 'en' ? 'Could not reset stage. Please retry.' : 'Không thể đặt lại giai đoạn. Vui lòng thử lại.'
+            'Could not reset stage. Please retry.'
           );
           return;
         }
@@ -1075,9 +918,7 @@ export default function Chat() {
         setMessages(prev => [
           ...prev,
           buildContentErrorMessage(
-            lang === 'en'
-              ? 'Failed to generate content. Please try again.'
-              : 'Loi khi tao noi dung. Vui long thu lai.'
+            'Failed to generate content. Please try again.'
           )
         ]);
       }
@@ -1086,7 +927,7 @@ export default function Chat() {
       setMessages(prev => [
         ...prev,
         buildContentErrorMessage(
-          lang === 'en' ? 'Network error when generating content.' : 'Loi mang khi tao noi dung.'
+          'Network error when generating content.'
         )
       ]);
     }
@@ -1129,9 +970,7 @@ export default function Chat() {
         setMessages(prev => [
           ...prev,
           buildContentErrorMessage(
-            lang === 'en'
-              ? 'Failed to generate content. Please try again.'
-              : 'Loi khi tao noi dung. Vui long thu lai.'
+            'Failed to generate content. Please try again.'
           )
         ]);
       }
@@ -1140,7 +979,7 @@ export default function Chat() {
       setMessages(prev => [
         ...prev,
         buildContentErrorMessage(
-          lang === 'en' ? 'Network error when generating content.' : 'Loi mang khi tao noi dung.'
+          'Network error when generating content.'
         )
       ]);
     }
@@ -1148,7 +987,7 @@ export default function Chat() {
   };
 
   const handleLogout = () => {
-    const confirmText = lang === 'en' ? 'Are you sure you want to logout?' : 'Bạn có chắc chắn muốn đăng xuất không?';
+    const confirmText = 'Are you sure you want to logout?';
     if (!window.confirm(confirmText)) return;
     logout();
     navigate('/');
@@ -1170,8 +1009,7 @@ export default function Chat() {
       metricsFields.forEach(field => {
         const idx = headers.findIndex(h =>
           h === field.key.toLowerCase() ||
-          h === field.label.en.toLowerCase() ||
-          h === field.label.vi.toLowerCase()
+          h === field.label.toLowerCase()
         );
         if (idx >= 0 && values[idx]) {
           newInputs[field.key] = values[idx];
@@ -1239,7 +1077,7 @@ export default function Chat() {
   const handleReanalyze = async () => {
     if (loading || !campaignId) return;
     const lastUserMsg = messages.slice().reverse().find(m => m.role === 'USER');
-    const textToResend = lastUserMsg ? lastUserMsg.content : (lang === 'en' ? 'Please reanalyze the strategy.' : 'Vui lòng phân tích lại chiến lược.');
+    const textToResend = lastUserMsg ? lastUserMsg.content : ('Please reanalyze the strategy.');
 
     setLoading(true);
     const generatedId = `${Date.now()}-retry`;
@@ -1410,171 +1248,171 @@ export default function Chat() {
     const quizData = currentCampaign.quizData;
 
     // Mapping values to display labels
-    const businessLabels: Record<string, { en: string; vi: string }> = {
-      ecommerce: { en: 'E-commerce', vi: 'Thương mại điện tử' },
-      saas: { en: 'SaaS / Software', vi: 'SaaS / Phần mềm' },
-      service: { en: 'Professional Services', vi: 'Dịch vụ chuyên nghiệp' },
-      local: { en: 'Local Business', vi: 'Kinh doanh địa phương' },
-      agency: { en: 'Marketing Agency', vi: 'Công ty Marketing' },
-      education: { en: 'Education', vi: 'Giáo dục' },
-      healthcare: { en: 'Healthcare', vi: 'Y tế' },
-      fintech: { en: 'Fintech', vi: 'Fintech' },
-      food: { en: 'Food & Beverage', vi: 'Thực phẩm & Đồ uống' },
-      travel: { en: 'Travel', vi: 'Du lịch' },
-      realestate: { en: 'Real Estate', vi: 'Bất động sản' },
-      entertainment: { en: 'Entertainment', vi: 'Giải trí' }
+    const businessLabels: Record<string, string> = {
+      ecommerce: 'E-commerce',
+      saas: 'SaaS / Software',
+      service: 'Professional Services',
+      local: 'Local Business',
+      agency: 'Marketing Agency',
+      education: 'Education',
+      healthcare: 'Healthcare',
+      fintech: 'Fintech',
+      food: 'Food & Beverage',
+      travel: 'Travel',
+      realestate: 'Real Estate',
+      entertainment: 'Entertainment'
     };
 
-    const audienceLabels: Record<string, { en: string; vi: string }> = {
-      b2b: { en: 'B2B', vi: 'B2B' },
-      b2c: { en: 'B2C', vi: 'B2C' },
-      both: { en: 'B2B & B2C', vi: 'B2B & B2C' },
-      genz: { en: 'Gen Z (18-25)', vi: 'Gen Z (18-25)' },
-      millennials: { en: 'Millennials (26-40)', vi: 'Millennials (26-40)' },
-      genx: { en: 'Gen X+ (40+)', vi: 'Gen X+ (40+)' },
-      enterprise: { en: 'Enterprise', vi: 'Doanh nghiệp lớn' },
-      startups: { en: 'Startups & SMBs', vi: 'Startup & SMB' },
-      women: { en: 'Women', vi: 'Phụ nữ' },
-      men: { en: 'Men', vi: 'Nam giới' },
-      parents: { en: 'Parents', vi: 'Phụ huynh' },
-      students: { en: 'Students', vi: 'Sinh viên' }
+    const audienceLabels: Record<string, string> = {
+      b2b: 'B2B',
+      b2c: 'B2C',
+      both: 'B2B & B2C',
+      genz: 'Gen Z (18-25)',
+      millennials: 'Millennials (26-40)',
+      genx: 'Gen X+ (40+)',
+      enterprise: 'Enterprise',
+      startups: 'Startups & SMBs',
+      women: 'Women',
+      men: 'Men',
+      parents: 'Parents',
+      students: 'Students'
     };
 
-    const goalLabels: Record<string, { en: string; vi: string }> = {
-      awareness: { en: 'Brand Awareness', vi: 'Nhận diện thương hiệu' },
-      leads: { en: 'Lead Generation', vi: 'Tạo khách hàng tiềm năng' },
-      sales: { en: 'Increase Sales', vi: 'Tăng doanh số' },
-      retention: { en: 'Customer Retention', vi: 'Giữ chân khách hàng' },
-      traffic: { en: 'Website Traffic', vi: 'Lưu lượng website' },
-      engagement: { en: 'Social Engagement', vi: 'Tương tác MXH' },
-      launch: { en: 'Product Launch', vi: 'Ra mắt sản phẩm' },
-      reputation: { en: 'Reputation', vi: 'Danh tiếng' },
-      appinstalls: { en: 'App Installs', vi: 'Cài đặt app' },
-      community: { en: 'Community', vi: 'Cộng đồng' }
+    const goalLabels: Record<string, string> = {
+      awareness: 'Brand Awareness',
+      leads: 'Lead Generation',
+      sales: 'Increase Sales',
+      retention: 'Customer Retention',
+      traffic: 'Website Traffic',
+      engagement: 'Social Engagement',
+      launch: 'Product Launch',
+      reputation: 'Reputation',
+      appinstalls: 'App Installs',
+      community: 'Community'
     };
 
-    const channelLabels: Record<string, { en: string; vi: string }> = {
-      social: { en: 'Social Media', vi: 'Mạng xã hội' },
-      search: { en: 'Google Ads & SEO', vi: 'Google Ads & SEO' },
-      email: { en: 'Email Marketing', vi: 'Email Marketing' },
-      content: { en: 'Content / Blog', vi: 'Content / Blog' },
-      video: { en: 'YouTube / TikTok', vi: 'YouTube / TikTok' },
-      influencer: { en: 'Influencer', vi: 'Influencer' },
-      affiliate: { en: 'Affiliate', vi: 'Affiliate' },
-      podcast: { en: 'Podcast', vi: 'Podcast' },
-      offline: { en: 'Offline / Events', vi: 'Offline / Sự kiện' },
-      all: { en: 'Multi-channel', vi: 'Đa kênh' }
+    const channelLabels: Record<string, string> = {
+      social: 'Social Media',
+      search: 'Google Ads & SEO',
+      email: 'Email Marketing',
+      content: 'Content / Blog',
+      video: 'YouTube / TikTok',
+      influencer: 'Influencer',
+      affiliate: 'Affiliate',
+      podcast: 'Podcast',
+      offline: 'Offline / Events',
+      all: 'Multi-channel'
     };
 
-    const budgetLabels: Record<string, { en: string; vi: string }> = {
-      minimal: { en: '< $500', vi: '< $500' },
-      small: { en: '$500 - $1,000', vi: '$500 - $1,000' },
-      medium: { en: '$1,000 - $5,000', vi: '$1,000 - $5,000' },
-      large: { en: '$5,000 - $20,000', vi: '$5,000 - $20,000' },
-      enterprise: { en: '$20,000 - $100,000', vi: '$20,000 - $100,000' },
-      unlimited: { en: '$100,000+', vi: '$100,000+' }
+    const budgetLabels: Record<string, string> = {
+      minimal: '< $500',
+      small: '$500 - $1,000',
+      medium: '$1,000 - $5,000',
+      large: '$5,000 - $20,000',
+      enterprise: '$20,000 - $100,000',
+      unlimited: '$100,000+'
     };
 
-    const regionLabels: Record<string, { en: string; vi: string }> = {
-      local: { en: 'Local', vi: 'Địa phương' },
-      national: { en: 'National', vi: 'Toàn quốc' },
-      regional: { en: 'Southeast Asia', vi: 'Đông Nam Á' },
-      asia: { en: 'Asia Pacific', vi: 'Châu Á TBD' },
-      us: { en: 'United States', vi: 'Hoa Kỳ' },
-      europe: { en: 'Europe', vi: 'Châu Âu' },
-      global: { en: 'Global', vi: 'Toàn cầu' }
+    const regionLabels: Record<string, string> = {
+      local: 'Local',
+      national: 'National',
+      regional: 'Southeast Asia',
+      asia: 'Asia Pacific',
+      us: 'United States',
+      europe: 'Europe',
+      global: 'Global'
     };
 
-    const seasonalityLabels: Record<string, { en: string; vi: string }> = {
-      none: { en: 'No seasonality', vi: 'Không có mùa vụ rõ ràng' },
-      holiday: { en: 'Holiday-driven', vi: 'Theo dịp lễ tết' },
-      summer: { en: 'Summer peak', vi: 'Cao điểm mùa hè' },
-      yearend: { en: 'Year-end peak', vi: 'Cao điểm cuối năm' },
-      event: { en: 'Event-driven', vi: 'Theo sự kiện' },
-      always: { en: 'Always-on demand', vi: 'Nhu cầu ổn định' }
+    const seasonalityLabels: Record<string, string> = {
+      none: 'No seasonality',
+      holiday: 'Holiday-driven',
+      summer: 'Summer peak',
+      yearend: 'Year-end peak',
+      event: 'Event-driven',
+      always: 'Always-on demand'
     };
 
-    const contentFormatLabels: Record<string, { en: string; vi: string }> = {
-      short_video: { en: 'Short videos', vi: 'Video ngắn' },
-      long_video: { en: 'Long-form video', vi: 'Video dài' },
-      static_visual: { en: 'Static visuals', vi: 'Hình ảnh/carousel' },
-      article: { en: 'Articles/blog', vi: 'Bài viết/blog' },
-      email: { en: 'Email/newsletter', vi: 'Email/newsletter' },
-      mixed: { en: 'Mixed format', vi: 'Kết hợp nhiều định dạng' }
+    const contentFormatLabels: Record<string, string> = {
+      short_video: 'Short videos',
+      long_video: 'Long-form video',
+      static_visual: 'Static visuals',
+      article: 'Articles/blog',
+      email: 'Email/newsletter',
+      mixed: 'Mixed format'
     };
 
-    const offerTypeLabels: Record<string, { en: string; vi: string }> = {
-      discount: { en: 'Discount / flash sale', vi: 'Giảm giá / flash sale' },
-      bundle: { en: 'Bundle package', vi: 'Gói combo' },
-      trial: { en: 'Free trial / freemium', vi: 'Dùng thử / freemium' },
-      gift: { en: 'Gift with purchase', vi: 'Tặng quà kèm' },
-      consultation: { en: 'Free consultation/demo', vi: 'Tư vấn/demo miễn phí' },
-      custom_offer: { en: 'Custom segment offers', vi: 'Ưu đãi theo nhóm khách' }
+    const offerTypeLabels: Record<string, string> = {
+      discount: 'Discount / flash sale',
+      bundle: 'Bundle package',
+      trial: 'Free trial / freemium',
+      gift: 'Gift with purchase',
+      consultation: 'Free consultation/demo',
+      custom_offer: 'Custom segment offers'
     };
 
-    const getLabel = (value: string, labels: Record<string, { en: string; vi: string }>) => {
+    const getLabel = (value: string, labels: Record<string, string>) => {
       if (!value || value === 'not_sure') return null;
       if (value.startsWith('custom: ')) return value.replace('custom: ', '');
-      return labels[value]?.[lang] || value;
+      return labels[value] || value;
     };
 
     const items: { icon: ReactNode; label: string; value: string }[] = [];
 
     if (quizData.productName && quizData.productName !== 'not_sure') {
-      items.push({ icon: <Package size={16} />, label: lang === 'en' ? 'Product' : 'Sản phẩm', value: quizData.productName });
+      items.push({ icon: <Package size={16} />, label: 'Product', value: quizData.productName });
     }
 
     const businessValue = getLabel(quizData.business, businessLabels);
     if (businessValue) {
-      items.push({ icon: <Building size={16} />, label: lang === 'en' ? 'Business' : 'Loại hình', value: businessValue });
+      items.push({ icon: <Building size={16} />, label: 'Business', value: businessValue });
     }
 
     const audienceValue = getLabel(quizData.audience, audienceLabels);
     if (audienceValue) {
-      items.push({ icon: <Users size={16} />, label: lang === 'en' ? 'Audience' : 'Đối tượng', value: audienceValue });
+      items.push({ icon: <Users size={16} />, label: 'Audience', value: audienceValue });
     }
 
     const goalValue = getLabel(quizData.goal, goalLabels);
     if (goalValue) {
-      items.push({ icon: <Target size={16} />, label: lang === 'en' ? 'Goal' : 'Mục tiêu', value: goalValue });
+      items.push({ icon: <Target size={16} />, label: 'Goal', value: goalValue });
     }
 
     const channelValue = getLabel(quizData.channels, channelLabels);
     if (channelValue) {
-      items.push({ icon: <Megaphone size={16} />, label: lang === 'en' ? 'Channels' : 'Kênh', value: channelValue });
+      items.push({ icon: <Megaphone size={16} />, label: 'Channels', value: channelValue });
     }
 
     const budgetValue = getLabel(quizData.budget, budgetLabels);
     if (budgetValue) {
-      items.push({ icon: <DollarSign size={16} />, label: lang === 'en' ? 'Budget' : 'Ngân sách', value: budgetValue });
+      items.push({ icon: <DollarSign size={16} />, label: 'Budget', value: budgetValue });
     }
 
     const regionValue = getLabel(quizData.region, regionLabels);
     if (regionValue) {
-      items.push({ icon: <Globe size={16} />, label: lang === 'en' ? 'Region' : 'Khu vực', value: regionValue });
+      items.push({ icon: <Globe size={16} />, label: 'Region', value: regionValue });
     }
 
     const seasonalityValue = getLabel(quizData.seasonality, seasonalityLabels);
     if (seasonalityValue) {
-      items.push({ icon: <Clock size={16} />, label: lang === 'en' ? 'Seasonality' : 'Mùa vụ', value: seasonalityValue });
+      items.push({ icon: <Clock size={16} />, label: 'Seasonality', value: seasonalityValue });
     }
 
     const contentFormatValue = getLabel(quizData.contentFormat, contentFormatLabels);
     if (contentFormatValue) {
-      items.push({ icon: <BookOpen size={16} />, label: lang === 'en' ? 'Content Format' : 'Định dạng nội dung', value: contentFormatValue });
+      items.push({ icon: <BookOpen size={16} />, label: 'Content Format', value: contentFormatValue });
     }
 
     const offerTypeValue = getLabel(quizData.offerType, offerTypeLabels);
     if (offerTypeValue) {
-      items.push({ icon: <Star size={16} />, label: lang === 'en' ? 'Offer Type' : 'Loại ưu đãi', value: offerTypeValue });
+      items.push({ icon: <Star size={16} />, label: 'Offer Type', value: offerTypeValue });
     }
 
     if (quizData.usp && quizData.usp !== 'not_sure') {
-      items.push({ icon: <Pencil size={16} />, label: lang === 'en' ? 'USP' : 'Điểm nổi bật', value: quizData.usp });
+      items.push({ icon: <Pencil size={16} />, label: 'USP', value: quizData.usp });
     }
 
     if (quizData.competitors && quizData.competitors !== 'not_sure') {
-      items.push({ icon: <Briefcase size={16} />, label: lang === 'en' ? 'Competitors' : 'Đối thủ', value: quizData.competitors });
+      items.push({ icon: <Briefcase size={16} />, label: 'Competitors', value: quizData.competitors });
     }
 
     return items;
@@ -1607,7 +1445,7 @@ export default function Chat() {
 
   // Activity log derived from messages + metrics snapshots. The log gives
   // the user a chronological audit of every meaningful campaign event:
-  // quick-quiz answers, plan selection, stage transitions, content
+  // quiz answers, plan selection, stage transitions, content
   // generations, and metrics submissions.
   type ActivityKind = 'quiz' | 'plan' | 'stage' | 'content' | 'metrics' | 'phase2';
   interface ActivityEvent {
@@ -1624,15 +1462,15 @@ export default function Chat() {
 
     // Quiz answers from quizData (the keys we know about).
     const qd = currentCampaign.quizData ?? {};
-    const KNOWN_KEYS: Array<{ key: string; label: { en: string; vi: string } }> = [
-      { key: 'business', label: { en: 'Business type', vi: 'Loai hinh kinh doanh' } },
-      { key: 'audience', label: { en: 'Target audience', vi: 'Doi tuong muc tieu' } },
-      { key: 'goal', label: { en: 'Primary goal', vi: 'Muc tieu chinh' } },
-      { key: 'channel', label: { en: 'Preferred channel', vi: 'Kenh uu tien' } },
-      { key: 'budget', label: { en: 'Budget range', vi: 'Ngan sach' } },
-      { key: 'region', label: { en: 'Region', vi: 'Khu vuc' } },
-      { key: 'productName', label: { en: 'Product / service', vi: 'San pham / dich vu' } },
-      { key: 'seasonality', label: { en: 'Seasonality', vi: 'Mua vu' } }
+    const KNOWN_KEYS: Array<{ key: string; label: string }> = [
+      { key: 'business', label: 'Business type' },
+      { key: 'audience', label: 'Target audience' },
+      { key: 'goal', label: 'Primary goal' },
+      { key: 'channel', label: 'Preferred channel' },
+      { key: 'budget', label: 'Budget range' },
+      { key: 'region', label: 'Region' },
+      { key: 'productName', label: 'Product / service' },
+      { key: 'seasonality', label: 'Seasonality' }
     ];
     KNOWN_KEYS.forEach(({ key, label }) => {
       const v = qd[key];
@@ -1640,7 +1478,7 @@ export default function Chat() {
         events.push({
           id: `quiz-${key}`,
           kind: 'quiz',
-          title: lang === 'en' ? `Quiz: ${label.en}` : `Quiz: ${label.vi}`,
+          title: `Quiz: ${label}`,
           detail: v,
           when: currentCampaign.createdAt
         });
@@ -1651,7 +1489,7 @@ export default function Chat() {
       events.push({
         id: `plan-${qd.selectedPlan}`,
         kind: 'plan',
-        title: lang === 'en' ? `Plan ${qd.selectedPlan} selected` : `Da chon Plan ${qd.selectedPlan}`,
+        title: `Plan ${qd.selectedPlan} selected`,
         when: currentCampaign.updatedAt ?? currentCampaign.createdAt
       });
     }
@@ -1666,7 +1504,7 @@ export default function Chat() {
       events.push({
         id: `phase2-${key}`,
         kind: 'phase2',
-        title: lang === 'en' ? `Stage 2: ${key}` : `Giai doan 2: ${key}`,
+        title: `Stage 2: ${key}`,
         detail: v,
         when: currentCampaign.updatedAt ?? currentCampaign.createdAt
       });
@@ -1679,14 +1517,11 @@ export default function Chat() {
         const toStage = (typeof meta.toStage === 'number' ? meta.toStage : 0) as Stage;
         const direction = meta.direction === 'rollback' ? 'rollback' : 'advance';
         const desc = STAGE_DESCRIPTORS[toStage] ?? STAGE_DESCRIPTORS[0];
-        const verbEn = direction === 'rollback' ? 'Reset to Stage' : 'Advanced to Stage';
-        const verbVi = direction === 'rollback' ? 'Dat lai ve Giai doan' : 'Tien sang Giai doan';
+        const verb = direction === 'rollback' ? 'Reset to Stage' : 'Advanced to Stage';
         events.push({
           id: `stage-${msg.id}`,
           kind: 'stage',
-          title: lang === 'en'
-            ? `${verbEn} ${toStage} - ${desc.title.en}`
-            : `${verbVi} ${toStage} - ${desc.title.vi}`,
+          title: `${verb} ${toStage} - ${desc.title}`,
           when: msg.createdAt
         });
       } else if (msg.kind === 'content_response') {
@@ -1695,7 +1530,7 @@ export default function Chat() {
         events.push({
           id: `content-${msg.id}`,
           kind: 'content',
-          title: lang === 'en' ? `Generated ${label}` : `Da tao ${label}`,
+          title: `Generated ${label}`,
           when: msg.createdAt
         });
       }
@@ -1706,9 +1541,7 @@ export default function Chat() {
       events.push({
         id: `metric-${snap.id}`,
         kind: 'metrics',
-        title: lang === 'en'
-          ? `Metrics snapshot: ${snap.label || 'Untitled'}`
-          : `Du lieu hieu suat: ${snap.label || 'Chua dat ten'}`,
+        title: `Metrics snapshot: ${snap.label || 'Untitled'}`,
         when: snap.createdAt
       });
     });
@@ -1725,16 +1558,14 @@ export default function Chat() {
   const contentMessages = messages.filter(m => classifyPane(m) === 'CONTENT');
   const showContentPane = currentStage > 0 || analystMessages.length > 0;
 
-  const ConfirmationModal = ({ 
-    isOpen, 
-    data, 
-    onClose, 
-    lang 
-  }: { 
-    isOpen: boolean; 
-    data: { title: string; message: string; onConfirm: () => void } | null; 
+  const ConfirmationModal = ({
+    isOpen,
+    data,
+    onClose
+  }: {
+    isOpen: boolean;
+    data: { title: string; message: string; onConfirm: () => void } | null;
     onClose: () => void;
-    lang: 'en' | 'vi';
   }) => {
     if (!isOpen || !data) return null;
     return (
@@ -1757,14 +1588,14 @@ export default function Chat() {
           </div>
           <div className="modal-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '1.25rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
             <button className="btn btn-secondary" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '0.6rem 1.2rem', borderRadius: '0.5rem', cursor: 'pointer' }}>
-              {lang === 'en' ? 'Cancel' : 'Hủy'}
+              {'Cancel'}
             </button>
             <button 
               className="btn btn-primary" 
               onClick={data.onConfirm} 
               style={{ background: '#ef4444', border: 'none', color: '#fff', padding: '0.6rem 1.2rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600 }}
             >
-              {lang === 'en' ? 'Reset Stage' : 'Đặt lại'}
+              {'Reset Stage'}
             </button>
           </div>
         </motion.div>
@@ -1791,7 +1622,7 @@ export default function Chat() {
               <button
                 className="sidebar-toggle"
                 onClick={() => setSidebarOpen(false)}
-                aria-label={lang === 'en' ? 'Hide sidebar' : 'Ẩn thanh bên'}
+                aria-label={'Hide sidebar'}
               >
                 <ChevronLeft size={18} />
               </button>
@@ -1799,12 +1630,12 @@ export default function Chat() {
 
             <button className="new-chat-btn" onClick={handleNewChat}>
               <Plus size={18} />
-              {lang === 'en' ? 'New Chat' : 'Chat mới'}
+              {'New Chat'}
             </button>
 
             {/* All campaigns (favorites sorted to top) */}
             <div className="sidebar-section">
-              <span className="section-label">{lang === 'en' ? 'Saved Campaigns' : 'Chiến dịch đã lưu'}</span>
+              <span className="section-label">{'Saved Campaigns'}</span>
               <div className="campaigns-list">
                 {sortedCampaigns.map((campaign) => (
                   <CampaignItem
@@ -1814,7 +1645,6 @@ export default function Chat() {
                     isEditing={editingCampaignId === campaign.id}
                     editingName={editingName}
                     menuOpen={activeCampaignMenu === campaign.id}
-                    lang={lang}
                     onNavigate={() => navigate(`/chat/${campaign.id}`)}
                     onMenuToggle={() => setActiveCampaignMenu(activeCampaignMenu === campaign.id ? null : campaign.id)}
                     onStartEdit={() => { setEditingCampaignId(campaign.id); setEditingName(campaign.name); }}
@@ -1826,7 +1656,7 @@ export default function Chat() {
                   />
                 ))}
                 {sortedCampaigns.length === 0 && (
-                  <p className="no-campaigns">{lang === 'en' ? 'No campaigns yet' : 'Chưa có chiến dịch'}</p>
+                  <p className="no-campaigns">{'No campaigns yet'}</p>
                 )}
               </div>
             </div>
@@ -1869,12 +1699,12 @@ export default function Chat() {
                       <div className="user-dropdown-divider" />
                       <button className="user-dropdown-item" onClick={() => navigate('/settings')}>
                         <Settings size={16} />
-                        {lang === 'en' ? 'Settings' : 'Cài đặt'}
+                        {'Settings'}
                       </button>
                       <div className="user-dropdown-divider" />
                       <button className="user-dropdown-item logout" onClick={handleLogout}>
                         <LogOut size={16} />
-                        {lang === 'en' ? 'Logout' : 'Đăng xuất'}
+                        {'Logout'}
                       </button>
                     </motion.div>
                   )}
@@ -1894,7 +1724,7 @@ export default function Chat() {
               <button
                 className="sidebar-toggle-open"
                 onClick={() => setSidebarOpen(true)}
-                aria-label={lang === 'en' ? 'Show sidebar' : 'Hiện thanh bên'}
+                aria-label={'Show sidebar'}
               >
                 <ChevronRight size={18} />
               </button>
@@ -1902,19 +1732,17 @@ export default function Chat() {
 
             <div className="chat-title-wrap">
               <h1 className="chat-title">
-                {currentCampaign?.name || (lang === 'en' ? 'General Marketing Chat' : 'Chat Marketing Tổng Quát')}
+                {currentCampaign?.name || ('General Marketing Chat')}
               </h1>
               <p className="chat-subtitle">
-                {lang === 'en'
-                  ? `${messages.length} message${messages.length === 1 ? '' : 's'}`
-                  : `${messages.length} tin nhắn`}
+                {`${messages.length} message${messages.length === 1 ? '' : 's'}`}
               </p>
             </div>
           </div>
 
           <div className="chat-header-right">
             {currentCampaign && (
-              <div className="chat-stage-timeline" role="list" aria-label={lang === 'en' ? 'Campaign stages' : 'Các giai đoạn chiến dịch'}>
+              <div className="chat-stage-timeline" role="list" aria-label={'Campaign stages'}>
                 {([0, 1, 2, 3] as const).map(stage => (
                   <button
                     key={stage}
@@ -1925,13 +1753,13 @@ export default function Chat() {
                     onClick={() => stage < currentStage && handleResetToStage(stage)}
                     aria-current={currentStage === stage ? 'step' : undefined}
                     title={stage < currentStage
-                      ? (lang === 'en' ? `Return to Stage ${stage} (Warning: Progress after this stage will be reset)` : `Quay lại Giai đoạn ${stage} (Cảnh báo: Tiến trình sau giai đoạn này sẽ bị xoá)`)
-                      : STAGE_DESCRIPTORS[stage].title[lang]}
+                      ? `Return to Stage ${stage} (Warning: Progress after this stage will be reset)`
+                      : STAGE_DESCRIPTORS[stage].title}
                   >
                     <div className="stage-dot">
                       {currentStage > stage ? <Check size={12} /> : stage}
                     </div>
-                    <span className="stage-label">{STAGE_DESCRIPTORS[stage].title[lang]}</span>
+                    <span className="stage-label">{STAGE_DESCRIPTORS[stage].title}</span>
                   </button>
                 ))}
               </div>
@@ -1944,7 +1772,7 @@ export default function Chat() {
                   onClick={() => setInsightsOpen(true)}
                 >
                   <BarChart3 size={16} />
-                  <span>{lang === 'en' ? 'Insights' : 'Insight'}</span>
+                  <span>{'Insights'}</span>
                 </button>
               )}
               <button
@@ -1952,7 +1780,7 @@ export default function Chat() {
                 onClick={() => setGuidePopupOpen(true)}
               >
                 <HelpCircle size={16} />
-                <span>{lang === 'en' ? 'Guide' : 'HD'}</span>
+                <span>{'Guide'}</span>
               </button>
               <button
                 className={`chat-action-btn ${glossaryOpen ? 'active' : ''}`}
@@ -1976,10 +1804,10 @@ export default function Chat() {
           <div className={`stage-banner stage-banner--stage-${currentStage}`}>
             <div className="stage-banner-text">
               <strong className="stage-banner-title">
-                {`${lang === 'en' ? 'Stage' : 'Giai đoạn'} ${currentStage} \u2022 ${stageDescriptor.title[lang]}`}
+                {`${'Stage'} ${currentStage} \u2022 ${stageDescriptor.title}`}
               </strong>
-              <p className="stage-banner-subtitle">{stageDescriptor.subtitle[lang]}</p>
-              <p className="stage-banner-next">{stageDescriptor.nextAction[lang]}</p>
+              <p className="stage-banner-subtitle">{stageDescriptor.subtitle}</p>
+              <p className="stage-banner-next">{stageDescriptor.nextAction}</p>
             </div>
             {stageTransitionError && (
               <div className="stage-banner-error" role="alert">
@@ -1988,7 +1816,7 @@ export default function Chat() {
                   type="button"
                   className="stage-banner-error-dismiss"
                   onClick={() => setStageTransitionError(null)}
-                  aria-label={lang === 'en' ? 'Dismiss' : 'Dong'}
+                  aria-label={'Dismiss'}
                 >
                   <X size={14} />
                 </button>
@@ -2003,8 +1831,8 @@ export default function Chat() {
         {currentCampaign && quizDataIssue && (
           <div className="stage-recovery-banner" role="alert">
             <div className="stage-recovery-text">
-              <strong>{lang === 'en' ? 'Campaign data needs recovery' : 'Du lieu chien dich can khoi phuc'}</strong>
-              <p>{quizDataIssue.message[lang]}</p>
+              <strong>{'Campaign data needs recovery'}</strong>
+              <p>{quizDataIssue.message}</p>
             </div>
             <div className="stage-recovery-actions">
               <button
@@ -2013,7 +1841,7 @@ export default function Chat() {
                 onClick={() => handleResetToStage(1)}
                 disabled={stageTransitionPending}
               >
-                {lang === 'en' ? 'Reselect plan' : 'Chon lai plan'}
+                {'Reselect plan'}
               </button>
               <button
                 type="button"
@@ -2021,7 +1849,7 @@ export default function Chat() {
                 onClick={() => handleResetToStage(0)}
                 disabled={stageTransitionPending}
               >
-                {lang === 'en' ? 'Restart quiz' : 'Lam lai quiz'}
+                {'Restart quiz'}
               </button>
             </div>
           </div>
@@ -2035,7 +1863,7 @@ export default function Chat() {
             <div className="chat-pane-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Sparkles size={16} style={{ color: 'var(--accent)' }} />
-                <h3>{lang === 'en' ? 'Strategy Analyst' : 'Phân tích chiến lược'}</h3>
+                <h3>{'Strategy Analyst'}</h3>
               </div>
             </div>
             {/* Messages */}
@@ -2049,16 +1877,14 @@ export default function Chat() {
                   <div className="welcome-icon">
                     <Sparkles size={40} />
                   </div>
-                  <h2>{lang === 'en' ? 'Welcome to AdVisor' : 'Chào mừng đến với AdVisor'}</h2>
-                  <p>{lang === 'en'
-                    ? 'Ask me anything about marketing strategy, ad copy, or campaign optimization.'
-                    : 'Hỏi tôi bất cứ điều gì về chiến lược marketing, nội dung quảng cáo, hoặc tối ưu hóa chiến dịch.'}</p>
+                  <h2>{'Welcome to AdVisor'}</h2>
+                  <p>{'Ask me anything about marketing strategy, ad copy, or campaign optimization.'}</p>
 
                   {/* Full Quiz Profile Card */}
                   {currentCampaign && getFullQuizProfile().length > 0 && (
                     <div className="welcome-quiz-profile">
                       <div className="quiz-profile-header">
-                        <h4>{lang === 'en' ? 'Your Campaign Profile' : 'Hồ sơ chiến dịch'}</h4>
+                        <h4>{'Your Campaign Profile'}</h4>
                       </div>
                       <div className="quiz-profile-grid">
                         {getFullQuizProfile().map((item, i) => (
@@ -2076,27 +1902,23 @@ export default function Chat() {
 
                   {currentStage === 0 && (
                     <div className="welcome-actions">
-                      <button className="welcome-action primary" onClick={handleOpenQuiz}>
+                      <button className="welcome-action primary" onClick={handleOpenFullQuiz}>
                         <div className="welcome-action-title">
                           <ListChecks size={16} />
-                          <span>{lang === 'en' ? 'Start with Smart Quiz' : 'Bắt đầu với Quiz thông minh'}</span>
+                          <span>{'Discovery Quiz'}</span>
                         </div>
                         <p>
-                          {lang === 'en'
-                            ? 'Answer a few questions so AI creates a stronger campaign plan.'
-                            : 'Trả lời vài câu hỏi để AI tạo chiến dịch sát thực tế hơn.'}
+                          {'Opens the full questionnaire. When you finish, your answers appear above the chat and the strategy starts automatically.'}
                         </p>
                       </button>
 
                       <button className="welcome-action secondary" onClick={focusComposer}>
                         <div className="welcome-action-title">
                           <MessageSquare size={16} />
-                          <span>{lang === 'en' ? 'Skip Quiz, Chat Directly' : 'Bỏ qua Quiz, Chat trực tiếp'}</span>
+                          <span>{'Skip Quiz, Chat Directly'}</span>
                         </div>
                         <p>
-                          {lang === 'en'
-                            ? 'Type your first request below. A new campaign will be created automatically.'
-                            : 'Nhập yêu cầu đầu tiên ở ô bên dưới. Hệ thống sẽ tự tạo campaign mới.'}
+                          {'Type your first request below. A new campaign will be created automatically.'}
                         </p>
                       </button>
 
@@ -2110,23 +1932,22 @@ export default function Chat() {
                       >
                         <div className="welcome-action-title">
                           <HelpCircle size={16} />
-                          <span>{lang === 'en' ? 'Show me how AdVisor works' : 'Xem hướng dẫn AdVisor'}</span>
+                          <span>{'Show me how AdVisor works'}</span>
                         </div>
                         <p>
-                          {lang === 'en'
-                            ? 'Walkthrough of the four stages, the two panes, and how metrics tie everything together.'
-                            : 'Hướng dẫn 4 giai đoạn, hai khung chat, và cách metrics kết nối tất cả.'}
+                          {'Walkthrough of the four stages, the two panes, and how metrics tie everything together.'}
                         </p>
                       </button>
                     </div>
                   )}
                 </div>
               ) : (
-                analystMessages.map((msg, i) => {
+                <>
+                  <CampaignProfileCard />
+                  {analystMessages.map((msg, i) => {
                   // SYSTEM-pane messages are rendered as inline stage transition
                   // markers (small label + horizontal rule) instead of chat
-                  // bubbles. Their content is computed from `metadata.toStage` so
-                  // the label respects the user's current language.
+                  // bubbles. Their content is computed from `metadata.toStage`.
                   if (classifyPane(msg) === 'SYSTEM') {
                     const meta = (msg.metadata ?? {}) as Record<string, unknown>;
                     const toStage = (typeof meta.toStage === 'number' ? meta.toStage : 0) as Stage;
@@ -2135,7 +1956,7 @@ export default function Chat() {
                       <div key={msg.id} className="stage-transition-divider" role="note">
                         <span className="stage-transition-line" aria-hidden="true" />
                         <span className="stage-transition-label">
-                          {`${lang === 'en' ? 'Stage' : 'Giai đoạn'} ${toStage} \u2022 ${desc.title[lang]}`}
+                          {`${'Stage'} ${toStage} \u2022 ${desc.title}`}
                         </span>
                         <span className="stage-transition-line" aria-hidden="true" />
                       </div>
@@ -2159,7 +1980,7 @@ export default function Chat() {
                       <div className="message-main">
                         <div className="message-meta">
                           <span className="message-author">
-                            {msg.role === 'USER' ? (user?.name || (lang === 'en' ? 'You' : 'Bạn')) : 'AdVisor AI'}
+                            {msg.role === 'USER' ? (user?.name || ('You')) : 'AdVisor AI'}
                           </span>
                           <span className="message-time">{formatMessageTime(msg.createdAt)}</span>
                         </div>
@@ -2200,9 +2021,7 @@ export default function Chat() {
                               {i === analystMessages.length - 1 && currentCampaign?.quizData?.selectedPlan && currentStage === 1 && !hasStageTransition(msg.content) && (
                                 <div className="content-assist-offer">
                                   <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-                                    {lang === 'en'
-                                      ? 'Want AI to draft some content for your campaign before moving on?'
-                                      : 'B\u1ea1n mu\u1ed1n AI vi\u1ebft th\u1eed n\u1ed9i dung cho chi\u1ebfn d\u1ecbch tr\u01b0\u1edbc khi sang giai \u0111o\u1ea1n ti\u1ebfp?'}
+                                    {'Want AI to draft some content for your campaign before moving on?'}
                                   </p>
                                   <div className="content-assist-buttons">
                                     <button
@@ -2211,7 +2030,7 @@ export default function Chat() {
                                       disabled={assistLoading}
                                     >
                                       <Mail size={14} />
-                                      <span>{lang === 'en' ? 'Draft Email' : 'Vi\u1ebft Email'}</span>
+                                      <span>{'Draft Email'}</span>
                                     </button>
                                     <button
                                       className="content-assist-btn"
@@ -2219,7 +2038,7 @@ export default function Chat() {
                                       disabled={assistLoading}
                                     >
                                       <FileText size={14} />
-                                      <span>{lang === 'en' ? 'Ad Copy' : 'N\u1ed9i dung qu\u1ea3ng c\u00e1o'}</span>
+                                      <span>{'Ad Copy'}</span>
                                     </button>
                                     <button
                                       className="content-assist-btn"
@@ -2227,7 +2046,7 @@ export default function Chat() {
                                       disabled={assistLoading}
                                     >
                                       <Palette size={14} />
-                                      <span>{lang === 'en' ? 'Social Post' : 'B\u00e0i MXH'}</span>
+                                      <span>{'Social Post'}</span>
                                     </button>
                                   </div>
                                   <button
@@ -2237,7 +2056,7 @@ export default function Chat() {
                                     style={{ marginTop: '0.75rem' }}
                                   >
                                     <ArrowRight size={16} />
-                                    {lang === 'en' ? 'Skip to Stage 2' : 'Sang Giai \u0111o\u1ea1n 2'}
+                                    {'Skip to Stage 2'}
                                   </button>
                                 </div>
                               )}
@@ -2245,7 +2064,7 @@ export default function Chat() {
                               {/* Stage transition prompt */}
                               {hasStageTransition(msg.content) && i === analystMessages.length - 1 && (
                                 <div className="stage-transition-prompt">
-                                  <p>{lang === 'en' ? 'Ready to move to the next stage?' : 'Sẵn sàng chuyển sang giai đoạn tiếp theo?'}</p>
+                                  <p>{'Ready to move to the next stage?'}</p>
                                   <button
                                     className="btn btn-primary btn-sm"
                                     onClick={() => handleAdvanceStage(currentStage + 1)}
@@ -2253,8 +2072,8 @@ export default function Chat() {
                                   >
                                     <ArrowRight size={16} />
                                     {currentStage < 3
-                                      ? (lang === 'en' ? `Go to Stage ${currentStage + 1}` : `Sang Giai đoạn ${currentStage + 1}`)
-                                      : (lang === 'en' ? 'Continue Optimizing' : 'Tiếp tục tối ưu')}
+                                      ? `Go to Stage ${currentStage + 1}`
+                                      : ('Continue Optimizing')}
                                   </button>
                                 </div>
                               )}
@@ -2269,7 +2088,7 @@ export default function Chat() {
                             <button
                               className="message-copy-btn"
                               onClick={handleReanalyze}
-                              title={lang === 'en' ? 'Reanalyze Strategy' : 'Phân tích lại'}
+                              title={'Reanalyze Strategy'}
                             >
                               <RefreshCw size={14} />
                             </button>
@@ -2278,15 +2097,13 @@ export default function Chat() {
                             <button
                               className="message-copy-btn"
                               onClick={() => {
-                                setContentInput(lang === 'en'
-                                  ? `Please write marketing content based on the strategy from the left pane...`
-                                  : `Hãy viết nội dung marketing dựa trên kế hoạch từ khung bên trái...`);
+                                setContentInput(`Please write marketing content based on the strategy from the left pane...`);
                                 setTimeout(() => {
                                   const inputField = document.querySelector('.content-pane textarea') as HTMLTextAreaElement;
                                   if (inputField) inputField.focus();
                                 }, 100);
                               }}
-                              title={lang === 'en' ? 'Send to Content Writer' : 'Chuyển sang AI Viết Nội dung'}
+                              title={'Send to Content Writer'}
                               style={{ color: '#34d399' }}
                             >
                               <ArrowRight size={14} />
@@ -2295,7 +2112,7 @@ export default function Chat() {
                           <button
                             className="message-copy-btn"
                             onClick={() => handleCopyMessage(msg.content, msg.id)}
-                            title={lang === 'en' ? 'Copy' : 'Sao chép'}
+                            title={'Copy'}
                           >
                             {copiedId === msg.id ? <Check size={14} /> : <Copy size={14} />}
                           </button>
@@ -2313,35 +2130,34 @@ export default function Chat() {
                       )}
                     </motion.div>
                   );
-                })
-              )}
-
-              {loading && (
-                <div className="message assistant loading-message">
-                  <div className="message-avatar assistant-avatar"><Sparkles size={16} /></div>
-                  <div className="message-main">
-                    <div className="message-meta">
-                      <span className="message-author">AdVisor AI</span>
-                    </div>
-                    <div className="message-content typing-bubble">
-                      <div className="typing-indicator">
-                        <span /><span /><span />
+                })}
+                {loading && (
+                  <div className="message assistant loading-message">
+                    <div className="message-avatar assistant-avatar"><Sparkles size={16} /></div>
+                    <div className="message-main">
+                      <div className="message-meta">
+                        <span className="message-author">AdVisor AI</span>
+                      </div>
+                      <div className="message-content typing-bubble">
+                        <div className="typing-indicator">
+                          <span /><span /><span />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-
-              <div ref={messagesEndRef} />
-            </div>
+                )}
+                <div ref={messagesEndRef} />
+              </>
+            )}
+          </div>
 
             {/* Input */}
             <div className="chat-input-wrapper">
               {(!currentCampaign || Object.keys(currentCampaign.quizData || {}).length === 0) && (
                 <div className="chat-toolbar">
-                  <button className="chat-quiz-cta" onClick={handleOpenQuiz}>
+                  <button className="chat-quiz-cta" onClick={handleOpenFullQuiz}>
                     <ListChecks size={14} />
-                    <span>{lang === 'en' ? 'Do Quiz for Better Strategy' : 'Lam Quiz de ra chien luoc tot hon'}</span>
+                    <span>{'Discovery Quiz'}</span>
                   </button>
                 </div>
               )}
@@ -2351,11 +2167,7 @@ export default function Chat() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={
-                    lang === 'en'
-                      ? 'Ask me anything about marketing...'
-                      : 'Hỏi tôi bất kỳ điều gì về marketing...'
-                  }
+                  placeholder={'Ask me anything about marketing...'}
                   rows={1}
                   disabled={loading}
                 />
@@ -2387,7 +2199,7 @@ export default function Chat() {
               <div className="chat-pane-header" style={{ background: 'rgba(16, 185, 129, 0.05)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <FileText size={16} style={{ color: '#34d399' }} />
-                  <h3 style={{ color: '#34d399' }}>{lang === 'en' ? 'Content Writer' : 'Tro ly Noi dung'}</h3>
+                  <h3 style={{ color: '#34d399' }}>{'Content Writer'}</h3>
                 </div>
               </div>
               <div className="chat-messages">
@@ -2396,8 +2208,8 @@ export default function Chat() {
                     <div className="welcome-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#34d399' }}>
                       <FileText size={40} />
                     </div>
-                    <h2 style={{ fontSize: '1.25rem' }}>{contentPaneMode.emptyTitle[lang]}</h2>
-                    <p style={{ fontSize: '0.85rem' }}>{contentPaneMode.emptyHint[lang]}</p>
+                    <h2 style={{ fontSize: '1.25rem' }}>{contentPaneMode.emptyTitle}</h2>
+                    <p style={{ fontSize: '0.85rem' }}>{contentPaneMode.emptyHint}</p>
                   </div>
                 ) : (
                   contentMessages.map((msg, i) => (
@@ -2417,8 +2229,8 @@ export default function Chat() {
                         <div className="message-meta">
                           <span className="message-author">
                             {msg.role === 'USER'
-                              ? (user?.name || (lang === 'en' ? 'You' : 'Ban'))
-                              : (lang === 'en' ? 'Content Writer' : 'Tro ly Noi dung')}
+                              ? (user?.name || ('You'))
+                              : ('Content Writer')}
                           </span>
                           {typeof msg.metadata === 'object' && msg.metadata && 'label' in msg.metadata ? (
                             <span className="message-tag">{String((msg.metadata as Record<string, unknown>).label)}</span>
@@ -2436,7 +2248,7 @@ export default function Chat() {
                               onClick={() => navigator.clipboard.writeText(
                                 msg.content.replace(/^\[Content Assistant - [^\]]+\]\n\n/, '')
                               )}
-                              aria-label={lang === 'en' ? 'Copy content' : 'Sao chep noi dung'}
+                              aria-label={'Copy content'}
                             >
                               <Copy size={14} />
                             </button>
@@ -2468,7 +2280,7 @@ export default function Chat() {
                         handleSendContent();
                       }
                     }}
-                    placeholder={contentPaneMode.placeholder[lang]}
+                    placeholder={contentPaneMode.placeholder}
                     rows={1}
                     disabled={assistLoading || !contentPaneMode.enabled}
                     style={{ padding: '0.8rem 1rem', fontSize: '0.85rem' }}
@@ -2477,7 +2289,7 @@ export default function Chat() {
                     className="send-btn"
                     onClick={handleSendContent}
                     disabled={!contentInput.trim() || assistLoading || !contentPaneMode.enabled}
-                    aria-label={lang === 'en' ? 'Send' : 'Gui'}
+                    aria-label={'Send'}
                   >
                     <Send size={18} />
                   </button>
@@ -2508,16 +2320,14 @@ export default function Chat() {
               <div className="modal-icon">
                 <Trash2 size={32} />
               </div>
-              <h3>{lang === 'en' ? 'Clear All Messages?' : 'Xóa tất cả tin nhắn?'}</h3>
-              <p>{lang === 'en'
-                ? 'This will permanently delete all messages in this conversation. This action cannot be undone.'
-                : 'Hành động này sẽ xóa vĩnh viễn tất cả tin nhắn trong cuộc trò chuyện. Không thể hoàn tác.'}</p>
+              <h3>{'Clear All Messages?'}</h3>
+              <p>{'This will permanently delete all messages in this conversation. This action cannot be undone.'}</p>
               <div className="modal-actions">
                 <button className="btn btn-secondary" onClick={() => setClearModalOpen(false)}>
-                  {lang === 'en' ? 'Cancel' : 'Hủy'}
+                  {'Cancel'}
                 </button>
                 <button className="btn btn-danger" onClick={handleClear}>
-                  {lang === 'en' ? 'Clear All' : 'Xóa tất cả'}
+                  {'Clear All'}
                 </button>
               </div>
             </motion.div>
@@ -2545,194 +2355,20 @@ export default function Chat() {
               <div className="modal-icon delete-icon">
                 <Trash2 size={32} />
               </div>
-              <h3>{lang === 'en' ? 'Delete Campaign?' : 'Xóa chiến dịch?'}</h3>
-              <p>{lang === 'en'
-                ? 'This will permanently delete this campaign and all its messages. This action cannot be undone.'
-                : 'Hành động này sẽ xóa vĩnh viễn chiến dịch và tất cả tin nhắn. Không thể hoàn tác.'}</p>
+              <h3>{'Delete Campaign?'}</h3>
+              <p>{'This will permanently delete this campaign and all its messages. This action cannot be undone.'}</p>
               <div className="modal-actions">
                 <button className="btn btn-secondary" onClick={() => setDeleteModalOpen(false)}>
-                  {lang === 'en' ? 'Cancel' : 'Hủy'}
+                  {'Cancel'}
                 </button>
                 <button className="btn btn-danger" onClick={handleDeleteCampaign}>
-                  {lang === 'en' ? 'Delete' : 'Xóa'}
+                  {'Delete'}
                 </button>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Inline Quiz Popup */}
-      <AnimatePresence>
-        {quizPopupOpen && (
-          <motion.div
-            className="modal-overlay quiz-popup-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setQuizPopupOpen(false)}
-          >
-            <motion.div
-              className="quiz-popup"
-              initial={{ opacity: 0, scale: 0.9, y: 30 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 30 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Popup Header */}
-              <div className="quiz-popup-header">
-                <div className="quiz-popup-header-left">
-                  <div className="quiz-popup-icon">
-                    <Sparkles size={20} />
-                  </div>
-                  <div>
-                    <h3>{lang === 'en' ? 'Quick Setup' : 'Thiết lập nhanh'}</h3>
-                    <p>{lang === 'en' ? `Question ${quizStep + 1} of ${quickQuizQuestions.length}` : `Câu ${quizStep + 1} / ${quickQuizQuestions.length}`}</p>
-                  </div>
-                </div>
-                <div className="quiz-popup-header-right">
-                  <button className="quiz-popup-full-btn" onClick={handleOpenFullQuiz}>
-                    {lang === 'en' ? 'Full Quiz' : 'Quiz đầy đủ'}
-                  </button>
-                  <button className="quiz-popup-close" onClick={() => setQuizPopupOpen(false)}>
-                    <X size={18} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Progress bar */}
-              <div className="quiz-popup-progress">
-                <motion.div
-                  className="quiz-popup-progress-fill"
-                  animate={{ width: `${((quizStep + 1) / quickQuizQuestions.length) * 100}%` }}
-                  transition={{ duration: 0.3 }}
-                />
-              </div>
-
-              {/* Question */}
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={quizStep}
-                  className="quiz-popup-body"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {(() => {
-                    const q = quickQuizQuestions[quizStep];
-                    const QIcon = q.icon;
-                    return (
-                      <>
-                        <div className="quiz-popup-question">
-                          <QIcon size={22} />
-                          <span>{q.question[lang]}</span>
-                        </div>
-
-                        {q.type === 'text' ? (
-                          <div className="quiz-popup-text-area">
-                            <input
-                              type="text"
-                              placeholder={q.placeholder?.[lang] || ''}
-                              value={quizTextInput}
-                              onChange={(e) => setQuizTextInput(e.target.value)}
-                              onKeyDown={(e) => e.key === 'Enter' && handleQuizTextSubmit()}
-                              autoFocus
-                              className="quiz-popup-input"
-                            />
-                            <div className="quiz-popup-text-actions">
-                              <button className="quiz-popup-skip" onClick={handleQuizSkipQuestion}>
-                                <HelpCircle size={14} />
-                                {lang === 'en' ? 'Skip' : 'Bỏ qua'}
-                              </button>
-                              <button className="quiz-popup-submit" onClick={handleQuizTextSubmit}>
-                                {lang === 'en' ? 'Continue' : 'Tiếp tục'}
-                                <ChevronRight size={16} />
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="quiz-popup-options">
-                            {q.options?.map((opt, idx) => (
-                              <motion.button
-                                key={opt.value}
-                                className={`quiz-popup-option ${quizAnswers[q.id] === opt.value ? 'selected' : ''}`}
-                                onClick={() => { handleQuizAnswer(opt.value); setQuizCustomOpen(false); }}
-                                initial={{ opacity: 0, y: 8 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: idx * 0.04 }}
-                                whileHover={{ scale: 1.02, y: -2 }}
-                                whileTap={{ scale: 0.98 }}
-                              >
-                                {opt.label[lang]}
-                              </motion.button>
-                            ))}
-
-                            {/* Custom Input Toggle */}
-                            <button
-                              className={`quiz-popup-skip-inline ${quizCustomOpen ? 'active' : ''}`}
-                              onClick={() => { setQuizCustomOpen(!quizCustomOpen); setQuizCustomInput(''); }}
-                            >
-                              <Pencil size={14} />
-                              {lang === 'en' ? 'Type my own answer' : 'Tự điền câu trả lời'}
-                            </button>
-
-                            {/* Custom Input Field */}
-                            <AnimatePresence>
-                              {quizCustomOpen && (
-                                <motion.div
-                                  className="quiz-popup-custom-input"
-                                  initial={{ opacity: 0, height: 0 }}
-                                  animate={{ opacity: 1, height: 'auto' }}
-                                  exit={{ opacity: 0, height: 0 }}
-                                  style={{ gridColumn: '1 / -1' }}
-                                >
-                                  <input
-                                    type="text"
-                                    placeholder={lang === 'en' ? 'Type your answer...' : 'Nhập câu trả lời...'}
-                                    value={quizCustomInput}
-                                    onChange={(e) => setQuizCustomInput(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleQuizCustomSubmit()}
-                                    autoFocus
-                                    className="quiz-popup-input"
-                                  />
-                                  <div className="quiz-popup-text-actions">
-                                    <button className="quiz-popup-submit" onClick={handleQuizCustomSubmit}>
-                                      {lang === 'en' ? 'Submit' : 'Gửi'}
-                                      <ChevronRight size={16} />
-                                    </button>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-
-                            <button className="quiz-popup-skip-inline" onClick={handleQuizSkipQuestion}>
-                              <HelpCircle size={14} />
-                              {lang === 'en' ? 'Skip this question' : 'Bỏ qua câu này'}
-                            </button>
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
-                </motion.div>
-              </AnimatePresence>
-
-              {/* Footer */}
-              <div className="quiz-popup-footer">
-                <button className="quiz-popup-skip-all" onClick={handleQuizSkipAll}>
-                  {lang === 'en' ? 'Skip all — let AI decide' : 'Bỏ qua tất cả — để AI tự xử lý'}
-                </button>
-                <span className="quiz-popup-hint">
-                  {lang === 'en' ? 'You can always update later' : 'Bạn luôn có thể cập nhật sau'}
-                </span>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-
 
       {/* Guide Popup Modal -- multi-tab walkthrough. Auto-shows the first
           time a user lands on the chat page (gated by localStorage). */}
@@ -2756,13 +2392,13 @@ export default function Chat() {
               <div className="guide-modal-header">
                 <div className="guide-modal-title">
                   <div className="guide-modal-icon"><HelpCircle size={20} /></div>
-                  <h3>{lang === 'en' ? 'How AdVisor Works' : 'Cach su dung AdVisor'}</h3>
+                  <h3>{'How AdVisor Works'}</h3>
                 </div>
                 <button
                   type="button"
                   onClick={() => setGuidePopupOpen(false)}
                   className="guide-modal-close"
-                  aria-label={lang === 'en' ? 'Close' : 'Dong'}
+                  aria-label={'Close'}
                 >
                   <X size={20} />
                 </button>
@@ -2770,11 +2406,11 @@ export default function Chat() {
 
               <div className="guide-modal-tabs" role="tablist">
                 {([
-                  { id: 'overview', en: 'Overview', vi: 'Tong quan' },
-                  { id: 'stages', en: '4 Stages', vi: '4 Giai doan' },
-                  { id: 'panes', en: 'Two Panes', vi: 'Hai khung' },
-                  { id: 'metrics', en: 'Metrics', vi: 'Du lieu' },
-                  { id: 'faq', en: 'FAQ', vi: 'FAQ' }
+                  { id: 'overview', label: 'Overview' },
+                  { id: 'stages', label: '4 Stages' },
+                  { id: 'panes', label: 'Two Panes' },
+                  { id: 'metrics', label: 'Metrics' },
+                  { id: 'faq', label: 'FAQ' }
                 ] as const).map(tab => (
                   <button
                     key={tab.id}
@@ -2784,7 +2420,7 @@ export default function Chat() {
                     className={`guide-modal-tab ${guideActiveTab === tab.id ? 'active' : ''}`}
                     onClick={() => setGuideActiveTab(tab.id)}
                   >
-                    {lang === 'en' ? tab.en : tab.vi}
+                    {tab.label}
                   </button>
                 ))}
               </div>
@@ -2793,24 +2429,20 @@ export default function Chat() {
                 {guideActiveTab === 'overview' && (
                   <div className="guide-section">
                     <p>
-                      {lang === 'en'
-                        ? 'AdVisor turns a short quiz into a full marketing plan. The AI walks you through four stages: discovery, strategy & plan selection, refinement, and ongoing optimisation.'
-                        : 'AdVisor bien mot bai quiz ngan thanh ke hoach marketing day du. AI dan ban qua 4 giai doan: kham pha, chien luoc & chon plan, tinh chinh, va toi uu lien tuc.'}
+                      {'AdVisor turns a short quiz into a full marketing plan. The AI walks you through four stages: discovery, strategy & plan selection, refinement, and ongoing optimisation.'}
                     </p>
                     <ul className="guide-list">
-                      <li>{lang === 'en' ? 'Stage 0 - Discovery: Answer the initial quiz to let AdVisor understand your business context.' : 'Giai đoạn 0 - Khám phá: Trả lời quiz ban đầu để AdVisor hiểu bối cảnh doanh nghiệp.'}</li>
-                      <li>{lang === 'en' ? 'Stage 1 - Strategy: Compare AI-generated plans. You must select one to proceed.' : 'Giai đoạn 1 - Chiến lược: So sánh các kế hoạch do AI tạo. Bạn cần chọn 1 plan để tiếp tục.'}</li>
-                      <li>{lang === 'en' ? 'Stage 2 - Refinement: Answer follow-up questions to lock in audience, budget, and KPIs.' : 'Giai đoạn 2 - Chi tiết hoá: Trả lời các câu hỏi bổ sung về đối tượng, ngân sách và KPI.'}</li>
-                      <li>{lang === 'en' ? 'Stage 3 - Optimisation: Submit metrics periodically. AI will analyze trends and suggest fixes.' : 'Giai đoạn 3 - Tối ưu: Nộp số liệu định kỳ để AI phân tích xu hướng và đề xuất cải thiện.'}</li>
+                      <li>{'Stage 0 - Discovery: Answer the initial quiz to let AdVisor understand your business context.'}</li>
+                      <li>{'Stage 1 - Strategy: Compare AI-generated plans. You must select one to proceed.'}</li>
+                      <li>{'Stage 2 - Refinement: Answer follow-up questions to lock in audience, budget, and KPIs.'}</li>
+                      <li>{'Stage 3 - Optimisation: Submit metrics periodically. AI will analyze trends and suggest fixes.'}</li>
                     </ul>
                     <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(124, 58, 237, 0.1)', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-border)' }}>
                       <p style={{ fontSize: '0.85rem', fontWeight: '500', color: 'var(--accent)', marginBottom: '0.25rem' }}>
-                        {lang === 'en' ? 'Pro Tip:' : 'Mẹo nhỏ:'}
+                        {'Pro Tip:'}
                       </p>
                       <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        {lang === 'en' 
-                          ? 'You can always return to a previous stage by clicking its name in the header timeline. Progress from later stages will be reset.' 
-                          : 'Bạn luôn có thể quay lại giai đoạn trước bằng cách nhấn vào tên giai đoạn trên thanh tiêu đề. Tiến trình ở các giai đoạn sau sẽ bị xóa.'}
+                        {'You can always return to a previous stage by clicking its name in the header timeline. Progress from later stages will be reset.'}
                       </p>
                     </div>
                   </div>
@@ -2824,10 +2456,10 @@ export default function Chat() {
                         <div key={stage} className={`guide-stage-card guide-stage-card--${stage}`}>
                           <div className="guide-stage-card-head">
                             <div className="guide-stage-num">{stage}</div>
-                            <h4>{desc.title[lang]}</h4>
+                            <h4>{desc.title}</h4>
                           </div>
-                          <p className="guide-stage-subtitle">{desc.subtitle[lang]}</p>
-                          <p className="guide-stage-next">{desc.nextAction[lang]}</p>
+                          <p className="guide-stage-subtitle">{desc.subtitle}</p>
+                          <p className="guide-stage-next">{desc.nextAction}</p>
                         </div>
                       );
                     })}
@@ -2836,23 +2468,17 @@ export default function Chat() {
 
                 {guideActiveTab === 'panes' && (
                   <div className="guide-section">
-                    <h4>{lang === 'en' ? 'Strategy Analyst (left)' : 'Phan tich chien luoc (trai)'}</h4>
+                    <h4>{'Strategy Analyst (left)'}</h4>
                     <p>
-                      {lang === 'en'
-                        ? 'Discusses strategy, generates plan options, validates stage transitions. Plan selection happens here.'
-                        : 'Thao luan chien luoc, tao plan options, xac nhan chuyen giai doan. Chon plan o khung nay.'}
+                      {'Discusses strategy, generates plan options, validates stage transitions. Plan selection happens here.'}
                     </p>
-                    <h4>{lang === 'en' ? 'Content Writer (right)' : 'Tro ly Noi dung (phai)'}</h4>
+                    <h4>{'Content Writer (right)'}</h4>
                     <p>
-                      {lang === 'en'
-                        ? 'Generates emails, ad copies, social posts. Disabled until you reach Stage 1 because the writer needs your selected plan as context.'
-                        : 'Tao email, ad copy, bai dang MXH. Tat o Giai doan 0 vi can plan da chon lam ngu canh.'}
+                      {'Generates emails, ad copies, social posts. Disabled until you reach Stage 1 because the writer needs your selected plan as context.'}
                     </p>
-                    <h4>{lang === 'en' ? 'Send to Content Writer' : 'Gui sang Content Writer'}</h4>
+                    <h4>{'Send to Content Writer'}</h4>
                     <p>
-                      {lang === 'en'
-                        ? 'Click the arrow icon on any strategy message to push that text into the Content Writer composer as a prompt.'
-                        : 'Bam icon mui ten tren bat ky tin nhan strategy nao de gui noi dung sang composer cua Content Writer.'}
+                      {'Click the arrow icon on any strategy message to push that text into the Content Writer composer as a prompt.'}
                     </p>
                   </div>
                 )}
@@ -2860,43 +2486,33 @@ export default function Chat() {
                 {guideActiveTab === 'metrics' && (
                   <div className="guide-section">
                     <p>
-                      {lang === 'en'
-                        ? 'Open the Insights panel to log a metrics snapshot. Each snapshot captures impressions, clicks, conversions, CPC, CPA, CTR, conversion rate, ROAS, and any custom fields you add. AdVisor compares the latest snapshot to the previous one and flags trends.'
-                        : 'Mo Insights de luu mot snapshot du lieu. Moi snapshot ghi nhan impressions, clicks, conversions, CPC, CPA, CTR, conversion rate, ROAS, va cac field tuy chinh. AdVisor so sanh snapshot moi voi snapshot truoc va danh dau xu huong.'}
+                      {'Open the Insights panel to log a metrics snapshot. Each snapshot captures impressions, clicks, conversions, CPC, CPA, CTR, conversion rate, ROAS, and any custom fields you add. AdVisor compares the latest snapshot to the previous one and flags trends.'}
                     </p>
                     <ul className="guide-list">
-                      <li>{lang === 'en' ? 'Snapshots are tied to the campaign and labelled by date.' : 'Snapshot gan voi chien dich va ghi theo ngay.'}</li>
-                      <li>{lang === 'en' ? 'Upload metrics in bulk via CSV for legacy reports.' : 'Co the tai metrics hang loat qua CSV.'}</li>
-                      <li>{lang === 'en' ? 'Submit a snapshot at Stage 3 to trigger AI optimisation feedback.' : 'Gui snapshot o Giai doan 3 de AI dua phan hoi toi uu.'}</li>
+                      <li>{'Snapshots are tied to the campaign and labelled by date.'}</li>
+                      <li>{'Upload metrics in bulk via CSV for legacy reports.'}</li>
+                      <li>{'Submit a snapshot at Stage 3 to trigger AI optimisation feedback.'}</li>
                     </ul>
                   </div>
                 )}
 
                 {guideActiveTab === 'faq' && (
                   <div className="guide-section">
-                    <h4>{lang === 'en' ? 'How do I advance to the next stage?' : 'Làm sao để chuyển sang giai đoạn tiếp theo?'}</h4>
+                    <h4>{'How do I advance to the next stage?'}</h4>
                     <p>
-                      {lang === 'en'
-                        ? 'Look for interactive buttons in the chat: picking a Plan card in Stage 1, or clicking the "Go to Stage X" button that appears after AI finishes its analysis.'
-                        : 'Hãy tìm các nút tương tác trong chat: chọn thẻ Plan ở Giai đoạn 1, hoặc nhấn nút "Sang Giai đoạn X" xuất hiện sau khi AI hoàn tất phân tích.'}
+                      {'Look for interactive buttons in the chat: picking a Plan card in Stage 1, or clicking the "Go to Stage X" button that appears after AI finishes its analysis.'}
                     </p>
-                    <h4>{lang === 'en' ? 'Can I redo a stage?' : 'Có thể làm lại một giai đoạn?'}</h4>
+                    <h4>{'Can I redo a stage?'}</h4>
                     <p>
-                      {lang === 'en'
-                        ? 'Yes. Click any completed stage in the header timeline to roll back. Note: Rolling back will reset your progress for all stages ahead of it.'
-                        : 'Có. Nhấn vào bất kỳ giai đoạn đã hoàn thành nào trên thanh tiêu đề để quay lại. Lưu ý: Quay lại sẽ đặt lại tiến trình của tất cả các giai đoạn phía sau.'}
+                      {'Yes. Click any completed stage in the header timeline to roll back. Note: Rolling back will reset your progress for all stages ahead of it.'}
                     </p>
-                    <h4>{lang === 'en' ? 'Why is the Content Writer disabled?' : 'Tại sao Content Writer bị tắt?'}</h4>
+                    <h4>{'Why is the Content Writer disabled?'}</h4>
                     <p>
-                      {lang === 'en'
-                        ? 'The Content Writer needs a selected plan for context. It unlocks automatically as soon as you choose a Plan in Stage 1.'
-                        : 'Content Writer cần một plan đã chọn để lấy ngữ cảnh. Nó sẽ tự động mở khóa ngay khi bạn chọn một Plan ở Giai đoạn 1.'}
+                      {'The Content Writer needs a selected plan for context. It unlocks automatically as soon as you choose a Plan in Stage 1.'}
                     </p>
-                    <h4>{lang === 'en' ? 'Where do I see my historical answers?' : 'Xem lại các câu trả lời cũ ở đâu?'}</h4>
+                    <h4>{'Where do I see my historical answers?'}</h4>
                     <p>
-                      {lang === 'en'
-                        ? 'Open the Insights panel (Bar Chart icon) to see the full activity log, including every quiz answer and plan selection.'
-                        : 'Mở bảng Insights (biểu tượng biểu đồ) để xem toàn bộ nhật ký hoạt động, bao gồm mọi câu trả lời quiz và lựa chọn plan.'}
+                      {'Open the Insights panel (Bar Chart icon) to see the full activity log, including every quiz answer and plan selection.'}
                     </p>
                   </div>
                 )}
@@ -2956,7 +2572,7 @@ export default function Chat() {
                   </div>
                   <div>
                     <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>
-                      {lang === 'en' ? 'Campaign Insights' : 'Dữ liệu chiến dịch'}
+                      {'Campaign Insights'}
                     </h3>
                   </div>
                 </div>
@@ -2983,7 +2599,7 @@ export default function Chat() {
                     <div className="insights-card-header" style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(236,72,153,0.08))' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <ListChecks size={16} style={{ color: 'var(--accent)' }} />
-                        <h3>{lang === 'en' ? 'Quiz Progress' : 'Tiến độ Quiz'}</h3>
+                        <h3>{'Quiz Progress'}</h3>
                       </div>
                       <span className="insights-pill">{progressPercent}%</span>
                     </div>
@@ -2993,9 +2609,7 @@ export default function Chat() {
                       </div>
                       <div className="insights-progress-meta">
                         <span>
-                          {lang === 'en'
-                            ? `${completedStages} / ${totalStages || '-'} stages`
-                            : `${completedStages} / ${totalStages || '-'} giai đoạn`}
+                          {`${completedStages} / ${totalStages || '-'} stages`}
                         </span>
                         {currentCampaign.quizProgress?.lastUpdated && (
                           <span style={{ fontSize: '0.72rem' }}>
@@ -3009,12 +2623,12 @@ export default function Chat() {
                     <div className="insights-stage-compare">
                       <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         <BookOpen size={14} style={{ color: 'var(--accent)' }} />
-                        {lang === 'en' ? 'Quiz Answers' : 'Dữ liệu chiến dịch'}
+                        {'Quiz Answers'}
                       </h4>
                       <div className="insights-stage-list">
                         {getFullQuizProfile().length === 0 ? (
                           <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                            {lang === 'en' ? 'No data yet.' : 'Chưa có dữ liệu.'}
+                            {'No data yet.'}
                           </p>
                         ) : (
                           getFullQuizProfile().slice(0, 8).map((item, idx) => (
@@ -3036,7 +2650,7 @@ export default function Chat() {
                     <div className="insights-card-header" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(59,130,246,0.08))' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <BarChart3 size={16} style={{ color: '#34d399' }} />
-                        <h3>{lang === 'en' ? 'Metrics Snapshots' : 'Dữ liệu hiệu suất'}</h3>
+                        <h3>{'Metrics Snapshots'}</h3>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span className="insights-pill" style={{ background: 'rgba(16,185,129,0.15)', color: '#34d399' }}>{metricsSnapshots.length}</span>
@@ -3077,18 +2691,18 @@ export default function Chat() {
                     <div className="metrics-form">
                       <div className="metrics-row">
                         <label>
-                          {lang === 'en' ? 'Label' : 'Nhãn'}
+                          {'Label'}
                           <input
                             type="text"
                             value={metricsLabel}
-                            placeholder={lang === 'en' ? 'Baseline, Month 1...' : 'Baseline, tháng 1...'}
+                            placeholder={'Baseline, Month 1...'}
                             onChange={(e) => setMetricsLabel(e.target.value)}
                           />
                         </label>
                       </div>
                       <div className="metrics-row">
                         <label>
-                          {lang === 'en' ? 'Start date' : 'Bắt đầu'}
+                          {'Start date'}
                           <input
                             type="date"
                             value={metricsPeriodStart}
@@ -3096,7 +2710,7 @@ export default function Chat() {
                           />
                         </label>
                         <label>
-                          {lang === 'en' ? 'End date' : 'Kết thúc'}
+                          {'End date'}
                           <input
                             type="date"
                             value={metricsPeriodEnd}
@@ -3107,7 +2721,7 @@ export default function Chat() {
                       <div className="metrics-grid">
                         {metricsFields.map((field) => (
                           <label key={field.key}>
-                            {field.label[lang]}
+                            {field.label}
                             <input
                               type="text"
                               value={metricsInputs[field.key] || ''}
@@ -3118,7 +2732,7 @@ export default function Chat() {
                       </div>
                       <button className="metrics-save" onClick={handleSaveMetrics}>
                         <Check size={14} />
-                        {lang === 'en' ? 'Save Snapshot' : 'Lưu dữ liệu'}
+                        {'Save Snapshot'}
                       </button>
                     </div>
 
@@ -3126,7 +2740,7 @@ export default function Chat() {
                     <div className="metrics-compare">
                       <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         <TrendingUp size={14} style={{ color: '#34d399' }} />
-                        {lang === 'en' ? 'Performance Trends' : 'Xu hướng hiệu suất'}
+                        {'Performance Trends'}
                       </h4>
                       {latestSnapshot ? (
                         <div className="metrics-compare-list">
@@ -3137,7 +2751,7 @@ export default function Chat() {
                             const isPositive = delta && delta.diff >= 0;
                             return (
                               <div key={field.key} className="metrics-compare-item">
-                                <span className="metrics-compare-label">{field.label[lang]}</span>
+                                <span className="metrics-compare-label">{field.label}</span>
                                 <span className="metrics-compare-value">{formatMetricValue(current)}</span>
                                 <span className={`metrics-compare-delta ${isPositive ? 'up' : 'down'}`}>
                                   {delta ? (
@@ -3152,7 +2766,7 @@ export default function Chat() {
                           })}
                         </div>
                       ) : (
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{lang === 'en' ? 'Add a snapshot to see trends.' : 'Them du lieu de xem xu huong.'}</p>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{'Add a snapshot to see trends.'}</p>
                       )}
                     </div>
                   </div>
@@ -3164,17 +2778,20 @@ export default function Chat() {
                 <div className="activity-log">
                   <div className="activity-log-header">
                     <BookOpen size={16} style={{ color: 'var(--accent)' }} />
-                    <h3>{lang === 'en' ? 'Activity Log' : 'Nhat ky chien dich'}</h3>
+                    <h3>{'Activity Log'}</h3>
                   </div>
                   {(() => {
                     const events = buildActivityEvents();
                     if (events.length === 0) {
                       return (
-                        <p className="activity-log-empty">
-                          {lang === 'en'
-                            ? 'No activity yet. Complete the Quick Setup to get started.'
-                            : 'Chua co hoat dong. Hoan thanh Quick Setup de bat dau.'}
-                        </p>
+                        <div className="activity-log-empty">
+                          <p>
+                            {'No activity yet. Complete the Discovery Quiz to get started.'}
+                          </p>
+                          <button type="button" className="btn btn-secondary btn-sm" style={{ marginTop: '0.75rem' }} onClick={handleOpenFullQuiz}>
+                            {'Open quiz'}
+                          </button>
+                        </div>
                       );
                     }
                     return (
@@ -3209,8 +2826,7 @@ export default function Chat() {
         isOpen={showConfirmModal} 
         data={confirmModalData} 
         onClose={() => setShowConfirmModal(false)} 
-        lang={lang} 
-      />
+        />
 
       {/* Phase 2 Quiz Popup */}
       <AnimatePresence>
@@ -3235,8 +2851,8 @@ export default function Chat() {
                     <Check size={20} />
                   </div>
                   <div>
-                    <h3>{lang === 'en' ? 'Finalize Plan' : 'Chốt Plan'}</h3>
-                    <p>{lang === 'en' ? `Phase 2 - Question ${phase2Step + 1} of ${phase2Questions.length}` : `Giai đoạn 2 - Câu ${phase2Step + 1} / ${phase2Questions.length}`}</p>
+                    <h3>{'Finalize Plan'}</h3>
+                    <p>{`Phase 2 - Question ${phase2Step + 1} of ${phase2Questions.length}`}</p>
                   </div>
                 </div>
                 <div className="quiz-popup-header-right">
@@ -3271,7 +2887,7 @@ export default function Chat() {
                       <>
                         <div className="quiz-popup-question" style={{ color: '#10b981' }}>
                           <QIcon size={22} />
-                          <span>{q.question[lang]}</span>
+                          <span>{q.question}</span>
                         </div>
 
                         <div className="quiz-popup-options">
@@ -3286,7 +2902,7 @@ export default function Chat() {
                               whileHover={{ scale: 1.02, y: -2 }}
                               whileTap={{ scale: 0.98 }}
                             >
-                              {opt.label[lang]}
+                              {opt.label}
                             </motion.button>
                           ))}
 
@@ -3295,7 +2911,7 @@ export default function Chat() {
                             onClick={() => { setPhase2CustomOpen(!phase2CustomOpen); setPhase2CustomInput(''); }}
                           >
                             <Pencil size={14} />
-                            {lang === 'en' ? 'Type my own answer' : 'Tự điền câu trả lời'}
+                            {'Type my own answer'}
                           </button>
 
                           <AnimatePresence>
@@ -3309,7 +2925,7 @@ export default function Chat() {
                               >
                                 <input
                                   type="text"
-                                  placeholder={lang === 'en' ? 'Type your answer...' : 'Nhập câu trả lời...'}
+                                  placeholder={'Type your answer...'}
                                   value={phase2CustomInput}
                                   onChange={(e) => setPhase2CustomInput(e.target.value)}
                                   onKeyDown={(e) => e.key === 'Enter' && handlePhase2CustomSubmit()}
@@ -3318,7 +2934,7 @@ export default function Chat() {
                                 />
                                 <div className="quiz-popup-text-actions">
                                   <button className="quiz-popup-submit" onClick={handlePhase2CustomSubmit}>
-                                    {lang === 'en' ? 'Submit' : 'Gửi'}
+                                    {'Submit'}
                                     <ChevronRight size={16} />
                                   </button>
                                 </div>
@@ -3328,7 +2944,7 @@ export default function Chat() {
 
                           <button className="quiz-popup-skip-inline" onClick={handlePhase2SkipQuestion}>
                             <HelpCircle size={14} />
-                            {lang === 'en' ? 'Skip this question' : 'Bỏ qua câu này'}
+                            {'Skip this question'}
                           </button>
                         </div>
                       </>
@@ -3354,8 +2970,8 @@ export default function Chat() {
           >
             <div className="summary-header" style={{ padding: '1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{lang === 'en' ? 'Marketing Glossary' : 'Từ điển marketing'}</h3>
-                <p className="summary-subtitle" style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{lang === 'en' ? 'Key terms used by marketers' : 'Thuật ngữ hay gặp trong marketing'}</p>
+                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{'Marketing Glossary'}</h3>
+                <p className="summary-subtitle" style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{'Key terms used by marketers'}</p>
               </div>
               <button className="summary-close" onClick={() => setGlossaryOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                 <X size={20} />
@@ -3364,24 +2980,24 @@ export default function Chat() {
             <div className="summary-list" style={{ flex: 1, overflowY: 'auto', padding: '1.25rem' }}>
               {glossaryMatches.length > 0 && (
                 <div className="glossary-section" style={{ marginBottom: '1.5rem' }}>
-                  <span className="glossary-section-title" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>{lang === 'en' ? 'Suggested for you' : 'Gợi ý liên quan'}</span>
+                  <span className="glossary-section-title" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>{'Suggested for you'}</span>
                   {glossaryMatches.map((entry) => (
                     <div key={entry.id} className="glossary-item" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '0.875rem', marginBottom: '0.75rem' }}>
                       <div className="glossary-term" style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.25rem' }}>{entry.term}</div>
-                      <div className="glossary-name" style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>{entry.name[lang]}</div>
-                      <p className="glossary-definition" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>{entry.definition[lang]}</p>
+                      <div className="glossary-name" style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>{entry.name}</div>
+                      <p className="glossary-definition" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>{entry.definition}</p>
                     </div>
                   ))}
                 </div>
               )}
               {glossaryGroups.map((group) => (
                 <div key={group.id} className="glossary-section" style={{ marginBottom: '1.5rem' }}>
-                  <span className="glossary-section-title" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>{group.label[lang]}</span>
+                  <span className="glossary-section-title" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>{group.label}</span>
                   {getGlossaryByGroup(group.id).map((entry) => (
                     <div key={entry.id} className="glossary-item" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '0.875rem', marginBottom: '0.75rem' }}>
                       <div className="glossary-term" style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.25rem' }}>{entry.term}</div>
-                      <div className="glossary-name" style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>{entry.name[lang]}</div>
-                      <p className="glossary-definition" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>{entry.definition[lang]}</p>
+                      <div className="glossary-name" style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>{entry.name}</div>
+                      <p className="glossary-definition" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>{entry.definition}</p>
                     </div>
                   ))}
                 </div>
@@ -3401,7 +3017,6 @@ interface CampaignItemProps {
   isEditing: boolean;
   editingName: string;
   menuOpen: boolean;
-  lang: 'en' | 'vi';
   onNavigate: () => void;
   onMenuToggle: () => void;
   onStartEdit: () => void;
@@ -3413,7 +3028,7 @@ interface CampaignItemProps {
 }
 
 function CampaignItem({
-  campaign, isActive, isEditing, editingName, menuOpen, lang,
+  campaign, isActive, isEditing, editingName, menuOpen,
   onNavigate, onMenuToggle, onStartEdit, onEditChange, onEditSubmit, onEditCancel, onDelete, onToggleFavorite
 }: CampaignItemProps) {
   if (isEditing) {
@@ -3468,17 +3083,17 @@ function CampaignItem({
             >
               <button onClick={onStartEdit}>
                 <Pencil size={14} />
-                {lang === 'en' ? 'Rename' : 'Đổi tên'}
+                {'Rename'}
               </button>
               <button onClick={onToggleFavorite}>
                 <Star size={14} fill={campaign.isFavorite ? 'currentColor' : 'none'} />
                 {campaign.isFavorite
-                  ? (lang === 'en' ? 'Unfavorite' : 'Bỏ yêu thích')
-                  : (lang === 'en' ? 'Favorite' : 'Yêu thích')}
+                  ? ('Unfavorite')
+                  : ('Favorite')}
               </button>
               <button className="danger" onClick={onDelete}>
                 <Trash2 size={14} />
-                {lang === 'en' ? 'Delete' : 'Xóa'}
+                {'Delete'}
               </button>
             </motion.div>
           )}

@@ -5,8 +5,8 @@ export type GlossaryGroup = 'cost' | 'engagement' | 'lifecycle' | 'tools';
 export interface GlossaryEntry {
   id: string;
   term: string;
-  name: { en: string; vi: string };
-  definition: { en: string; vi: string };
+  name: string;
+  definition: string;
   group: GlossaryGroup;
   aliases?: string[];
 }
@@ -22,11 +22,11 @@ const wordBoundaryRegex = (term: string) => {
 
 export const glossaryEntries = entries;
 
-export const glossaryGroups: { id: GlossaryGroup; label: { en: string; vi: string } }[] = [
-  { id: 'cost', label: { en: 'Cost & Budget', vi: 'Chi phi & Ngan sach' } },
-  { id: 'engagement', label: { en: 'Engagement & Experience', vi: 'Tuong tac & Trai nghiem' } },
-  { id: 'lifecycle', label: { en: 'Lifecycle Value', vi: 'Gia tri vong doi' } },
-  { id: 'tools', label: { en: 'Marketing Concepts', vi: 'Khung & Khai niem' } }
+export const glossaryGroups: { id: GlossaryGroup; label: string }[] = [
+  { id: 'cost', label: 'Cost & Budget' },
+  { id: 'engagement', label: 'Engagement & Experience' },
+  { id: 'lifecycle', label: 'Lifecycle Value' },
+  { id: 'tools', label: 'Marketing Concepts' }
 ];
 
 export function getGlossaryByGroup(group: GlossaryGroup): GlossaryEntry[] {
@@ -39,7 +39,7 @@ export function findGlossaryMatches(text: string, max = 6): GlossaryEntry[] {
   const matches: GlossaryEntry[] = [];
 
   for (const entry of entries) {
-    const terms = [entry.term, entry.name.en, entry.name.vi, ...(entry.aliases || [])];
+    const terms = [entry.term, entry.name, ...(entry.aliases || [])];
     if (terms.some((term) => normalized.includes(normalizeText(term)) || wordBoundaryRegex(term).test(text))) {
       matches.push(entry);
     }
@@ -52,10 +52,10 @@ export function findGlossaryMatches(text: string, max = 6): GlossaryEntry[] {
   return matches;
 }
 
-export function summarizeGlossary(entriesToSummarize: GlossaryEntry[], lang: 'en' | 'vi') {
+export function summarizeGlossary(entriesToSummarize: GlossaryEntry[]) {
   return entriesToSummarize.map((entry) => ({
     term: entry.term,
-    name: entry.name[lang],
-    definition: entry.definition[lang]
+    name: entry.name,
+    definition: entry.definition
   }));
 }
