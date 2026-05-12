@@ -3372,24 +3372,37 @@ function CampaignItem({
   }
 
   return (
-    <div className={`campaign-item ${isActive ? 'active' : ''} ${campaign.isFavorite ? 'favorited' : ''}`}>
+    <motion.div 
+      layout
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      className={`campaign-item ${isActive ? 'active' : ''} ${campaign.isFavorite ? 'favorited' : ''}`}
+    >
       <button className="campaign-link" onClick={onNavigate}>
-        <MessageSquare size={16} className={campaign.isFavorite ? 'favorite-icon' : ''} />
+        <motion.div whileHover={{ rotate: 15 }}>
+          <MessageSquare size={16} className={campaign.isFavorite ? 'favorite-icon' : ''} />
+        </motion.div>
         <span>{campaign.name}</span>
       </button>
 
       <div className="campaign-actions">
-        <button className="campaign-action-btn" onClick={onMenuToggle}>
+        <motion.button 
+          whileHover={{ scale: 1.15 }}
+          whileTap={{ scale: 0.9 }}
+          className="campaign-action-btn" 
+          onClick={onMenuToggle}
+        >
           <MoreHorizontal size={14} />
-        </button>
+        </motion.button>
 
         <AnimatePresence>
           {menuOpen && (
             <motion.div
               className="campaign-menu"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.95, y: -5 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -5 }}
+              transition={{ duration: 0.1 }}
             >
               <button onClick={onStartEdit}>
                 <Pencil size={14} />
@@ -3409,6 +3422,6 @@ function CampaignItem({
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 }

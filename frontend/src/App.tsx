@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { useEffect, lazy, Suspense } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 const Landing = lazy(() => import('./pages/Landing'));
 const Login = lazy(() => import('./pages/Login'));
@@ -85,6 +86,36 @@ function AppMeta() {
   return null;
 }
 
+const PageWrapper = ({ children }: { children: React.ReactNode }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -10 }}
+    transition={{ duration: 0.3, ease: "easeInOut" }}
+    style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}
+  >
+    {children}
+  </motion.div>
+);
+
+function AppRoutes() {
+  const location = useLocation();
+  
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<PageWrapper><Landing /></PageWrapper>} />
+        <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
+        <Route path="/register" element={<PageWrapper><Register /></PageWrapper>} />
+        <Route path="/quiz" element={<PageWrapper><Quiz /></PageWrapper>} />
+        <Route path="/chat" element={<PageWrapper><Chat /></PageWrapper>} />
+        <Route path="/chat/:campaignId" element={<PageWrapper><Chat /></PageWrapper>} />
+        <Route path="/settings" element={<PageWrapper><Settings /></PageWrapper>} />
+      </Routes>
+    </AnimatePresence>
+  );
+}
+
 function App() {
   useEffect(() => {
     const storedTheme = localStorage.getItem('advisor-theme') || 'dark';
@@ -98,15 +129,7 @@ function App() {
         <AppMeta />
         <a className="skip-link" href="#main-content">Skip to main content</a>
         <main id="main-content">
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/quiz" element={<Quiz />} />
-            <Route path="/chat" element={<Chat />} />
-            <Route path="/chat/:campaignId" element={<Chat />} />
-            <Route path="/settings" element={<Settings />} />
-          </Routes>
+          <AppRoutes />
         </main>
       </Suspense>
     </BrowserRouter>
