@@ -75,8 +75,16 @@ export default function Register() {
   };
 
   const handleGoogleLogin = async () => {
+    if (googleLoading) {
+      return;
+    }
+
     setError('');
     setGoogleLoading(true);
+    const timeoutId = window.setTimeout(() => {
+      setGoogleLoading(false);
+      setError('Google sign-in timed out. Please try again.');
+    }, 15000);
 
     try {
       const result = await signInWithPopup(auth, googleProvider);
@@ -99,6 +107,7 @@ export default function Register() {
     } catch (err: unknown) {
       setError(getGoogleAuthErrorMessage(err));
     } finally {
+      window.clearTimeout(timeoutId);
       setGoogleLoading(false);
     }
   };
