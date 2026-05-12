@@ -20,10 +20,15 @@ function shouldUseLiveAi(): boolean {
   return GEMINI_API_KEY.length > 30;
 }
 
-const planTagRegex = /\[PLAN(?:_|\s)?[A-Z0-9]+\]/i;
+const planOpenTagRegex = /\[PLAN(?:_|\s)?[A-Z0-9]+\]/i;
+const planBlockRegex = /\[PLAN(?:_|\s)?([A-Z0-9]+)\]([\s\S]*?)\[\/PLAN(?:_|\s)?\1\]/gi;
+
+function countPlanBlocks(content: string): number {
+  return Array.from(content.matchAll(planBlockRegex)).length;
+}
 
 function hasPlanTags(content: string): boolean {
-  return planTagRegex.test(content);
+  return planOpenTagRegex.test(content);
 }
 
 const PLAN_OPTIONS_FALLBACK = [
@@ -53,14 +58,14 @@ const PLAN_OPTIONS_FALLBACK = [
 ].join('\n');
 
 function appendPlanOptionsIfMissing(content: string): string {
-  if (hasPlanTags(content)) return content;
+  if (countPlanBlocks(content) >= 3) return content;
   const trimmed = content.trim();
   if (!trimmed) return PLAN_OPTIONS_FALLBACK;
   return `${trimmed}\n\n${PLAN_OPTIONS_FALLBACK}`;
 }
 
 function detectStrategyKind(content: string): { kind: string | null; metadata: Record<string, unknown> | null } {
-  if (content.includes('[PLAN_OPTIONS]') || hasPlanTags(content)) {
+  if (content.includes('[PLAN_OPTIONS]') || countPlanBlocks(content) > 0 || hasPlanTags(content)) {
     return { kind: 'plan_options', metadata: null };
   }
   if (content.includes('[STAGE_TRANSITION]')) {
@@ -396,7 +401,7 @@ How can I assist you with your campaign today? Try completing the **Quiz** first
       }
     }
 
-    if (effectivePhase === '1' && !hasPlanTags(aiText)) {
+    if (effectivePhase === '1') {
       aiText = appendPlanOptionsIfMissing(aiText);
     }
 

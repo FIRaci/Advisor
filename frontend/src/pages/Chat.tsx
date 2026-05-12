@@ -183,6 +183,7 @@ export default function Chat() {
       .replace(/\*\*\[PLAN_OPTIONS\]\*\*/gi, '')
       .replace(/\[PLAN_OPTIONS\]/gi, '')
       .replace(/\[PLAN[_\s]?([A-Z0-9]+)\][\s\S]*?\[\/PLAN[_\s]?\1\]/gi, '')
+      .replace(/\[\/?PLAN(?:_|\s)?[A-Z0-9]+\]/gi, '')
       .replace(/\[\/PLAN_OPTIONS\]/gi, '')
       .replace(/\*\*\[STAGE_TRANSITION\]\*\*/gi, '')
       .replace(/\[STAGE_TRANSITION\]/gi, '')
