@@ -1,25 +1,18 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
-import { ArrowRight, Sparkles, BarChart3, FileText, Globe, Zap, Shield, TrendingUp, Play, CheckCircle2, MessageSquare, LogOut, Settings, ListChecks, Target, Wand2, LineChart, GraduationCap, BookOpen, MessageCircle, ShoppingBag, Briefcase, Building2, Github } from 'lucide-react';
+import { ArrowRight, Sparkles, BarChart3, FileText, Zap, Shield, TrendingUp, Play, CheckCircle2, MessageSquare, LogOut, Settings, ListChecks, Target, Wand2, LineChart, GraduationCap, BookOpen, MessageCircle, ShoppingBag, Briefcase, Building2, Github } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useState, useRef, useEffect } from 'react';
 import './Landing.css';
 
 export default function Landing() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuthStore();
   const [isVideoOpen, setIsVideoOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
-
-
-  const toggleLanguage = () => {
-    const nextLang = i18n.language === 'en' ? 'vi' : 'en';
-    i18n.changeLanguage(nextLang);
-    localStorage.setItem('advisor-lang', nextLang);
-  };
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -42,75 +35,75 @@ export default function Landing() {
   ];
 
   const benefits = [
-    i18n.language === 'en' ? 'Quick setup, no hassle' : 'Thiet lap nhanh, khong ruom ra',
-    i18n.language === 'en' ? 'Built for academic demos' : 'Toi uu cho demo do an',
-    i18n.language === 'en' ? 'Friendly guidance included' : 'Huong dan than thien, de hieu',
+    'Quick setup, no hassle',
+    'Built for academic demos',
+    'Friendly guidance included'
   ];
 
   // Step-by-step explanation that mirrors the in-app stage indicator. Keeps
   // the marketing copy honest about how the product actually works.
-  const howItWorks: Array<{ icon: typeof ListChecks; en: { t: string; d: string }; vi: { t: string; d: string } }> = [
+  const howItWorks: Array<{ icon: typeof ListChecks; title: string; desc: string }> = [
     {
       icon: ListChecks,
-      en: { t: 'Quick Setup quiz', d: 'Answer a short quiz about your product, audience, goal, and budget.' },
-      vi: { t: 'Quick Setup quiz', d: 'Tra loi bai quiz ngan ve san pham, doi tuong, muc tieu va ngan sach.' }
+      title: 'Quick Setup quiz',
+      desc: 'Answer a short quiz about your product, audience, goal, and budget.'
     },
     {
       icon: Target,
-      en: { t: 'AI proposes 3 plans', d: 'The AI returns three tailored strategy options. You pick the one that fits.' },
-      vi: { t: 'AI de xuat 3 plan', d: 'AI tra ve ba plan chien luoc. Ban chon plan phu hop nhat.' }
+      title: 'AI proposes 3 plans',
+      desc: 'The AI returns three tailored strategy options. You pick the one that fits.'
     },
     {
       icon: Wand2,
-      en: { t: 'Refine and write', d: 'Phase 2 quiz tightens the plan. The Content Writer pane drafts emails, ads, social posts.' },
-      vi: { t: 'Tinh chinh & viet noi dung', d: 'Phase 2 tinh chinh plan. Content Writer giup soan email, quang cao, bai dang MXH.' }
+      title: 'Refine and write',
+      desc: 'Phase 2 quiz tightens the plan. The Content Writer pane drafts emails, ads, and social posts.'
     },
     {
       icon: LineChart,
-      en: { t: 'Track and optimise', d: 'Submit metrics snapshots; AdVisor compares them and suggests adjustments.' },
-      vi: { t: 'Theo doi & toi uu', d: 'Nhap snapshot du lieu; AdVisor so sanh va de xuat dieu chinh.' }
+      title: 'Track and optimize',
+      desc: 'Submit metrics snapshots; AdVisor compares them and suggests adjustments.'
     }
   ];
 
-  const useCases: Array<{ icon: typeof ShoppingBag; en: { t: string; d: string }; vi: { t: string; d: string } }> = [
+  const useCases: Array<{ icon: typeof ShoppingBag; title: string; desc: string }> = [
     {
       icon: ShoppingBag,
-      en: { t: 'E-commerce launch', d: 'Plan a Shopee or Lazada drop with channel mix and ad copies ready to go.' },
-      vi: { t: 'Ra mat E-commerce', d: 'Len ke hoach drop Shopee, Lazada voi mix kenh va ad copy san sang.' }
+      title: 'E-commerce launch',
+      desc: 'Plan a Shopee or Lazada drop with channel mix and ad copies ready to go.'
     },
     {
       icon: Briefcase,
-      en: { t: 'Agency client onboarding', d: 'Use the activity log as a deliverable summary for client check-ins.' },
-      vi: { t: 'Onboarding khach hang agency', d: 'Dung activity log lam bao cao tom tat moi lan hop khach.' }
+      title: 'Agency client onboarding',
+      desc: 'Use the activity log as a deliverable summary for client check-ins.'
     },
     {
       icon: Building2,
-      en: { t: 'Internal SME marketing', d: 'A non-marketer can run quick experiments without hiring an agency.' },
-      vi: { t: 'Marketing noi bo SME', d: 'Nguoi khong chuyen marketing co the chay thu nghiem nhanh ma khong can thue agency.' }
+      title: 'Internal SME marketing',
+      desc: 'A non-marketer can run quick experiments without hiring an agency.'
     },
     {
       icon: GraduationCap,
-      en: { t: 'Marketing classroom', d: 'Built for students and instructors running case studies and live demos.' },
-      vi: { t: 'Lop hoc marketing', d: 'Phu hop cho sinh vien va giang vien chay case study, demo truc tiep.' }
+      title: 'Marketing classroom',
+      desc: 'Built for students and instructors running case studies and live demos.'
     }
   ];
 
-  const faqs: Array<{ en: { q: string; a: string }; vi: { q: string; a: string } }> = [
+  const faqs: Array<{ q: string; a: string }> = [
     {
-      en: { q: 'Is AdVisor free to use?', a: 'Yes. AdVisor is an academic prototype and free for personal and classroom use. No credit card, no usage caps.' },
-      vi: { q: 'AdVisor co mien phi khong?', a: 'Co. AdVisor la prototype hoc thuat, mien phi cho ca nhan va lop hoc. Khong can the, khong gioi han.' }
+      q: 'Is AdVisor free to use?',
+      a: 'Yes. AdVisor is an academic prototype and free for personal and classroom use. No credit card, no usage caps.'
     },
     {
-      en: { q: 'Which AI model do you use?', a: 'AdVisor uses Google Gemini for strategy generation and content writing. The model name is configurable in the deployment.' },
-      vi: { q: 'AdVisor dung mo hinh AI nao?', a: 'AdVisor dung Google Gemini de tao chien luoc va noi dung. Ten model co the cau hinh khi trien khai.' }
+      q: 'Which AI model do you use?',
+      a: 'AdVisor uses Google Gemini for strategy generation and content writing. The model name is configurable in the deployment.'
     },
     {
-      en: { q: 'Where is my data stored?', a: 'Campaigns and chat history live in a Postgres database. You can export or delete a campaign at any time.' },
-      vi: { q: 'Du lieu cua toi luu o dau?', a: 'Chien dich va lich su chat luu trong Postgres. Ban co the xuat hoac xoa chien dich bat ky luc nao.' }
+      q: 'Where is my data stored?',
+      a: 'Campaigns and chat history live in a Postgres database. You can export or delete a campaign at any time.'
     },
     {
-      en: { q: 'Can I run this on my own server?', a: 'Yes. The repo is open source. Backend is Node + Prisma; frontend is Vite + React. See the README to self-host.' },
-      vi: { q: 'Co the tu deploy duoc khong?', a: 'Co. Repo la open source. Backend Node + Prisma, frontend Vite + React. Xem README de self-host.' }
+      q: 'Can I run this on my own server?',
+      a: 'Yes. The repo is open source. Backend is Node + Prisma; frontend is Vite + React. See the README to self-host.'
     }
   ];
 
@@ -142,38 +135,22 @@ export default function Landing() {
           </Link>
 
           <div className="nav-actions">
-            {/* Language toggle - always left */}
-            <motion.button 
-              onClick={toggleLanguage} 
-              className="btn-icon" 
-              title="Toggle Language"
-              aria-label={i18n.language === 'en' ? 'Switch to Vietnamese' : 'Chuyển sang tiếng Anh'}
-              type="button"
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-            >
-              <Globe size={18} />
-              <span>{i18n.language.toUpperCase()}</span>
-            </motion.button>
-
             {isAuthenticated() ? (
               <>
-
                 {/* Chatbot shortcut */}
                 <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }} transition={{ type: 'spring', stiffness: 400, damping: 17 }}>
-                  <Link to="/chat" className="btn-icon" title="Chatbot" aria-label={i18n.language === 'en' ? 'Open chat' : 'Mở chat'}>
+                  <Link to="/chat" className="btn-icon" title="Chatbot" aria-label="Open chat">
                     <MessageSquare size={18} />
                   </Link>
                 </motion.div>
 
                 {/* User avatar with dropdown - right */}
                 <div className="nav-user-menu" ref={userMenuRef}>
-                  <button 
+                  <button
                     className="nav-avatar-btn"
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
                     type="button"
-                    aria-label={i18n.language === 'en' ? 'Open user menu' : 'Mở menu người dùng'}
+                    aria-label="Open user menu"
                   >
                     {user?.avatar ? (
                       <img src={user.avatar} alt={user.name || 'User'} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
@@ -181,9 +158,9 @@ export default function Landing() {
                       user?.name?.charAt(0) || 'U'
                     )}
                   </button>
-                  
+
                   {userMenuOpen && (
-                    <motion.div 
+                    <motion.div
                       className="nav-dropdown"
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -205,12 +182,12 @@ export default function Landing() {
                       <div className="nav-dropdown-divider" />
                       <button className="nav-dropdown-item" onClick={() => navigate('/settings')}>
                         <Settings size={16} />
-                        {i18n.language === 'en' ? 'Settings' : 'Cài đặt'}
+                        Settings
                       </button>
                       <div className="nav-dropdown-divider" />
                       <button className="nav-dropdown-item logout" onClick={logout}>
                         <LogOut size={16} />
-                        {i18n.language === 'en' ? 'Logout' : 'Đăng xuất'}
+                        Logout
                       </button>
                     </motion.div>
                   )}
@@ -362,19 +339,14 @@ export default function Landing() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <span className="section-badge">{i18n.language === 'en' ? 'How it works' : 'Cach hoat dong'}</span>
-            <h2>{i18n.language === 'en' ? 'Four stages, no surprises' : 'Bon giai doan, ro rang'}</h2>
-            <p>
-              {i18n.language === 'en'
-                ? 'AdVisor walks every campaign through the same four stages so you always know what to do next.'
-                : 'AdVisor dan moi chien dich qua 4 giai doan giong nhau de ban luon biet buoc tiep theo.'}
-            </p>
+            <span className="section-badge">How it works</span>
+            <h2>Four stages, no surprises</h2>
+            <p>AdVisor walks every campaign through the same four stages so you always know what to do next.</p>
           </motion.div>
 
           <div className="how-grid">
             {howItWorks.map((step, i) => {
               const Icon = step.icon;
-              const copy = i18n.language === 'en' ? step.en : step.vi;
               return (
                 <motion.div
                   key={i}
@@ -386,8 +358,8 @@ export default function Landing() {
                 >
                   <div className="how-step-num">{i}</div>
                   <div className="how-step-icon"><Icon size={22} /></div>
-                  <h3>{copy.t}</h3>
-                  <p>{copy.d}</p>
+                  <h3>{step.title}</h3>
+                  <p>{step.desc}</p>
                 </motion.div>
               );
             })}
@@ -404,14 +376,13 @@ export default function Landing() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <span className="section-badge">{i18n.language === 'en' ? 'Use cases' : 'Truong hop su dung'}</span>
-            <h2>{i18n.language === 'en' ? 'Built for marketers, students, and small teams' : 'Cho marketer, sinh vien, va doi nho'}</h2>
+            <span className="section-badge">Use cases</span>
+            <h2>Built for marketers, students, and small teams</h2>
           </motion.div>
 
           <div className="use-cases-grid">
             {useCases.map((uc, i) => {
               const Icon = uc.icon;
-              const copy = i18n.language === 'en' ? uc.en : uc.vi;
               return (
                 <motion.div
                   key={i}
@@ -423,8 +394,8 @@ export default function Landing() {
                   whileHover={{ y: -4 }}
                 >
                   <div className="use-case-icon"><Icon size={20} /></div>
-                  <h3>{copy.t}</h3>
-                  <p>{copy.d}</p>
+                  <h3>{uc.title}</h3>
+                  <p>{uc.desc}</p>
                 </motion.div>
               );
             })}
@@ -441,13 +412,9 @@ export default function Landing() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <span className="section-badge">{i18n.language === 'en' ? 'Pricing' : 'Gia'}</span>
-            <h2>{i18n.language === 'en' ? 'Free, forever' : 'Mien phi, mai mai'}</h2>
-            <p>
-              {i18n.language === 'en'
-                ? 'AdVisor is an academic prototype. Use it for class, freelancing, or your own SME marketing without paying a dime.'
-                : 'AdVisor la prototype hoc thuat. Dung cho lop hoc, freelance, hoac marketing SME ma khong mat phi.'}
-            </p>
+            <span className="section-badge">Pricing</span>
+            <h2>Free, forever</h2>
+            <p>AdVisor is an academic prototype. Use it for class, freelancing, or your own SME marketing without paying a dime.</p>
           </motion.div>
 
           <motion.div
@@ -456,24 +423,24 @@ export default function Landing() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <div className="pricing-tier">{i18n.language === 'en' ? 'Free tier' : 'Goi mien phi'}</div>
+            <div className="pricing-tier">Free tier</div>
             <div className="pricing-price">
-              <span className="pricing-price-num">0₫</span>
-              <span className="pricing-price-meta">{i18n.language === 'en' ? '/ forever' : '/ mai mai'}</span>
+              <span className="pricing-price-num">$0</span>
+              <span className="pricing-price-meta">/ forever</span>
             </div>
             <ul className="pricing-list">
-              <li><CheckCircle2 size={16} /> {i18n.language === 'en' ? 'Unlimited campaigns' : 'Khong gioi han so chien dich'}</li>
-              <li><CheckCircle2 size={16} /> {i18n.language === 'en' ? 'Strategy + content generation' : 'Tao chien luoc + noi dung'}</li>
-              <li><CheckCircle2 size={16} /> {i18n.language === 'en' ? 'Metrics tracking and trend analysis' : 'Theo doi metrics & phan tich xu huong'}</li>
-              <li><CheckCircle2 size={16} /> {i18n.language === 'en' ? 'EN / VI bilingual interface' : 'Giao dien song ngu EN / VI'}</li>
-              <li><CheckCircle2 size={16} /> {i18n.language === 'en' ? 'Self-host friendly (open source)' : 'Co the self-host (open source)'}</li>
+              <li><CheckCircle2 size={16} /> Unlimited campaigns</li>
+              <li><CheckCircle2 size={16} /> Strategy and content generation</li>
+              <li><CheckCircle2 size={16} /> Metrics tracking and trend analysis</li>
+              <li><CheckCircle2 size={16} /> English-only interface</li>
+              <li><CheckCircle2 size={16} /> Self-host friendly (open source)</li>
             </ul>
             <button
               className="btn btn-primary btn-lg"
               type="button"
               onClick={() => navigate(isAuthenticated() ? '/quiz' : '/register')}
             >
-              {i18n.language === 'en' ? 'Get started' : 'Bat dau'}
+              Get started
               <ArrowRight size={18} />
             </button>
           </motion.div>
@@ -490,12 +457,11 @@ export default function Landing() {
             viewport={{ once: true }}
           >
             <span className="section-badge">FAQ</span>
-            <h2>{i18n.language === 'en' ? 'Frequently asked questions' : 'Cau hoi thuong gap'}</h2>
+            <h2>Frequently asked questions</h2>
           </motion.div>
 
           <div className="faq-list">
             {faqs.map((qa, i) => {
-              const copy = i18n.language === 'en' ? qa.en : qa.vi;
               return (
                 <motion.details
                   key={i}
@@ -505,8 +471,8 @@ export default function Landing() {
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.05 }}
                 >
-                  <summary>{copy.q}</summary>
-                  <p>{copy.a}</p>
+                  <summary>{qa.q}</summary>
+                  <p>{qa.a}</p>
                 </motion.details>
               );
             })}
@@ -520,12 +486,8 @@ export default function Landing() {
           <div className="academic-card">
             <div className="academic-icon"><GraduationCap size={28} /></div>
             <div>
-              <h3>{i18n.language === 'en' ? 'Academic project' : 'Du an hoc thuat'}</h3>
-              <p>
-                {i18n.language === 'en'
-                  ? 'AdVisor is a graduation thesis on AI-assisted marketing tooling. The codebase is open and any feedback is welcome.'
-                  : 'AdVisor la do an tot nghiep ve cong cu marketing co tro giup tu AI. Ma nguon mo, moi gop y deu duoc don nhan.'}
-              </p>
+              <h3>Academic project</h3>
+              <p>AdVisor is a graduation thesis on AI-assisted marketing tooling. The codebase is open and any feedback is welcome.</p>
             </div>
           </div>
         </div>
@@ -540,38 +502,34 @@ export default function Landing() {
               <span><span className="logo-highlight">Ad</span>Visor</span>
             </div>
             <p className="footer-tagline">
-              {i18n.language === 'en'
-                ? 'AI-assisted marketing tooling, free for everyone.'
-                : 'Cong cu marketing co AI ho tro, mien phi cho moi nguoi.'}
+              AI-assisted marketing tooling, free for everyone.
             </p>
           </div>
           <div className="footer-col">
-            <h4>{i18n.language === 'en' ? 'Product' : 'San pham'}</h4>
-            <a href="#features">{i18n.language === 'en' ? 'Features' : 'Tinh nang'}</a>
-            <a href="#how-it-works">{i18n.language === 'en' ? 'How it works' : 'Cach hoat dong'}</a>
-            <a href="#pricing">{i18n.language === 'en' ? 'Pricing' : 'Gia'}</a>
+            <h4>Product</h4>
+            <a href="#features">Features</a>
+            <a href="#how-it-works">How it works</a>
+            <a href="#pricing">Pricing</a>
             <a href="#faq">FAQ</a>
           </div>
           <div className="footer-col">
-            <h4>{i18n.language === 'en' ? 'Resources' : 'Tai nguyen'}</h4>
+            <h4>Resources</h4>
             <a href="https://github.com/FIRaci/GR1" target="_blank" rel="noreferrer noopener">
               <Github size={14} /> GitHub
             </a>
             <a href="https://github.com/FIRaci/GR1/issues" target="_blank" rel="noreferrer noopener">
-              <BookOpen size={14} /> {i18n.language === 'en' ? 'Issues & feedback' : 'Issues & gop y'}
+              <BookOpen size={14} /> Issues and feedback
             </a>
           </div>
           <div className="footer-col">
-            <h4>{i18n.language === 'en' ? 'Contact' : 'Lien he'}</h4>
+            <h4>Contact</h4>
             <a href="mailto:thanh.bq235830@sis.hust.edu.vn">
               <MessageCircle size={14} /> thanh.bq235830@sis.hust.edu.vn
             </a>
           </div>
         </div>
         <div className="footer-bottom">
-          <p>{i18n.language === 'en'
-            ? 'AdVisor - Academic prototype'
-            : 'AdVisor - Prototype hoc thuat'}</p>
+          <p>AdVisor - Academic prototype</p>
         </div>
       </footer>
 

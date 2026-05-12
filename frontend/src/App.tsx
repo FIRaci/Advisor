@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { useEffect, lazy, Suspense } from 'react'
-import { useTranslation } from 'react-i18next'
 
 const Landing = lazy(() => import('./pages/Landing'))
 const Login = lazy(() => import('./pages/Login'))
@@ -12,53 +11,31 @@ const Settings = lazy(() => import('./pages/Settings'))
 function AppLoader() {
   return (
     <div style={{
-      minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center',
-      background: 'var(--bg-primary)',
-      color: 'var(--text-secondary)'
-    }}>
+      document.documentElement.lang = 'en'
+      document.documentElement.setAttribute('data-lang', 'en')
+    }, [])
       Loading...
     </div>
   )
-}
+      const titles: Record<string, string> = {
+        '/': 'AdVisor - AI Marketing Platform',
+        '/login': 'Login - AdVisor',
+        '/register': 'Register - AdVisor',
+        '/quiz': 'Quiz - AdVisor',
+        '/chat': 'Chat - AdVisor',
+        '/settings': 'Settings - AdVisor'
+      }
 
-function AppMeta() {
-  const location = useLocation()
-  const { i18n } = useTranslation()
-
-  useEffect(() => {
-    const lang = i18n.language === 'vi' ? 'vi' : 'en'
-    document.documentElement.lang = lang
-    document.documentElement.setAttribute('data-lang', lang)
-  }, [i18n.language])
-
-  useEffect(() => {
-    const path = location.pathname
-    const isVi = i18n.language === 'vi'
-
-    const titles: Record<string, { en: string; vi: string }> = {
-      '/': { en: 'AdVisor - AI Marketing Platform', vi: 'AdVisor - Nền tảng AI Marketing' },
-      '/login': { en: 'Login - AdVisor', vi: 'Đăng nhập - AdVisor' },
-      '/register': { en: 'Register - AdVisor', vi: 'Đăng ký - AdVisor' },
-      '/quiz': { en: 'Quiz - AdVisor', vi: 'Bảng câu hỏi - AdVisor' },
-      '/chat': { en: 'Chat - AdVisor', vi: 'Trò chuyện - AdVisor' },
-      '/settings': { en: 'Settings - AdVisor', vi: 'Cài đặt - AdVisor' }
-    }
-
-    const descriptions: Record<string, { en: string; vi: string }> = {
-      '/': {
-        en: 'AI marketing platform for generating strategy, content, and campaign planning faster.',
-        vi: 'Nền tảng AI marketing để tạo chiến lược, nội dung và kế hoạch chiến dịch nhanh hơn.'
-      },
-      '/login': {
-        en: 'Sign in to your AdVisor account.',
-        vi: 'Đăng nhập vào tài khoản AdVisor của bạn.'
-      },
-      '/register': {
-        en: 'Create an AdVisor account and start your marketing workflow.',
-        vi: 'Tạo tài khoản AdVisor và bắt đầu quy trình marketing của bạn.'
+      const descriptions: Record<string, string> = {
+        '/': 'AI marketing platform for generating strategy, content, and campaign planning faster.',
+        '/login': 'Sign in to your AdVisor account.',
+        '/register': 'Create an AdVisor account and start your marketing workflow.',
+        '/quiz': 'Answer the quiz to generate a personalized marketing strategy.',
+        '/chat': 'Chat with the AI marketing advisor and refine your strategy.',
+        '/settings': 'Manage your AdVisor account settings and preferences.'
+      }
       },
       '/quiz': {
         en: 'Answer the quiz to generate a personalized marketing strategy.',
@@ -75,8 +52,8 @@ function AppMeta() {
     }
 
     const matchedPath = Object.prototype.hasOwnProperty.call(titles, path) ? path : '/'
-    const nextTitle = titles[matchedPath][isVi ? 'vi' : 'en']
-    const nextDescription = descriptions[matchedPath][isVi ? 'vi' : 'en']
+    const nextTitle = titles[matchedPath]
+    const nextDescription = descriptions[matchedPath]
     const canonicalUrl = new URL(matchedPath, window.location.origin).toString()
 
     document.title = nextTitle
@@ -103,7 +80,7 @@ function AppMeta() {
     setMeta('meta[property="og:url"]', canonicalUrl)
     setMeta('meta[name="twitter:title"]', nextTitle)
     setMeta('meta[name="twitter:description"]', nextDescription)
-  }, [location.pathname, i18n.language])
+  }, [location.pathname])
 
   return null
 }

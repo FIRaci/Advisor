@@ -3,11 +3,39 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
 import { Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react';
+import { FirebaseError } from 'firebase/app';
+import { signInWithPopup } from 'firebase/auth';
 import { useAuthStore } from '../store/authStore';
+import { auth, googleProvider } from '../lib/firebase';
 
 import './Auth.css';
 
 import { api } from '../hooks/useApi';
+
+function getGoogleAuthErrorMessage(error: unknown): string {
+  if (error instanceof FirebaseError) {
+    switch (error.code) {
+      case 'auth/popup-closed-by-user':
+        return 'Sign-in was canceled.';
+      case 'auth/popup-blocked':
+        return 'Popup was blocked. Please allow popups and try again.';
+      case 'auth/cancelled-popup-request':
+        return 'Another sign-in attempt is already in progress.';
+      case 'auth/unauthorized-domain':
+        return 'This domain is not authorized for Google sign-in.';
+      case 'auth/network-request-failed':
+        return 'Network error. Please try again.';
+      default:
+        return error.message || 'Google login failed.';
+    }
+  }
+
+  if (error instanceof Error) {
+    return error.message || 'Google login failed.';
+  }
+
+  return 'Google login failed.';
+}
 
 export default function Register() {
   const { t } = useTranslation();
@@ -19,6 +47,7 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +75,32 @@ export default function Register() {
   };
 
   const handleGoogleLogin = async () => {
-    setError('Google login is not supported in this version.');
+    setError('');
+    setGoogleLoading(true);
+
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const token = await result.user.getIdToken();
+      const fallbackEmail = `${result.user.uid}@firebase.auth`;
+      const email = result.user.email || fallbackEmail;
+      const name = result.user.displayName || email;
+
+      setAuth(
+        {
+          id: result.user.uid,
+          email,
+          name,
+          avatar: result.user.photoURL || undefined
+        },
+        token
+      );
+
+      navigate('/', { replace: true });
+    } catch (err: unknown) {
+      setError(getGoogleAuthErrorMessage(err));
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   return (
@@ -74,6 +128,7 @@ export default function Register() {
             className="btn btn-outline w-full" 
             style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
             onClick={handleGoogleLogin}
+            disabled={loading || googleLoading}
           >
             <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
               <g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">

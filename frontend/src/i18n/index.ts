@@ -95,110 +95,14 @@ const resources = {
         light: 'Light'
       }
     }
-  },
-  vi: {
-    translation: {
-      nav: {
-        home: 'Trang Chủ',
-        features: 'Tính Năng',
-        login: 'Đăng Nhập',
-        signup: 'Đăng Ký',
-        logout: 'Đăng Xuất'
-      },
-      hero: {
-        badge: 'Marketing AI',
-        title: 'Tạo Chiến Dịch',
-        titleHighlight: 'Marketing Thành Công',
-        titleEnd: 'Trong Vài Phút',
-        subtitle: 'AdVisor sử dụng AI để phân tích doanh nghiệp và tạo chiến lược marketing cá nhân hóa mang lại kết quả.',
-        cta: 'Bắt Đầu Miễn Phí',
-        ctaSecondary: 'Xem Cách Hoạt Động'
-      },
-      features: {
-        title: 'Mọi Thứ Bạn Cần',
-        subtitle: 'Công cụ mạnh mẽ để tăng hiệu quả marketing',
-        ai: {
-          title: 'Chiến Lược AI',
-          desc: 'Nhận đề xuất marketing cá nhân hóa từ AI tiên tiến'
-        },
-        analytics: {
-          title: 'Phân Tích Thông Minh',
-          desc: 'Theo dõi hiệu suất và tối ưu hóa chiến dịch với thông tin thời gian thực'
-        },
-        content: {
-          title: 'Tạo Nội Dung',
-          desc: 'Tạo nội dung quảng cáo hấp dẫn và gợi ý ngay lập tức'
-        },
-        fast: {
-          title: 'Siêu Nhanh',
-          desc: 'Tạo chiến dịch hoàn chỉnh trong chưa đầy 30 giây'
-        },
-        enterprise: {
-          title: 'Doanh Nghiệp',
-          desc: 'Tuân thủ SOC2 với các tính năng bảo mật nâng cao'
-        },
-        roi: {
-          title: 'Tập Trung ROI',
-          desc: 'AI được tối ưu hóa để tối đa hóa lợi nhuận quảng cáo'
-        }
-      },
-      auth: {
-        loginTitle: 'Chào Mừng Trở Lại',
-        loginSubtitle: 'Đăng nhập vào tài khoản của bạn',
-        registerTitle: 'Tạo Tài Khoản',
-        registerSubtitle: 'Bắt đầu hành trình marketing của bạn',
-        email: 'Email',
-        password: 'Mật Khẩu',
-        name: 'Họ và Tên',
-        login: 'Đăng Nhập',
-        register: 'Tạo Tài Khoản',
-        noAccount: 'Chưa có tài khoản?',
-        hasAccount: 'Đã có tài khoản?',
-        forgotPassword: 'Quên mật khẩu?'
-      },
-      quiz: {
-        title: 'Kể Về Doanh Nghiệp Của Bạn',
-        subtitle: 'Trả lời một vài câu hỏi để nhận đề xuất cá nhân hóa',
-        next: 'Tiếp Theo',
-        back: 'Quay Lại',
-        submit: 'Nhận Đề Xuất'
-      },
-      chat: {
-        title: 'Cố Vấn Marketing',
-        placeholder: 'Hỏi tôi bất cứ điều gì về marketing...',
-        send: 'Gửi'
-      },
-      settings: {
-        title: 'Cài đặt',
-        profile: 'Hồ sơ',
-        security: 'Bảo mật',
-        preferences: 'Tùy chọn',
-        profileInfo: 'Thông tin hồ sơ',
-        changePassword: 'Đổi mật khẩu',
-        appPreferences: 'Tùy chọn ứng dụng',
-        fullName: 'Họ và tên',
-        email: 'Email',
-        currentPassword: 'Mật khẩu hiện tại',
-        newPassword: 'Mật khẩu mới',
-        confirmPassword: 'Xác nhận mật khẩu mới',
-        saveChanges: 'Lưu thay đổi',
-        saving: 'Đang lưu...',
-        language: 'Ngôn ngữ',
-        theme: 'Giao diện',
-        dark: 'Tối',
-        light: 'Sáng'
-      }
-    }
   }
 };
-
-const savedLang = localStorage.getItem('advisor-lang') || 'en';
 
 i18n
   .use(initReactI18next)
   .init({
     resources,
-    lng: savedLang,
+    lng: 'en',
     fallbackLng: 'en',
     interpolation: {
       escapeValue: false

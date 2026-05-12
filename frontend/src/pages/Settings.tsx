@@ -8,10 +8,9 @@ import { api } from '../hooks/useApi';
 import './Settings.css';
 
 export default function Settings() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, token, setAuth } = useAuthStore();
-  const lang = i18n.language as 'en' | 'vi';
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'preferences'>('profile');
@@ -66,7 +65,7 @@ export default function Settings() {
     const nextEmail = email.trim().toLowerCase();
 
     if (!nextName || !nextEmail) {
-      alert(lang === 'en' ? 'Name and email are required' : 'Vui lòng nhập tên và email');
+      alert('Name and email are required');
       return;
     }
 
@@ -90,17 +89,17 @@ export default function Settings() {
       return;
     }
 
-    alert(res.error || (lang === 'en' ? 'Failed to save profile' : 'Lưu hồ sơ thất bại'));
+    alert(res.error || 'Failed to save profile');
     setProfileSaving(false);
   };
 
   const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
-      alert(lang === 'en' ? 'Passwords do not match' : 'Mật khẩu không khớp');
+      alert('Passwords do not match');
       return;
     }
     if (newPassword.length < 8) {
-      alert(lang === 'en' ? 'Password must be at least 8 characters' : 'Mật khẩu phải có ít nhất 8 ký tự');
+      alert('Password must be at least 8 characters');
       return;
     }
 
@@ -118,25 +117,17 @@ export default function Settings() {
         return;
       }
 
-      alert(res.error || (lang === 'en' ? 'Failed to change password' : 'Đổi mật khẩu thất bại'));
+      alert(res.error || 'Failed to change password');
       setPasswordSaving(false);
       return;
     }
 
-    setSavedMessage(lang === 'en' ? 'Password changed!' : 'Đã đổi mật khẩu!');
+    setSavedMessage('Password changed!');
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
     setTimeout(() => setSavedMessage(''), 3000);
     setPasswordSaving(false);
-  };
-
-  const toggleLanguage = () => {
-    const nextLang = lang === 'en' ? 'vi' : 'en';
-    i18n.changeLanguage(nextLang);
-    localStorage.setItem('advisor-lang', nextLang);
-    setSavedMessage(t('settings.language') + ' ' + (lang === 'en' ? 'changed!' : 'đã đổi!'));
-    setTimeout(() => setSavedMessage(''), 3000);
   };
 
   return (
@@ -215,7 +206,7 @@ export default function Settings() {
                   onChange={handleAvatarChange}
                   hidden
                 />
-                <p className="avatar-hint">{lang === 'en' ? 'Click to change avatar' : 'Nhấn để đổi ảnh đại diện'}</p>
+                <p className="avatar-hint">Click to change avatar</p>
               </div>
 
               {/* Name */}
@@ -225,7 +216,7 @@ export default function Settings() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder={lang === 'en' ? 'Enter your name' : 'Nhập tên của bạn'}
+                  placeholder="Enter your name"
                 />
               </div>
 
@@ -236,7 +227,7 @@ export default function Settings() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder={lang === 'en' ? 'Enter your email' : 'Nhập email của bạn'}
+                  placeholder="Enter your email"
                 />
               </div>
 
@@ -296,27 +287,13 @@ export default function Settings() {
             <div className="tab-content">
               <h2>{t('settings.appPreferences')}</h2>
 
-              {/* Language */}
-              <div className="preference-item">
-                <div className="preference-info">
-                  <Globe size={20} />
-                  <div>
-                    <h3>{t('settings.language')}</h3>
-                    <p>{lang === 'en' ? 'Choose your preferred language' : 'Chọn ngôn ngữ hiển thị'}</p>
-                  </div>
-                </div>
-                <button className="toggle-btn" onClick={toggleLanguage}>
-                  {lang === 'en' ? 'English' : 'Tiếng Việt'}
-                </button>
-              </div>
-
               {/* Theme */}
               <div className="preference-item">
                 <div className="preference-info">
                   <Moon size={20} />
                   <div>
                     <h3>{t('settings.theme')}</h3>
-                    <p>{lang === 'en' ? 'App color scheme' : 'Chế độ màu ứng dụng'}</p>
+                    <p>App color scheme</p>
                   </div>
                 </div>
                 <button 
