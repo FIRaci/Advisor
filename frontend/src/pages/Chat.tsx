@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Send, Sparkles, Trash2, Plus, MessageSquare, ChevronLeft, ChevronRight, 
+import {
+  Send, Sparkles, Trash2, Plus, MessageSquare, ChevronLeft, ChevronRight,
   Settings, LogOut, MoreHorizontal, Pencil, Star, Copy, Check, ListChecks,
   BarChart3, BookOpen, Package, Building, Users, RefreshCw, Zap, ArrowRight, Award,
   Target, Megaphone, DollarSign, Globe, Clock, Briefcase, X, HelpCircle,
@@ -151,10 +150,9 @@ const phase2Questions = [
 export default function Chat() {
   const { campaignId } = useParams();
   const [searchParams] = useSearchParams();
-  const { i18n } = useTranslation();
   const navigate = useNavigate();
   const { token, user, logout } = useAuthStore();
-  
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [currentCampaign, setCurrentCampaign] = useState<Campaign | null>(null);
@@ -207,7 +205,7 @@ export default function Chat() {
     return findGlossaryMatches(JSON.stringify(currentCampaign) + JSON.stringify(messages));
   }, [currentCampaign, messages]);
 
-  const lang = i18n.language as 'en' | 'vi';
+  let lang: 'en' | 'vi' = 'en';
   const isLoggedIn = Boolean(token);
 
   // Compute current stage from quizData using the shared state-machine helper.
@@ -482,8 +480,8 @@ export default function Chat() {
     }
 
     const now = new Date();
-    const month = now.toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', { month: 'short' });
-    return lang === 'vi' ? `Chiến dịch ${month} ${now.getDate()}` : `Campaign ${month} ${now.getDate()}`;
+    const month = now.toLocaleDateString('en-US', { month: 'short' });
+    return `Campaign ${month} ${now.getDate()}`;
   };
 
   const ensureCampaignForMessage = async (message: string) => {
@@ -637,7 +635,7 @@ export default function Chat() {
     } else {
       appendAssistantMessage(getGenericAiErrorMessage());
     }
-    
+
     setLoading(false);
   };
 
@@ -656,7 +654,7 @@ export default function Chat() {
   };
 
   const formatMessageTime = (time: string) =>
-    new Date(time).toLocaleTimeString(lang === 'vi' ? 'vi-VN' : 'en-US', {
+    new Date(time).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit'
     });
@@ -994,10 +992,10 @@ export default function Chat() {
     if (!campaignId || stageTransitionPending) return;
     if (targetStage >= currentStage) return;
 
-    const confirmText = lang === 'en' 
-      ? `Warning: You are about to return to Stage ${targetStage} (${STAGE_DESCRIPTORS[targetStage].title.en}). \n\nThis will permanently delete all strategy decisions, selected plans, and execution details made after this stage. Your chat history will remain, but the AI's current context will be reset to this earlier point. \n\nAre you sure you want to proceed?` 
+    const confirmText = lang === 'en'
+      ? `Warning: You are about to return to Stage ${targetStage} (${STAGE_DESCRIPTORS[targetStage].title.en}). \n\nThis will permanently delete all strategy decisions, selected plans, and execution details made after this stage. Your chat history will remain, but the AI's current context will be reset to this earlier point. \n\nAre you sure you want to proceed?`
       : `Cảnh báo: Bạn chuẩn bị quay lại Giai đoạn ${targetStage} (${STAGE_DESCRIPTORS[targetStage].title.vi}). \n\nHành động này sẽ xoá vĩnh viễn các quyết định chiến lược, kế hoạch đã chọn và chi tiết thực thi sau giai đoạn này. Lịch sử chat vẫn được giữ lại, nhưng ngữ cảnh hiện tại của AI sẽ bị quay về thời điểm đó. \n\nBạn có chắc chắn muốn tiếp tục không?`;
-    
+
     if (!window.confirm(confirmText)) return;
 
     setStageTransitionPending(true);
@@ -1153,8 +1151,8 @@ export default function Chat() {
       const values = lines[1].split(',').map(v => v.trim());
       const newInputs: Record<string, string> = {};
       metricsFields.forEach(field => {
-        const idx = headers.findIndex(h => 
-          h === field.key.toLowerCase() || 
+        const idx = headers.findIndex(h =>
+          h === field.key.toLowerCase() ||
           h === field.label.en.toLowerCase() ||
           h === field.label.vi.toLowerCase()
         );
@@ -1225,7 +1223,7 @@ export default function Chat() {
     if (loading || !campaignId) return;
     const lastUserMsg = messages.slice().reverse().find(m => m.role === 'USER');
     const textToResend = lastUserMsg ? lastUserMsg.content : (lang === 'en' ? 'Please reanalyze the strategy.' : 'Vui lòng phân tích lại chiến lược.');
-    
+
     setLoading(true);
     const generatedId = `${Date.now()}-retry`;
     setMessages((prev) => [...prev, {
@@ -1305,7 +1303,7 @@ export default function Chat() {
 
   const formatMetricValue = (value?: unknown) => {
     if (value === null || value === undefined) return '-';
-    if (typeof value === 'number') return value.toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US');
+    if (typeof value === 'number') return value.toLocaleString('en-US');
     return String(value);
   };
 
@@ -1393,7 +1391,7 @@ export default function Chat() {
   const getFullQuizProfile = () => {
     if (!currentCampaign?.quizData) return [];
     const quizData = currentCampaign.quizData;
-    
+
     // Mapping values to display labels
     const businessLabels: Record<string, { en: string; vi: string }> = {
       ecommerce: { en: 'E-commerce', vi: 'Thương mại điện tử' },
@@ -1409,7 +1407,7 @@ export default function Chat() {
       realestate: { en: 'Real Estate', vi: 'Bất động sản' },
       entertainment: { en: 'Entertainment', vi: 'Giải trí' }
     };
-    
+
     const audienceLabels: Record<string, { en: string; vi: string }> = {
       b2b: { en: 'B2B', vi: 'B2B' },
       b2c: { en: 'B2C', vi: 'B2C' },
@@ -1424,7 +1422,7 @@ export default function Chat() {
       parents: { en: 'Parents', vi: 'Phụ huynh' },
       students: { en: 'Students', vi: 'Sinh viên' }
     };
-    
+
     const goalLabels: Record<string, { en: string; vi: string }> = {
       awareness: { en: 'Brand Awareness', vi: 'Nhận diện thương hiệu' },
       leads: { en: 'Lead Generation', vi: 'Tạo khách hàng tiềm năng' },
@@ -1437,7 +1435,7 @@ export default function Chat() {
       appinstalls: { en: 'App Installs', vi: 'Cài đặt app' },
       community: { en: 'Community', vi: 'Cộng đồng' }
     };
-    
+
     const channelLabels: Record<string, { en: string; vi: string }> = {
       social: { en: 'Social Media', vi: 'Mạng xã hội' },
       search: { en: 'Google Ads & SEO', vi: 'Google Ads & SEO' },
@@ -1450,7 +1448,7 @@ export default function Chat() {
       offline: { en: 'Offline / Events', vi: 'Offline / Sự kiện' },
       all: { en: 'Multi-channel', vi: 'Đa kênh' }
     };
-    
+
     const budgetLabels: Record<string, { en: string; vi: string }> = {
       minimal: { en: '< $500', vi: '< $500' },
       small: { en: '$500 - $1,000', vi: '$500 - $1,000' },
@@ -1459,7 +1457,7 @@ export default function Chat() {
       enterprise: { en: '$20,000 - $100,000', vi: '$20,000 - $100,000' },
       unlimited: { en: '$100,000+', vi: '$100,000+' }
     };
-    
+
     const regionLabels: Record<string, { en: string; vi: string }> = {
       local: { en: 'Local', vi: 'Địa phương' },
       national: { en: 'National', vi: 'Toàn quốc' },
@@ -1504,36 +1502,36 @@ export default function Chat() {
     };
 
     const items: { icon: ReactNode; label: string; value: string }[] = [];
-    
+
     if (quizData.productName && quizData.productName !== 'not_sure') {
       items.push({ icon: <Package size={16} />, label: lang === 'en' ? 'Product' : 'Sản phẩm', value: quizData.productName });
     }
-    
+
     const businessValue = getLabel(quizData.business, businessLabels);
     if (businessValue) {
       items.push({ icon: <Building size={16} />, label: lang === 'en' ? 'Business' : 'Loại hình', value: businessValue });
     }
-    
+
     const audienceValue = getLabel(quizData.audience, audienceLabels);
     if (audienceValue) {
       items.push({ icon: <Users size={16} />, label: lang === 'en' ? 'Audience' : 'Đối tượng', value: audienceValue });
     }
-    
+
     const goalValue = getLabel(quizData.goal, goalLabels);
     if (goalValue) {
       items.push({ icon: <Target size={16} />, label: lang === 'en' ? 'Goal' : 'Mục tiêu', value: goalValue });
     }
-    
+
     const channelValue = getLabel(quizData.channels, channelLabels);
     if (channelValue) {
       items.push({ icon: <Megaphone size={16} />, label: lang === 'en' ? 'Channels' : 'Kênh', value: channelValue });
     }
-    
+
     const budgetValue = getLabel(quizData.budget, budgetLabels);
     if (budgetValue) {
       items.push({ icon: <DollarSign size={16} />, label: lang === 'en' ? 'Budget' : 'Ngân sách', value: budgetValue });
     }
-    
+
     const regionValue = getLabel(quizData.region, regionLabels);
     if (regionValue) {
       items.push({ icon: <Globe size={16} />, label: lang === 'en' ? 'Region' : 'Khu vực', value: regionValue });
@@ -1553,15 +1551,15 @@ export default function Chat() {
     if (offerTypeValue) {
       items.push({ icon: <Star size={16} />, label: lang === 'en' ? 'Offer Type' : 'Loại ưu đãi', value: offerTypeValue });
     }
-    
+
     if (quizData.usp && quizData.usp !== 'not_sure') {
       items.push({ icon: <Pencil size={16} />, label: lang === 'en' ? 'USP' : 'Điểm nổi bật', value: quizData.usp });
     }
-    
+
     if (quizData.competitors && quizData.competitors !== 'not_sure') {
       items.push({ icon: <Briefcase size={16} />, label: lang === 'en' ? 'Competitors' : 'Đối thủ', value: quizData.competitors });
     }
-    
+
     return items;
   };
 
@@ -1715,7 +1713,7 @@ export default function Chat() {
       {/* Sidebar */}
       <AnimatePresence>
         {sidebarOpen && (
-          <motion.aside 
+          <motion.aside
             className="chat-sidebar"
             initial={{ width: 0, opacity: 0 }}
             animate={{ width: 280, opacity: 1 }}
@@ -1772,7 +1770,7 @@ export default function Chat() {
             {/* Sidebar footer - User profile only */}
             <div className="sidebar-footer">
               <div className="user-menu-wrapper" ref={userMenuRef}>
-                <button 
+                <button
                   className="user-profile-btn"
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                 >
@@ -1783,10 +1781,10 @@ export default function Chat() {
                   )}
                   <span className="user-name-text">{user?.name || 'User'}</span>
                 </button>
-                
+
                 <AnimatePresence>
                   {userMenuOpen && (
-                    <motion.div 
+                    <motion.div
                       className="user-dropdown"
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1972,468 +1970,468 @@ export default function Chat() {
           <div className="chat-pane strategy-pane" style={{ width: showContentPane ? `${strategyWidth}%` : '100%', flex: showContentPane ? 'none' : 1 }}>
             <div className="chat-pane-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Sparkles size={16} style={{color: 'var(--accent)'}} />
+                <Sparkles size={16} style={{ color: 'var(--accent)' }} />
                 <h3>{lang === 'en' ? 'Strategy Analyst' : 'Phân tích chiến lược'}</h3>
               </div>
             </div>
             {/* Messages */}
             <div className="chat-messages">
-          {initialLoading ? (
-            <div className="chat-loading">
-              <div className="spinner" />
-            </div>
-          ) : analystMessages.length === 0 ? (
-            <div className="chat-welcome">
-              <div className="welcome-icon">
-                <Sparkles size={40} />
-              </div>
-              <h2>{lang === 'en' ? 'Welcome to AdVisor' : 'Chào mừng đến với AdVisor'}</h2>
-              <p>{lang === 'en' 
-                ? 'Ask me anything about marketing strategy, ad copy, or campaign optimization.' 
-                : 'Hỏi tôi bất cứ điều gì về chiến lược marketing, nội dung quảng cáo, hoặc tối ưu hóa chiến dịch.'}</p>
-              
-              {/* Full Quiz Profile Card */}
-              {currentCampaign && getFullQuizProfile().length > 0 && (
-                <div className="welcome-quiz-profile">
-                  <div className="quiz-profile-header">
-                    <h4>{lang === 'en' ? 'Your Campaign Profile' : 'Hồ sơ chiến dịch'}</h4>
+              {initialLoading ? (
+                <div className="chat-loading">
+                  <div className="spinner" />
+                </div>
+              ) : analystMessages.length === 0 ? (
+                <div className="chat-welcome">
+                  <div className="welcome-icon">
+                    <Sparkles size={40} />
                   </div>
-                  <div className="quiz-profile-grid">
-                    {getFullQuizProfile().map((item, i) => (
-                      <div key={i} className="quiz-profile-item">
-                        <span className="profile-icon">{item.icon}</span>
-                        <div className="profile-content">
-                          <span className="profile-label">{item.label}</span>
-                          <span className="profile-value">{item.value}</span>
-                        </div>
+                  <h2>{lang === 'en' ? 'Welcome to AdVisor' : 'Chào mừng đến với AdVisor'}</h2>
+                  <p>{lang === 'en'
+                    ? 'Ask me anything about marketing strategy, ad copy, or campaign optimization.'
+                    : 'Hỏi tôi bất cứ điều gì về chiến lược marketing, nội dung quảng cáo, hoặc tối ưu hóa chiến dịch.'}</p>
+
+                  {/* Full Quiz Profile Card */}
+                  {currentCampaign && getFullQuizProfile().length > 0 && (
+                    <div className="welcome-quiz-profile">
+                      <div className="quiz-profile-header">
+                        <h4>{lang === 'en' ? 'Your Campaign Profile' : 'Hồ sơ chiến dịch'}</h4>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {currentStage === 0 && (
-                <div className="welcome-actions">
-                  <button className="welcome-action primary" onClick={handleOpenQuiz}>
-                    <div className="welcome-action-title">
-                      <ListChecks size={16} />
-                      <span>{lang === 'en' ? 'Start with Smart Quiz' : 'Bắt đầu với Quiz thông minh'}</span>
-                    </div>
-                    <p>
-                      {lang === 'en'
-                        ? 'Answer a few questions so AI creates a stronger campaign plan.'
-                        : 'Trả lời vài câu hỏi để AI tạo chiến dịch sát thực tế hơn.'}
-                    </p>
-                  </button>
-
-                  <button className="welcome-action secondary" onClick={focusComposer}>
-                    <div className="welcome-action-title">
-                      <MessageSquare size={16} />
-                      <span>{lang === 'en' ? 'Skip Quiz, Chat Directly' : 'Bỏ qua Quiz, Chat trực tiếp'}</span>
-                    </div>
-                    <p>
-                      {lang === 'en'
-                        ? 'Type your first request below. A new campaign will be created automatically.'
-                        : 'Nhập yêu cầu đầu tiên ở ô bên dưới. Hệ thống sẽ tự tạo campaign mới.'}
-                    </p>
-                  </button>
-
-                  <button
-                    className="welcome-action secondary"
-                    type="button"
-                    onClick={() => {
-                      setGuideActiveTab('overview');
-                      setGuidePopupOpen(true);
-                    }}
-                  >
-                    <div className="welcome-action-title">
-                      <HelpCircle size={16} />
-                      <span>{lang === 'en' ? 'Show me how AdVisor works' : 'Xem hướng dẫn AdVisor'}</span>
-                    </div>
-                    <p>
-                      {lang === 'en'
-                        ? 'Walkthrough of the four stages, the two panes, and how metrics tie everything together.'
-                        : 'Hướng dẫn 4 giai đoạn, hai khung chat, và cách metrics kết nối tất cả.'}
-                    </p>
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            analystMessages.map((msg, i) => {
-              // SYSTEM-pane messages are rendered as inline stage transition
-              // markers (small label + horizontal rule) instead of chat
-              // bubbles. Their content is computed from `metadata.toStage` so
-              // the label respects the user's current language.
-              if (classifyPane(msg) === 'SYSTEM') {
-                const meta = (msg.metadata ?? {}) as Record<string, unknown>;
-                const toStage = (typeof meta.toStage === 'number' ? meta.toStage : 0) as Stage;
-                const desc = STAGE_DESCRIPTORS[toStage] ?? STAGE_DESCRIPTORS[0];
-                return (
-                  <div key={msg.id} className="stage-transition-divider" role="note">
-                    <span className="stage-transition-line" aria-hidden="true" />
-                    <span className="stage-transition-label">
-                      {`${lang === 'en' ? 'Stage' : 'Giai đoạn'} ${toStage} \u2022 ${desc.title[lang]}`}
-                    </span>
-                    <span className="stage-transition-line" aria-hidden="true" />
-                  </div>
-                );
-              }
-
-              return (
-              <motion.div
-                key={msg.id}
-                className={`message ${msg.role === 'USER' ? 'user' : 'assistant'}`}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.02 }}
-              >
-                {msg.role === 'ASSISTANT' && (
-                  <div className="message-avatar assistant-avatar">
-                    <Sparkles size={16} />
-                  </div>
-                )}
-
-                <div className="message-main">
-                  <div className="message-meta">
-                    <span className="message-author">
-                      {msg.role === 'USER' ? (user?.name || (lang === 'en' ? 'You' : 'Bạn')) : 'AdVisor AI'}
-                    </span>
-                    <span className="message-time">{formatMessageTime(msg.createdAt)}</span>
-                  </div>
-
-                  <div className="message-content">
-                    {msg.role === 'ASSISTANT' ? (
-                      <>
-                        <ReactMarkdown>{cleanContent(msg.content)}</ReactMarkdown>
-                        
-                        {/* Plan selection cards */}
-                        {parsePlanOptions(msg.content).length > 0 && (
-                          <div className="plan-cards">
-                            {parsePlanOptions(msg.content).map(plan => (
-                              <motion.button
-                                key={plan.id}
-                                className={`plan-card ${selectedPlanInChat === plan.id || currentCampaign?.quizData?.selectedPlan === plan.id ? 'selected' : ''}`}
-                                onClick={() => handleSelectPlan(plan.id, plan.content)}
-                                disabled={loading || !!currentCampaign?.quizData?.selectedPlan}
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                              >
-                                <div className="plan-card-badge">
-                                  {plan.id === 'A' ? <Zap size={16} /> : plan.id === 'B' ? <Target size={16} /> : <Award size={16} />}
-                                </div>
-                                <ReactMarkdown>{plan.content}</ReactMarkdown>
-                                {(selectedPlanInChat === plan.id || currentCampaign?.quizData?.selectedPlan === plan.id) && (
-                                  <div className="plan-card-check"><Check size={16} /></div>
-                                )}
-                              </motion.button>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Content Assistant offer - after plan selected, before Stage 2 */}
-                        {i === analystMessages.length - 1 && currentCampaign?.quizData?.selectedPlan && currentStage === 1 && !hasStageTransition(msg.content) && (
-                          <div className="content-assist-offer">
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-                              {lang === 'en' 
-                                ? 'Want AI to draft some content for your campaign before moving on?' 
-                                : 'B\u1ea1n mu\u1ed1n AI vi\u1ebft th\u1eed n\u1ed9i dung cho chi\u1ebfn d\u1ecbch tr\u01b0\u1edbc khi sang giai \u0111o\u1ea1n ti\u1ebfp?'}
-                            </p>
-                            <div className="content-assist-buttons">
-                              <button 
-                                className="content-assist-btn"
-                                onClick={() => handleAssistContent('email')}
-                                disabled={assistLoading}
-                              >
-                                <Mail size={14} />
-                                <span>{lang === 'en' ? 'Draft Email' : 'Vi\u1ebft Email'}</span>
-                              </button>
-                              <button 
-                                className="content-assist-btn"
-                                onClick={() => handleAssistContent('ad_copy')}
-                                disabled={assistLoading}
-                              >
-                                <FileText size={14} />
-                                <span>{lang === 'en' ? 'Ad Copy' : 'N\u1ed9i dung qu\u1ea3ng c\u00e1o'}</span>
-                              </button>
-                              <button 
-                                className="content-assist-btn"
-                                onClick={() => handleAssistContent('social_post')}
-                                disabled={assistLoading}
-                              >
-                                <Palette size={14} />
-                                <span>{lang === 'en' ? 'Social Post' : 'B\u00e0i MXH'}</span>
-                              </button>
+                      <div className="quiz-profile-grid">
+                        {getFullQuizProfile().map((item, i) => (
+                          <div key={i} className="quiz-profile-item">
+                            <span className="profile-icon">{item.icon}</span>
+                            <div className="profile-content">
+                              <span className="profile-label">{item.label}</span>
+                              <span className="profile-value">{item.value}</span>
                             </div>
-                            <button
-                              className="btn btn-primary btn-sm"
-                              onClick={() => handleAdvanceStage(2)}
-                              disabled={loading}
-                              style={{ marginTop: '0.75rem' }}
-                            >
-                              <ArrowRight size={16} />
-                              {lang === 'en' ? 'Skip to Stage 2' : 'Sang Giai \u0111o\u1ea1n 2'}
-                            </button>
                           </div>
-                        )}
-
-                        {/* Stage transition prompt */}
-                        {hasStageTransition(msg.content) && i === analystMessages.length - 1 && (
-                          <div className="stage-transition-prompt">
-                            <p>{lang === 'en' ? 'Ready to move to the next stage?' : 'Sẵn sàng chuyển sang giai đoạn tiếp theo?'}</p>
-                            <button
-                              className="btn btn-primary btn-sm"
-                              onClick={() => handleAdvanceStage(currentStage + 1)}
-                              disabled={loading}
-                            >
-                              <ArrowRight size={16} />
-                              {currentStage < 3
-                                ? (lang === 'en' ? `Go to Stage ${currentStage + 1}` : `Sang Giai đoạn ${currentStage + 1}`)
-                                : (lang === 'en' ? 'Continue Optimizing' : 'Tiếp tục tối ưu')}
-                            </button>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <p>{msg.content}</p>
-                    )}
-                  </div>
-
-                  <div className="message-tools">
-                    {msg.role === 'ASSISTANT' && i === analystMessages.length - 1 && (
-                      <button 
-                        className="message-copy-btn"
-                        onClick={handleReanalyze}
-                        title={lang === 'en' ? 'Reanalyze Strategy' : 'Phân tích lại'}
-                      >
-                        <RefreshCw size={14} />
-                      </button>
-                    )}
-                    {msg.role === 'ASSISTANT' && showContentPane && (
-                      <button 
-                        className="message-copy-btn"
-                        onClick={() => {
-                          setContentInput(lang === 'en' 
-                            ? `Please write marketing content based on the strategy from the left pane...` 
-                            : `Hãy viết nội dung marketing dựa trên kế hoạch từ khung bên trái...`);
-                          setTimeout(() => {
-                            const inputField = document.querySelector('.content-pane textarea') as HTMLTextAreaElement;
-                            if (inputField) inputField.focus();
-                          }, 100);
-                        }}
-                        title={lang === 'en' ? 'Send to Content Writer' : 'Chuyển sang AI Viết Nội dung'}
-                        style={{ color: '#34d399' }}
-                      >
-                        <ArrowRight size={14} />
-                      </button>
-                    )}
-                    <button 
-                      className="message-copy-btn"
-                      onClick={() => handleCopyMessage(msg.content, msg.id)}
-                      title={lang === 'en' ? 'Copy' : 'Sao chép'}
-                    >
-                      {copiedId === msg.id ? <Check size={14} /> : <Copy size={14} />}
-                    </button>
-                  </div>
-                </div>
-
-                {msg.role === 'USER' && (
-                  user?.avatar ? (
-                    <img src={user.avatar} alt={user.name || 'User'} className="message-avatar user-avatar" style={{ objectFit: 'cover' }} />
-                  ) : (
-                    <div className="message-avatar user-avatar">
-                      {user?.name?.charAt(0) || 'U'}
-                    </div>
-                  )
-                )}
-              </motion.div>
-              );
-            })
-          )}
-
-          {loading && (
-            <div className="message assistant loading-message">
-              <div className="message-avatar assistant-avatar"><Sparkles size={16} /></div>
-              <div className="message-main">
-                <div className="message-meta">
-                  <span className="message-author">AdVisor AI</span>
-                </div>
-                <div className="message-content typing-bubble">
-                  <div className="typing-indicator">
-                    <span /><span /><span />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Input */}
-        <div className="chat-input-wrapper">
-          {(!currentCampaign || Object.keys(currentCampaign.quizData || {}).length === 0) && (
-            <div className="chat-toolbar">
-              <button className="chat-quiz-cta" onClick={handleOpenQuiz}>
-                <ListChecks size={14} />
-                <span>{lang === 'en' ? 'Do Quiz for Better Strategy' : 'Lam Quiz de ra chien luoc tot hon'}</span>
-              </button>
-            </div>
-          )}
-          <div className="chat-input">
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={
-                lang === 'en'
-                  ? 'Ask me anything about marketing...'
-                  : 'Hỏi tôi bất kỳ điều gì về marketing...'
-              }
-              rows={1}
-              disabled={loading}
-            />
-            <button 
-              className="send-btn" 
-              onClick={handleSend}
-              disabled={!input.trim() || loading}
-            >
-              <Send size={18} />
-            </button>
-            </div>
-          </div>
-        </div>
-
-      {/* Resizer */}
-      {showContentPane && (
-        <div 
-          className="pane-resizer" 
-          onMouseDown={() => setIsDraggingPane(true)}
-          style={{ width: '6px', cursor: 'col-resize', background: isDraggingPane ? 'var(--accent)' : 'transparent', zIndex: 10, position: 'relative', transition: 'background 0.2s' }}
-        >
-          <div style={{ width: '2px', height: '100%', background: 'rgba(255,255,255,0.08)', margin: '0 auto' }}></div>
-        </div>
-      )}
-
-      {/* Content Assistant Pane */}
-      {showContentPane && (
-        <div className="chat-pane content-pane">
-          <div className="chat-pane-header" style={{background: 'rgba(16, 185, 129, 0.05)'}}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <FileText size={16} style={{color: '#34d399'}} />
-              <h3 style={{color: '#34d399'}}>{lang === 'en' ? 'Content Writer' : 'Tro ly Noi dung'}</h3>
-            </div>
-          </div>
-          <div className="chat-messages">
-            {contentMessages.length === 0 ? (
-              <div className="chat-welcome" style={{marginTop: '2rem'}}>
-                <div className="welcome-icon" style={{background: 'rgba(16, 185, 129, 0.1)', color: '#34d399'}}>
-                  <FileText size={40} />
-                </div>
-                <h2 style={{ fontSize: '1.25rem' }}>{contentPaneMode.emptyTitle[lang]}</h2>
-                <p style={{ fontSize: '0.85rem' }}>{contentPaneMode.emptyHint[lang]}</p>
-              </div>
-            ) : (
-              contentMessages.map((msg, i) => (
-                <motion.div
-                  key={msg.id}
-                  className={`message ${msg.role === 'USER' ? 'user' : 'assistant'}`}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.02 }}
-                >
-                  {msg.role === 'ASSISTANT' && (
-                    <div className="message-avatar assistant-avatar" style={{background: 'linear-gradient(135deg, #10b981, #3b82f6)'}}>
-                      <FileText size={16} />
+                        ))}
+                      </div>
                     </div>
                   )}
+
+                  {currentStage === 0 && (
+                    <div className="welcome-actions">
+                      <button className="welcome-action primary" onClick={handleOpenQuiz}>
+                        <div className="welcome-action-title">
+                          <ListChecks size={16} />
+                          <span>{lang === 'en' ? 'Start with Smart Quiz' : 'Bắt đầu với Quiz thông minh'}</span>
+                        </div>
+                        <p>
+                          {lang === 'en'
+                            ? 'Answer a few questions so AI creates a stronger campaign plan.'
+                            : 'Trả lời vài câu hỏi để AI tạo chiến dịch sát thực tế hơn.'}
+                        </p>
+                      </button>
+
+                      <button className="welcome-action secondary" onClick={focusComposer}>
+                        <div className="welcome-action-title">
+                          <MessageSquare size={16} />
+                          <span>{lang === 'en' ? 'Skip Quiz, Chat Directly' : 'Bỏ qua Quiz, Chat trực tiếp'}</span>
+                        </div>
+                        <p>
+                          {lang === 'en'
+                            ? 'Type your first request below. A new campaign will be created automatically.'
+                            : 'Nhập yêu cầu đầu tiên ở ô bên dưới. Hệ thống sẽ tự tạo campaign mới.'}
+                        </p>
+                      </button>
+
+                      <button
+                        className="welcome-action secondary"
+                        type="button"
+                        onClick={() => {
+                          setGuideActiveTab('overview');
+                          setGuidePopupOpen(true);
+                        }}
+                      >
+                        <div className="welcome-action-title">
+                          <HelpCircle size={16} />
+                          <span>{lang === 'en' ? 'Show me how AdVisor works' : 'Xem hướng dẫn AdVisor'}</span>
+                        </div>
+                        <p>
+                          {lang === 'en'
+                            ? 'Walkthrough of the four stages, the two panes, and how metrics tie everything together.'
+                            : 'Hướng dẫn 4 giai đoạn, hai khung chat, và cách metrics kết nối tất cả.'}
+                        </p>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                analystMessages.map((msg, i) => {
+                  // SYSTEM-pane messages are rendered as inline stage transition
+                  // markers (small label + horizontal rule) instead of chat
+                  // bubbles. Their content is computed from `metadata.toStage` so
+                  // the label respects the user's current language.
+                  if (classifyPane(msg) === 'SYSTEM') {
+                    const meta = (msg.metadata ?? {}) as Record<string, unknown>;
+                    const toStage = (typeof meta.toStage === 'number' ? meta.toStage : 0) as Stage;
+                    const desc = STAGE_DESCRIPTORS[toStage] ?? STAGE_DESCRIPTORS[0];
+                    return (
+                      <div key={msg.id} className="stage-transition-divider" role="note">
+                        <span className="stage-transition-line" aria-hidden="true" />
+                        <span className="stage-transition-label">
+                          {`${lang === 'en' ? 'Stage' : 'Giai đoạn'} ${toStage} \u2022 ${desc.title[lang]}`}
+                        </span>
+                        <span className="stage-transition-line" aria-hidden="true" />
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <motion.div
+                      key={msg.id}
+                      className={`message ${msg.role === 'USER' ? 'user' : 'assistant'}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.02 }}
+                    >
+                      {msg.role === 'ASSISTANT' && (
+                        <div className="message-avatar assistant-avatar">
+                          <Sparkles size={16} />
+                        </div>
+                      )}
+
+                      <div className="message-main">
+                        <div className="message-meta">
+                          <span className="message-author">
+                            {msg.role === 'USER' ? (user?.name || (lang === 'en' ? 'You' : 'Bạn')) : 'AdVisor AI'}
+                          </span>
+                          <span className="message-time">{formatMessageTime(msg.createdAt)}</span>
+                        </div>
+
+                        <div className="message-content">
+                          {msg.role === 'ASSISTANT' ? (
+                            <>
+                              <ReactMarkdown>{cleanContent(msg.content)}</ReactMarkdown>
+
+                              {/* Plan selection cards */}
+                              {parsePlanOptions(msg.content).length > 0 && (
+                                <div className="plan-cards">
+                                  {parsePlanOptions(msg.content).map(plan => (
+                                    <motion.button
+                                      key={plan.id}
+                                      className={`plan-card ${selectedPlanInChat === plan.id || currentCampaign?.quizData?.selectedPlan === plan.id ? 'selected' : ''}`}
+                                      onClick={() => handleSelectPlan(plan.id, plan.content)}
+                                      disabled={loading || !!currentCampaign?.quizData?.selectedPlan}
+                                      whileHover={{ scale: 1.02 }}
+                                      whileTap={{ scale: 0.98 }}
+                                    >
+                                      <div className="plan-card-badge">
+                                        {plan.id === 'A' ? <Zap size={16} /> : plan.id === 'B' ? <Target size={16} /> : <Award size={16} />}
+                                      </div>
+                                      <ReactMarkdown>{plan.content}</ReactMarkdown>
+                                      {(selectedPlanInChat === plan.id || currentCampaign?.quizData?.selectedPlan === plan.id) && (
+                                        <div className="plan-card-check"><Check size={16} /></div>
+                                      )}
+                                    </motion.button>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Content Assistant offer - after plan selected, before Stage 2 */}
+                              {i === analystMessages.length - 1 && currentCampaign?.quizData?.selectedPlan && currentStage === 1 && !hasStageTransition(msg.content) && (
+                                <div className="content-assist-offer">
+                                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                                    {lang === 'en'
+                                      ? 'Want AI to draft some content for your campaign before moving on?'
+                                      : 'B\u1ea1n mu\u1ed1n AI vi\u1ebft th\u1eed n\u1ed9i dung cho chi\u1ebfn d\u1ecbch tr\u01b0\u1edbc khi sang giai \u0111o\u1ea1n ti\u1ebfp?'}
+                                  </p>
+                                  <div className="content-assist-buttons">
+                                    <button
+                                      className="content-assist-btn"
+                                      onClick={() => handleAssistContent('email')}
+                                      disabled={assistLoading}
+                                    >
+                                      <Mail size={14} />
+                                      <span>{lang === 'en' ? 'Draft Email' : 'Vi\u1ebft Email'}</span>
+                                    </button>
+                                    <button
+                                      className="content-assist-btn"
+                                      onClick={() => handleAssistContent('ad_copy')}
+                                      disabled={assistLoading}
+                                    >
+                                      <FileText size={14} />
+                                      <span>{lang === 'en' ? 'Ad Copy' : 'N\u1ed9i dung qu\u1ea3ng c\u00e1o'}</span>
+                                    </button>
+                                    <button
+                                      className="content-assist-btn"
+                                      onClick={() => handleAssistContent('social_post')}
+                                      disabled={assistLoading}
+                                    >
+                                      <Palette size={14} />
+                                      <span>{lang === 'en' ? 'Social Post' : 'B\u00e0i MXH'}</span>
+                                    </button>
+                                  </div>
+                                  <button
+                                    className="btn btn-primary btn-sm"
+                                    onClick={() => handleAdvanceStage(2)}
+                                    disabled={loading}
+                                    style={{ marginTop: '0.75rem' }}
+                                  >
+                                    <ArrowRight size={16} />
+                                    {lang === 'en' ? 'Skip to Stage 2' : 'Sang Giai \u0111o\u1ea1n 2'}
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* Stage transition prompt */}
+                              {hasStageTransition(msg.content) && i === analystMessages.length - 1 && (
+                                <div className="stage-transition-prompt">
+                                  <p>{lang === 'en' ? 'Ready to move to the next stage?' : 'Sẵn sàng chuyển sang giai đoạn tiếp theo?'}</p>
+                                  <button
+                                    className="btn btn-primary btn-sm"
+                                    onClick={() => handleAdvanceStage(currentStage + 1)}
+                                    disabled={loading}
+                                  >
+                                    <ArrowRight size={16} />
+                                    {currentStage < 3
+                                      ? (lang === 'en' ? `Go to Stage ${currentStage + 1}` : `Sang Giai đoạn ${currentStage + 1}`)
+                                      : (lang === 'en' ? 'Continue Optimizing' : 'Tiếp tục tối ưu')}
+                                  </button>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <p>{msg.content}</p>
+                          )}
+                        </div>
+
+                        <div className="message-tools">
+                          {msg.role === 'ASSISTANT' && i === analystMessages.length - 1 && (
+                            <button
+                              className="message-copy-btn"
+                              onClick={handleReanalyze}
+                              title={lang === 'en' ? 'Reanalyze Strategy' : 'Phân tích lại'}
+                            >
+                              <RefreshCw size={14} />
+                            </button>
+                          )}
+                          {msg.role === 'ASSISTANT' && showContentPane && (
+                            <button
+                              className="message-copy-btn"
+                              onClick={() => {
+                                setContentInput(lang === 'en'
+                                  ? `Please write marketing content based on the strategy from the left pane...`
+                                  : `Hãy viết nội dung marketing dựa trên kế hoạch từ khung bên trái...`);
+                                setTimeout(() => {
+                                  const inputField = document.querySelector('.content-pane textarea') as HTMLTextAreaElement;
+                                  if (inputField) inputField.focus();
+                                }, 100);
+                              }}
+                              title={lang === 'en' ? 'Send to Content Writer' : 'Chuyển sang AI Viết Nội dung'}
+                              style={{ color: '#34d399' }}
+                            >
+                              <ArrowRight size={14} />
+                            </button>
+                          )}
+                          <button
+                            className="message-copy-btn"
+                            onClick={() => handleCopyMessage(msg.content, msg.id)}
+                            title={lang === 'en' ? 'Copy' : 'Sao chép'}
+                          >
+                            {copiedId === msg.id ? <Check size={14} /> : <Copy size={14} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {msg.role === 'USER' && (
+                        user?.avatar ? (
+                          <img src={user.avatar} alt={user.name || 'User'} className="message-avatar user-avatar" style={{ objectFit: 'cover' }} />
+                        ) : (
+                          <div className="message-avatar user-avatar">
+                            {user?.name?.charAt(0) || 'U'}
+                          </div>
+                        )
+                      )}
+                    </motion.div>
+                  );
+                })
+              )}
+
+              {loading && (
+                <div className="message assistant loading-message">
+                  <div className="message-avatar assistant-avatar"><Sparkles size={16} /></div>
                   <div className="message-main">
                     <div className="message-meta">
-                      <span className="message-author">
-                        {msg.role === 'USER'
-                          ? (user?.name || (lang === 'en' ? 'You' : 'Ban'))
-                          : (lang === 'en' ? 'Content Writer' : 'Tro ly Noi dung')}
-                      </span>
-                      {typeof msg.metadata === 'object' && msg.metadata && 'label' in msg.metadata ? (
-                        <span className="message-tag">{String((msg.metadata as Record<string, unknown>).label)}</span>
-                      ) : null}
+                      <span className="message-author">AdVisor AI</span>
                     </div>
-                    <div className="message-content">
-                      <ReactMarkdown>
-                        {msg.content.replace(/^\[Content Prompt\] |^\[Content Assistant - [^\]]+\]\n\n/, '')}
-                      </ReactMarkdown>
-                    </div>
-                    {msg.role === 'ASSISTANT' && (
-                      <div className="message-tools">
-                        <button
-                          className="message-copy-btn"
-                          onClick={() => navigator.clipboard.writeText(
-                            msg.content.replace(/^\[Content Assistant - [^\]]+\]\n\n/, '')
-                          )}
-                          aria-label={lang === 'en' ? 'Copy content' : 'Sao chep noi dung'}
-                        >
-                          <Copy size={14} />
-                        </button>
+                    <div className="message-content typing-bubble">
+                      <div className="typing-indicator">
+                        <span /><span /><span />
                       </div>
-                    )}
-                  </div>
-                </motion.div>
-              ))
-            )}
-            {assistLoading && (
-              <div className="message assistant loading-message">
-                <div className="message-avatar assistant-avatar" style={{background: 'linear-gradient(135deg, #10b981, #3b82f6)'}}><FileText size={16} /></div>
-                <div className="message-main">
-                  <div className="message-content typing-bubble">
-                    <div className="typing-indicator"><span /><span /><span /></div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-          <div className="chat-input-wrapper">
-            <div className="chat-input">
-              <textarea
-                value={contentInput}
-                onChange={(e) => setContentInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendContent();
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input */}
+            <div className="chat-input-wrapper">
+              {(!currentCampaign || Object.keys(currentCampaign.quizData || {}).length === 0) && (
+                <div className="chat-toolbar">
+                  <button className="chat-quiz-cta" onClick={handleOpenQuiz}>
+                    <ListChecks size={14} />
+                    <span>{lang === 'en' ? 'Do Quiz for Better Strategy' : 'Lam Quiz de ra chien luoc tot hon'}</span>
+                  </button>
+                </div>
+              )}
+              <div className="chat-input">
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={
+                    lang === 'en'
+                      ? 'Ask me anything about marketing...'
+                      : 'Hỏi tôi bất kỳ điều gì về marketing...'
                   }
-                }}
-                placeholder={contentPaneMode.placeholder[lang]}
-                rows={1}
-                disabled={assistLoading || !contentPaneMode.enabled}
-                style={{ padding: '0.8rem 1rem', fontSize: '0.85rem' }}
-              />
-              <button
-                className="send-btn"
-                onClick={handleSendContent}
-                disabled={!contentInput.trim() || assistLoading || !contentPaneMode.enabled}
-                aria-label={lang === 'en' ? 'Send' : 'Gui'}
-              >
-                <Send size={18} />
-              </button>
+                  rows={1}
+                  disabled={loading}
+                />
+                <button
+                  className="send-btn"
+                  onClick={handleSend}
+                  disabled={!input.trim() || loading}
+                >
+                  <Send size={18} />
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* Resizer */}
+          {showContentPane && (
+            <div
+              className="pane-resizer"
+              onMouseDown={() => setIsDraggingPane(true)}
+              style={{ width: '6px', cursor: 'col-resize', background: isDraggingPane ? 'var(--accent)' : 'transparent', zIndex: 10, position: 'relative', transition: 'background 0.2s' }}
+            >
+              <div style={{ width: '2px', height: '100%', background: 'rgba(255,255,255,0.08)', margin: '0 auto' }}></div>
+            </div>
+          )}
+
+          {/* Content Assistant Pane */}
+          {showContentPane && (
+            <div className="chat-pane content-pane">
+              <div className="chat-pane-header" style={{ background: 'rgba(16, 185, 129, 0.05)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <FileText size={16} style={{ color: '#34d399' }} />
+                  <h3 style={{ color: '#34d399' }}>{lang === 'en' ? 'Content Writer' : 'Tro ly Noi dung'}</h3>
+                </div>
+              </div>
+              <div className="chat-messages">
+                {contentMessages.length === 0 ? (
+                  <div className="chat-welcome" style={{ marginTop: '2rem' }}>
+                    <div className="welcome-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#34d399' }}>
+                      <FileText size={40} />
+                    </div>
+                    <h2 style={{ fontSize: '1.25rem' }}>{contentPaneMode.emptyTitle[lang]}</h2>
+                    <p style={{ fontSize: '0.85rem' }}>{contentPaneMode.emptyHint[lang]}</p>
+                  </div>
+                ) : (
+                  contentMessages.map((msg, i) => (
+                    <motion.div
+                      key={msg.id}
+                      className={`message ${msg.role === 'USER' ? 'user' : 'assistant'}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.02 }}
+                    >
+                      {msg.role === 'ASSISTANT' && (
+                        <div className="message-avatar assistant-avatar" style={{ background: 'linear-gradient(135deg, #10b981, #3b82f6)' }}>
+                          <FileText size={16} />
+                        </div>
+                      )}
+                      <div className="message-main">
+                        <div className="message-meta">
+                          <span className="message-author">
+                            {msg.role === 'USER'
+                              ? (user?.name || (lang === 'en' ? 'You' : 'Ban'))
+                              : (lang === 'en' ? 'Content Writer' : 'Tro ly Noi dung')}
+                          </span>
+                          {typeof msg.metadata === 'object' && msg.metadata && 'label' in msg.metadata ? (
+                            <span className="message-tag">{String((msg.metadata as Record<string, unknown>).label)}</span>
+                          ) : null}
+                        </div>
+                        <div className="message-content">
+                          <ReactMarkdown>
+                            {msg.content.replace(/^\[Content Prompt\] |^\[Content Assistant - [^\]]+\]\n\n/, '')}
+                          </ReactMarkdown>
+                        </div>
+                        {msg.role === 'ASSISTANT' && (
+                          <div className="message-tools">
+                            <button
+                              className="message-copy-btn"
+                              onClick={() => navigator.clipboard.writeText(
+                                msg.content.replace(/^\[Content Assistant - [^\]]+\]\n\n/, '')
+                              )}
+                              aria-label={lang === 'en' ? 'Copy content' : 'Sao chep noi dung'}
+                            >
+                              <Copy size={14} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))
+                )}
+                {assistLoading && (
+                  <div className="message assistant loading-message">
+                    <div className="message-avatar assistant-avatar" style={{ background: 'linear-gradient(135deg, #10b981, #3b82f6)' }}><FileText size={16} /></div>
+                    <div className="message-main">
+                      <div className="message-content typing-bubble">
+                        <div className="typing-indicator"><span /><span /><span /></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="chat-input-wrapper">
+                <div className="chat-input">
+                  <textarea
+                    value={contentInput}
+                    onChange={(e) => setContentInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendContent();
+                      }
+                    }}
+                    placeholder={contentPaneMode.placeholder[lang]}
+                    rows={1}
+                    disabled={assistLoading || !contentPaneMode.enabled}
+                    style={{ padding: '0.8rem 1rem', fontSize: '0.85rem' }}
+                  />
+                  <button
+                    className="send-btn"
+                    onClick={handleSendContent}
+                    disabled={!contentInput.trim() || assistLoading || !contentPaneMode.enabled}
+                    aria-label={lang === 'en' ? 'Send' : 'Gui'}
+                  >
+                    <Send size={18} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  </div>
+      </div>
 
       {/* Clear Chat Modal */}
       <AnimatePresence>
         {clearModalOpen && (
-          <motion.div 
+          <motion.div
             className="modal-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setClearModalOpen(false)}
           >
-            <motion.div 
+            <motion.div
               className="modal-content"
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -2444,8 +2442,8 @@ export default function Chat() {
                 <Trash2 size={32} />
               </div>
               <h3>{lang === 'en' ? 'Clear All Messages?' : 'Xóa tất cả tin nhắn?'}</h3>
-              <p>{lang === 'en' 
-                ? 'This will permanently delete all messages in this conversation. This action cannot be undone.' 
+              <p>{lang === 'en'
+                ? 'This will permanently delete all messages in this conversation. This action cannot be undone.'
                 : 'Hành động này sẽ xóa vĩnh viễn tất cả tin nhắn trong cuộc trò chuyện. Không thể hoàn tác.'}</p>
               <div className="modal-actions">
                 <button className="btn btn-secondary" onClick={() => setClearModalOpen(false)}>
@@ -2463,14 +2461,14 @@ export default function Chat() {
       {/* Delete Campaign Modal */}
       <AnimatePresence>
         {deleteModalOpen && (
-          <motion.div 
+          <motion.div
             className="modal-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setDeleteModalOpen(false)}
           >
-            <motion.div 
+            <motion.div
               className="modal-content"
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -2481,8 +2479,8 @@ export default function Chat() {
                 <Trash2 size={32} />
               </div>
               <h3>{lang === 'en' ? 'Delete Campaign?' : 'Xóa chiến dịch?'}</h3>
-              <p>{lang === 'en' 
-                ? 'This will permanently delete this campaign and all its messages. This action cannot be undone.' 
+              <p>{lang === 'en'
+                ? 'This will permanently delete this campaign and all its messages. This action cannot be undone.'
                 : 'Hành động này sẽ xóa vĩnh viễn chiến dịch và tất cả tin nhắn. Không thể hoàn tác.'}</p>
               <div className="modal-actions">
                 <button className="btn btn-secondary" onClick={() => setDeleteModalOpen(false)}>
@@ -2500,14 +2498,14 @@ export default function Chat() {
       {/* Inline Quiz Popup */}
       <AnimatePresence>
         {quizPopupOpen && (
-          <motion.div 
+          <motion.div
             className="modal-overlay quiz-popup-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setQuizPopupOpen(false)}
           >
-            <motion.div 
+            <motion.div
               className="quiz-popup"
               initial={{ opacity: 0, scale: 0.9, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -2537,7 +2535,7 @@ export default function Chat() {
 
               {/* Progress bar */}
               <div className="quiz-popup-progress">
-                <motion.div 
+                <motion.div
                   className="quiz-popup-progress-fill"
                   animate={{ width: `${((quizStep + 1) / quickQuizQuestions.length) * 100}%` }}
                   transition={{ duration: 0.3 }}
@@ -2604,8 +2602,8 @@ export default function Chat() {
                             ))}
 
                             {/* Custom Input Toggle */}
-                            <button 
-                              className={`quiz-popup-skip-inline ${quizCustomOpen ? 'active' : ''}`} 
+                            <button
+                              className={`quiz-popup-skip-inline ${quizCustomOpen ? 'active' : ''}`}
                               onClick={() => { setQuizCustomOpen(!quizCustomOpen); setQuizCustomInput(''); }}
                             >
                               <Pencil size={14} />
@@ -2615,7 +2613,7 @@ export default function Chat() {
                             {/* Custom Input Field */}
                             <AnimatePresence>
                               {quizCustomOpen && (
-                                <motion.div 
+                                <motion.div
                                   className="quiz-popup-custom-input"
                                   initial={{ opacity: 0, height: 0 }}
                                   animate={{ opacity: 1, height: 'auto' }}
@@ -2828,7 +2826,7 @@ export default function Chat() {
       {/* Campaign Insights Modal */}
       <AnimatePresence>
         {insightsOpen && currentCampaign && (
-          <motion.div 
+          <motion.div
             className="modal-overlay insights-modal-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -2836,7 +2834,7 @@ export default function Chat() {
             onClick={() => setInsightsOpen(false)}
             style={{ zIndex: 1100 }}
           >
-            <motion.div 
+            <motion.div
               className="insights-modal-content"
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -2879,7 +2877,7 @@ export default function Chat() {
                     </h3>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => setInsightsOpen(false)}
                   style={{
                     background: 'transparent', border: 'none', color: 'var(--text-muted)',
@@ -2890,193 +2888,191 @@ export default function Chat() {
                   <X size={20} />
                 </button>
               </div>
-              
+
               <div className="insights-modal-body" style={{
                 padding: '1.5rem',
                 overflowY: 'auto',
                 flex: 1
               }}>
                 <div className="insights-grid">
-                    {/* Left Column - Quiz Progress */}
-                    <div className="insights-card">
-                      <div className="insights-card-header" style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(236,72,153,0.08))' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <ListChecks size={16} style={{ color: 'var(--accent)' }} />
-                          <h3>{lang === 'en' ? 'Quiz Progress' : 'Tiến độ Quiz'}</h3>
-                        </div>
-                        <span className="insights-pill">{progressPercent}%</span>
+                  {/* Left Column - Quiz Progress */}
+                  <div className="insights-card">
+                    <div className="insights-card-header" style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(236,72,153,0.08))' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <ListChecks size={16} style={{ color: 'var(--accent)' }} />
+                        <h3>{lang === 'en' ? 'Quiz Progress' : 'Tiến độ Quiz'}</h3>
                       </div>
-                      <div className="insights-progress">
-                        <div className="insights-progress-bar">
-                          <div className="insights-progress-fill" style={{ width: `${progressPercent}%` }} />
-                        </div>
-                        <div className="insights-progress-meta">
-                          <span>
-                            {lang === 'en'
-                              ? `${completedStages} / ${totalStages || '-'} stages`
-                              : `${completedStages} / ${totalStages || '-'} giai đoạn`}
-                          </span>
-                          {currentCampaign.quizProgress?.lastUpdated && (
-                            <span style={{ fontSize: '0.72rem' }}>
-                              {new Date(currentCampaign.quizProgress.lastUpdated).toLocaleDateString(
-                                lang === 'vi' ? 'vi-VN' : 'en-US'
-                              )}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Quiz Summary */}
-                      <div className="insights-stage-compare">
-                        <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <BookOpen size={14} style={{ color: 'var(--accent)' }} />
-                          {lang === 'en' ? 'Quiz Answers' : 'Dữ liệu chiến dịch'}
-                        </h4>
-                        <div className="insights-stage-list">
-                          {getFullQuizProfile().length === 0 ? (
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                              {lang === 'en' ? 'No data yet.' : 'Chưa có dữ liệu.'}
-                            </p>
-                          ) : (
-                            getFullQuizProfile().slice(0, 8).map((item, idx) => (
-                              <div key={idx} className="insights-stage-item">
-                                <span className="insights-stage-key" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                  {item.icon}
-                                  {item.label}
-                                </span>
-                                <span className="insights-stage-value">{item.value}</span>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </div>
+                      <span className="insights-pill">{progressPercent}%</span>
                     </div>
-
-                    {/* Right Column - Metrics */}
-                    <div className="insights-card">
-                      <div className="insights-card-header" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(59,130,246,0.08))' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <BarChart3 size={16} style={{ color: '#34d399' }} />
-                          <h3>{lang === 'en' ? 'Metrics Snapshots' : 'Dữ liệu hiệu suất'}</h3>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span className="insights-pill" style={{ background: 'rgba(16,185,129,0.15)', color: '#34d399' }}>{metricsSnapshots.length}</span>
-                          <input
-                            ref={csvInputRef}
-                            type="file"
-                            accept=".csv"
-                            style={{ display: 'none' }}
-                            onChange={handleCsvUpload}
-                          />
-                          <button
-                            onClick={() => csvInputRef.current?.click()}
-                            style={{
-                              background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)',
-                              color: '#34d399', cursor: 'pointer', padding: '0.3rem 0.6rem',
-                              borderRadius: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.3rem',
-                              fontSize: '0.72rem', fontWeight: 500
-                            }}
-                          >
-                            <Upload size={12} />
-                            CSV
-                          </button>
-                        </div>
+                    <div className="insights-progress">
+                      <div className="insights-progress-bar">
+                        <div className="insights-progress-fill" style={{ width: `${progressPercent}%` }} />
                       </div>
-
-                      {/* Mini Chart - show when snapshots exist */}
-                      {metricsSnapshots.length > 0 && (
-                        <div style={{ padding: '0.75rem', borderBottom: '1px solid var(--border)' }}>
-                          <MiniBarChart
-                            data={metricsFields.slice(0, 6).map(f => ({
-                              label: f.key,
-                              value: parseFloat(String((latestSnapshot?.metrics as Record<string, any>)?.[f.key] || '0')) || 0
-                            }))}
-                          />
-                        </div>
-                      )}
-
-                      <div className="metrics-form">
-                        <div className="metrics-row">
-                          <label>
-                            {lang === 'en' ? 'Label' : 'Nhãn'}
-                            <input
-                              type="text"
-                              value={metricsLabel}
-                              placeholder={lang === 'en' ? 'Baseline, Month 1...' : 'Baseline, tháng 1...'}
-                              onChange={(e) => setMetricsLabel(e.target.value)}
-                            />
-                          </label>
-                        </div>
-                        <div className="metrics-row">
-                          <label>
-                            {lang === 'en' ? 'Start date' : 'Bắt đầu'}
-                            <input
-                              type="date"
-                              value={metricsPeriodStart}
-                              onChange={(e) => setMetricsPeriodStart(e.target.value)}
-                            />
-                          </label>
-                          <label>
-                            {lang === 'en' ? 'End date' : 'Kết thúc'}
-                            <input
-                              type="date"
-                              value={metricsPeriodEnd}
-                              onChange={(e) => setMetricsPeriodEnd(e.target.value)}
-                            />
-                          </label>
-                        </div>
-                        <div className="metrics-grid">
-                          {metricsFields.map((field) => (
-                            <label key={field.key}>
-                              {field.label[lang]}
-                              <input
-                                type="text"
-                                value={metricsInputs[field.key] || ''}
-                                onChange={(e) => handleMetricsInputChange(field.key, e.target.value)}
-                              />
-                            </label>
-                          ))}
-                        </div>
-                        <button className="metrics-save" onClick={handleSaveMetrics}>
-                          <Check size={14} />
-                          {lang === 'en' ? 'Save Snapshot' : 'Lưu dữ liệu'}
-                        </button>
-                      </div>
-
-                      {/* Comparison with trend indicators */}
-                      <div className="metrics-compare">
-                        <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <TrendingUp size={14} style={{ color: '#34d399' }} />
-                          {lang === 'en' ? 'Performance Trends' : 'Xu hướng hiệu suất'}
-                        </h4>
-                        {latestSnapshot ? (
-                          <div className="metrics-compare-list">
-                            {metricsFields.map((field) => {
-                              const current = latestSnapshot.metrics?.[field.key];
-                              const previous = previousSnapshot?.metrics?.[field.key];
-                              const delta = computeMetricDelta(current, previous);
-                              const isPositive = delta && delta.diff >= 0;
-                              return (
-                                <div key={field.key} className="metrics-compare-item">
-                                  <span className="metrics-compare-label">{field.label[lang]}</span>
-                                  <span className="metrics-compare-value">{formatMetricValue(current)}</span>
-                                  <span className={`metrics-compare-delta ${isPositive ? 'up' : 'down'}`}>
-                                    {delta ? (
-                                      <>
-                                        {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                                        {delta.percent !== null ? `${delta.percent.toFixed(1)}%` : delta.diff.toFixed(2)}
-                                      </>
-                                    ) : '-'}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{lang === 'en' ? 'Add a snapshot to see trends.' : 'Them du lieu de xem xu huong.'}</p>
+                      <div className="insights-progress-meta">
+                        <span>
+                          {lang === 'en'
+                            ? `${completedStages} / ${totalStages || '-'} stages`
+                            : `${completedStages} / ${totalStages || '-'} giai đoạn`}
+                        </span>
+                        {currentCampaign.quizProgress?.lastUpdated && (
+                          <span style={{ fontSize: '0.72rem' }}>
+                            {new Date(currentCampaign.quizProgress.lastUpdated).toLocaleDateString('en-US')}
+                          </span>
                         )}
                       </div>
                     </div>
+
+                    {/* Quiz Summary */}
+                    <div className="insights-stage-compare">
+                      <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <BookOpen size={14} style={{ color: 'var(--accent)' }} />
+                        {lang === 'en' ? 'Quiz Answers' : 'Dữ liệu chiến dịch'}
+                      </h4>
+                      <div className="insights-stage-list">
+                        {getFullQuizProfile().length === 0 ? (
+                          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                            {lang === 'en' ? 'No data yet.' : 'Chưa có dữ liệu.'}
+                          </p>
+                        ) : (
+                          getFullQuizProfile().slice(0, 8).map((item, idx) => (
+                            <div key={idx} className="insights-stage-item">
+                              <span className="insights-stage-key" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                {item.icon}
+                                {item.label}
+                              </span>
+                              <span className="insights-stage-value">{item.value}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column - Metrics */}
+                  <div className="insights-card">
+                    <div className="insights-card-header" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(59,130,246,0.08))' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <BarChart3 size={16} style={{ color: '#34d399' }} />
+                        <h3>{lang === 'en' ? 'Metrics Snapshots' : 'Dữ liệu hiệu suất'}</h3>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span className="insights-pill" style={{ background: 'rgba(16,185,129,0.15)', color: '#34d399' }}>{metricsSnapshots.length}</span>
+                        <input
+                          ref={csvInputRef}
+                          type="file"
+                          accept=".csv"
+                          style={{ display: 'none' }}
+                          onChange={handleCsvUpload}
+                        />
+                        <button
+                          onClick={() => csvInputRef.current?.click()}
+                          style={{
+                            background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)',
+                            color: '#34d399', cursor: 'pointer', padding: '0.3rem 0.6rem',
+                            borderRadius: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.3rem',
+                            fontSize: '0.72rem', fontWeight: 500
+                          }}
+                        >
+                          <Upload size={12} />
+                          CSV
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Mini Chart - show when snapshots exist */}
+                    {metricsSnapshots.length > 0 && (
+                      <div style={{ padding: '0.75rem', borderBottom: '1px solid var(--border)' }}>
+                        <MiniBarChart
+                          data={metricsFields.slice(0, 6).map(f => ({
+                            label: f.key,
+                            value: parseFloat(String((latestSnapshot?.metrics as Record<string, any>)?.[f.key] || '0')) || 0
+                          }))}
+                        />
+                      </div>
+                    )}
+
+                    <div className="metrics-form">
+                      <div className="metrics-row">
+                        <label>
+                          {lang === 'en' ? 'Label' : 'Nhãn'}
+                          <input
+                            type="text"
+                            value={metricsLabel}
+                            placeholder={lang === 'en' ? 'Baseline, Month 1...' : 'Baseline, tháng 1...'}
+                            onChange={(e) => setMetricsLabel(e.target.value)}
+                          />
+                        </label>
+                      </div>
+                      <div className="metrics-row">
+                        <label>
+                          {lang === 'en' ? 'Start date' : 'Bắt đầu'}
+                          <input
+                            type="date"
+                            value={metricsPeriodStart}
+                            onChange={(e) => setMetricsPeriodStart(e.target.value)}
+                          />
+                        </label>
+                        <label>
+                          {lang === 'en' ? 'End date' : 'Kết thúc'}
+                          <input
+                            type="date"
+                            value={metricsPeriodEnd}
+                            onChange={(e) => setMetricsPeriodEnd(e.target.value)}
+                          />
+                        </label>
+                      </div>
+                      <div className="metrics-grid">
+                        {metricsFields.map((field) => (
+                          <label key={field.key}>
+                            {field.label[lang]}
+                            <input
+                              type="text"
+                              value={metricsInputs[field.key] || ''}
+                              onChange={(e) => handleMetricsInputChange(field.key, e.target.value)}
+                            />
+                          </label>
+                        ))}
+                      </div>
+                      <button className="metrics-save" onClick={handleSaveMetrics}>
+                        <Check size={14} />
+                        {lang === 'en' ? 'Save Snapshot' : 'Lưu dữ liệu'}
+                      </button>
+                    </div>
+
+                    {/* Comparison with trend indicators */}
+                    <div className="metrics-compare">
+                      <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <TrendingUp size={14} style={{ color: '#34d399' }} />
+                        {lang === 'en' ? 'Performance Trends' : 'Xu hướng hiệu suất'}
+                      </h4>
+                      {latestSnapshot ? (
+                        <div className="metrics-compare-list">
+                          {metricsFields.map((field) => {
+                            const current = latestSnapshot.metrics?.[field.key];
+                            const previous = previousSnapshot?.metrics?.[field.key];
+                            const delta = computeMetricDelta(current, previous);
+                            const isPositive = delta && delta.diff >= 0;
+                            return (
+                              <div key={field.key} className="metrics-compare-item">
+                                <span className="metrics-compare-label">{field.label[lang]}</span>
+                                <span className="metrics-compare-value">{formatMetricValue(current)}</span>
+                                <span className={`metrics-compare-delta ${isPositive ? 'up' : 'down'}`}>
+                                  {delta ? (
+                                    <>
+                                      {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                                      {delta.percent !== null ? `${delta.percent.toFixed(1)}%` : delta.diff.toFixed(2)}
+                                    </>
+                                  ) : '-'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{lang === 'en' ? 'Add a snapshot to see trends.' : 'Them du lieu de xem xu huong.'}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Activity Log: chronological list of every meaningful event
@@ -3107,7 +3103,7 @@ export default function Chat() {
                               <div className="activity-log-title">{ev.title}</div>
                               {ev.detail && <div className="activity-log-detail">{ev.detail}</div>}
                               <div className="activity-log-time">
-                                {new Date(ev.when).toLocaleString(lang === 'vi' ? 'vi-VN' : 'en-US', {
+                                {new Date(ev.when).toLocaleString('en-US', {
                                   month: 'short',
                                   day: 'numeric',
                                   hour: '2-digit',
@@ -3130,14 +3126,14 @@ export default function Chat() {
       {/* Phase 2 Quiz Popup */}
       <AnimatePresence>
         {phase2PopupOpen && (
-          <motion.div 
+          <motion.div
             className="modal-overlay quiz-popup-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setPhase2PopupOpen(false)}
           >
-            <motion.div 
+            <motion.div
               className="quiz-popup"
               initial={{ opacity: 0, scale: 0.9, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -3162,7 +3158,7 @@ export default function Chat() {
               </div>
 
               <div className="quiz-popup-progress">
-                <motion.div 
+                <motion.div
                   className="quiz-popup-progress-fill"
                   style={{ background: 'linear-gradient(90deg, #10b981, #3b82f6)' }}
                   animate={{ width: `${((phase2Step + 1) / phase2Questions.length) * 100}%` }}
@@ -3205,8 +3201,8 @@ export default function Chat() {
                             </motion.button>
                           ))}
 
-                          <button 
-                            className={`quiz-popup-skip-inline ${phase2CustomOpen ? 'active' : ''}`} 
+                          <button
+                            className={`quiz-popup-skip-inline ${phase2CustomOpen ? 'active' : ''}`}
                             onClick={() => { setPhase2CustomOpen(!phase2CustomOpen); setPhase2CustomInput(''); }}
                           >
                             <Pencil size={14} />
@@ -3215,7 +3211,7 @@ export default function Chat() {
 
                           <AnimatePresence>
                             {phase2CustomOpen && (
-                              <motion.div 
+                              <motion.div
                                 className="quiz-popup-custom-input"
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: 'auto' }}
@@ -3354,15 +3350,15 @@ function CampaignItem({
         <MessageSquare size={16} className={campaign.isFavorite ? 'favorite-icon' : ''} />
         <span>{campaign.name}</span>
       </button>
-      
+
       <div className="campaign-actions">
         <button className="campaign-action-btn" onClick={onMenuToggle}>
           <MoreHorizontal size={14} />
         </button>
-        
+
         <AnimatePresence>
           {menuOpen && (
-            <motion.div 
+            <motion.div
               className="campaign-menu"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -3374,7 +3370,7 @@ function CampaignItem({
               </button>
               <button onClick={onToggleFavorite}>
                 <Star size={14} fill={campaign.isFavorite ? 'currentColor' : 'none'} />
-                {campaign.isFavorite 
+                {campaign.isFavorite
                   ? (lang === 'en' ? 'Unfavorite' : 'Bỏ yêu thích')
                   : (lang === 'en' ? 'Favorite' : 'Yêu thích')}
               </button>

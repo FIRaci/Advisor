@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  ArrowLeft, Sparkles, Building, Users, Target, DollarSign, Globe, Clock, 
+import {
+  ArrowLeft, Sparkles, Building, Users, Target, DollarSign, Globe, Clock,
   Megaphone, TrendingUp, HelpCircle, ChevronLeft, ChevronRight,
   Package, Briefcase, Zap, Heart, BarChart3, Smartphone, ShoppingBag,
   CheckCircle2, ListChecks, BookOpen, Pencil
@@ -356,12 +355,11 @@ const stages: QuizStage[] = stageBlueprints.map((stage) => ({
 }));
 
 export default function Quiz() {
-  const { i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { token } = useAuthStore();
-  
+
   const [stageIndex, setStageIndex] = useState(0);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -375,7 +373,7 @@ export default function Quiz() {
   const [customInputOpen, setCustomInputOpen] = useState(false);
   const [customInput, setCustomInput] = useState('');
 
-  const lang = i18n.language as 'en' | 'vi';
+  let lang: 'en' | 'vi' = 'en';
   const currentStage = stages[Math.min(stageIndex, stages.length - 1)];
   const currentQuestion = currentStage.questions[Math.min(questionIndex, currentStage.questions.length - 1)];
   const Icon = currentQuestion.icon;
@@ -438,12 +436,12 @@ export default function Quiz() {
   const getAnswerDisplay = (questionId: string, value: string): string => {
     if (!value || value === 'not_sure') return lang === 'en' ? 'Skipped' : 'Bỏ qua';
     if (value.startsWith('custom: ')) return value.replace('custom: ', '');
-    
+
     const question = questions.find(q => q.id === questionId);
     if (!question) return value;
-    
+
     if (question.type === 'text') return value;
-    
+
     const option = question.options?.find(o => o.value === value);
     return option ? option.label[lang] : value;
   };
@@ -527,9 +525,9 @@ export default function Quiz() {
 
     alert(
       res.error ||
-        (lang === 'en'
-          ? 'Failed to create campaign. Please try again.'
-          : 'Không thể tạo chiến dịch. Vui lòng thử lại.')
+      (lang === 'en'
+        ? 'Failed to create campaign. Please try again.'
+        : 'Không thể tạo chiến dịch. Vui lòng thử lại.')
     );
     return null;
   };
@@ -638,22 +636,22 @@ export default function Quiz() {
   };
 
   const generateCampaignName = (finalAnswers: Record<string, string>) => {
-    const productName = finalAnswers.productName && finalAnswers.productName !== 'not_sure' 
-      ? finalAnswers.productName 
+    const productName = finalAnswers.productName && finalAnswers.productName !== 'not_sure'
+      ? finalAnswers.productName
       : null;
-    
+
     const businessType = finalAnswers.business && finalAnswers.business !== 'not_sure'
       ? finalAnswers.business
       : null;
-      
+
     const goal = finalAnswers.goal && finalAnswers.goal !== 'not_sure'
       ? finalAnswers.goal
       : null;
-    
+
     if (productName) {
       return productName;
     }
-    
+
     if (businessType && goal) {
       const businessLabels: Record<string, string> = {
         ecommerce: 'E-commerce', saas: 'SaaS', service: 'Services', local: 'Local Business',
@@ -669,7 +667,7 @@ export default function Quiz() {
       const g = goalLabels[goal] || goal;
       return `${biz} - ${g}`;
     }
-    
+
     if (businessType) {
       const businessLabels: Record<string, string> = {
         ecommerce: 'E-commerce Campaign', saas: 'SaaS Campaign', service: 'Service Campaign',
@@ -679,7 +677,7 @@ export default function Quiz() {
       };
       return businessLabels[businessType] || `${businessType} Campaign`;
     }
-    
+
     if (goal) {
       const goalLabels: Record<string, string> = {
         awareness: 'Brand Awareness', leads: 'Lead Generation', sales: 'Sales Growth',
@@ -689,10 +687,10 @@ export default function Quiz() {
       };
       return goalLabels[goal] || goal;
     }
-    
+
     const now = new Date();
-    const month = now.toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-US', { month: 'short' });
-    return lang === 'vi' ? `Chiến dịch ${month} ${now.getDate()}` : `Campaign ${month} ${now.getDate()}`;
+    const month = now.toLocaleDateString('en-US', { month: 'short' });
+    return `Campaign ${month} ${now.getDate()}`;
   };
 
   const handleSubmit = async (finalAnswers: Record<string, string>) => {
@@ -702,7 +700,7 @@ export default function Quiz() {
     }
 
     setLoading(true);
-    
+
     const name = generateCampaignName(finalAnswers);
     const existingCampaignId = campaignId || (await ensureCampaign(finalAnswers, currentStage, stageIndex));
 
@@ -724,9 +722,9 @@ export default function Quiz() {
 
     alert(
       res.error ||
-        (lang === 'en'
-          ? 'Failed to finalize campaign. Please try again.'
-          : 'Không thể hoàn tất chiến dịch. Vui lòng thử lại.')
+      (lang === 'en'
+        ? 'Failed to finalize campaign. Please try again.'
+        : 'Không thể hoàn tất chiến dịch. Vui lòng thử lại.')
     );
     setLoading(false);
   };
@@ -781,7 +779,7 @@ export default function Quiz() {
             <span className="progress-total">{totalQuestions}</span>
           </div>
           <div className="progress-bar">
-            <motion.div 
+            <motion.div
               className="progress-fill"
               initial={{ width: 0 }}
               animate={{ width: `${((flatQuestionIndex + 1) / totalQuestions) * 100}%` }}
@@ -789,7 +787,7 @@ export default function Quiz() {
             />
           </div>
         </div>
-        <button 
+        <button
           className={`summary-toggle-btn ${glossaryOpen ? 'active' : ''}`}
           onClick={() => {
             const next = !glossaryOpen;
@@ -801,7 +799,7 @@ export default function Quiz() {
         >
           <BookOpen size={18} />
         </button>
-        <button 
+        <button
           className={`summary-toggle-btn ${summaryOpen ? 'active' : ''}`}
           onClick={() => {
             const next = !summaryOpen;
@@ -890,7 +888,7 @@ export default function Quiz() {
                 const hasAnswer = answer && answer !== 'not_sure';
                 const QIcon = q.icon;
                 const stageLabel = stages[questionStageLookup[q.id]]?.title[lang];
-                
+
                 return (
                   <button
                     key={q.id}
@@ -971,14 +969,14 @@ export default function Quiz() {
               <>
                 {/* Special Actions for select type */}
                 <div className="special-actions">
-                  <button 
+                  <button
                     className={`special-btn ${answers[currentQuestion.id] === 'not_sure' ? 'active' : ''}`}
                     onClick={handleSkip}
                   >
                     <HelpCircle size={16} />
                     <span>{lang === 'en' ? "Skip" : 'Bỏ qua'}</span>
                   </button>
-                  <button 
+                  <button
                     className={`special-btn ${customInputOpen ? 'active' : ''}`}
                     onClick={() => { setCustomInputOpen(!customInputOpen); setCustomInput(''); }}
                   >
@@ -990,7 +988,7 @@ export default function Quiz() {
                 {/* Custom Input */}
                 <AnimatePresence>
                   {customInputOpen && (
-                    <motion.div 
+                    <motion.div
                       className="custom-input-box"
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
