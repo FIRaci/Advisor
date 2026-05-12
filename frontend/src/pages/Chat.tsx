@@ -227,11 +227,11 @@ export default function Chat() {
 
   // Parse plan options from AI response
   const parsePlanOptions = (content: string) => {
-    const planRegex = /\[PLAN_(A|B|C)\]([\s\S]*?)\[\/PLAN_\1\]/g;
+    const planRegex = /\[PLAN[_\s]?([A-Z0-9]+)\]([\s\S]*?)\[\/PLAN[_\s]?\1\]/gi;
     const plans: { id: string; content: string }[] = [];
     let match;
     while ((match = planRegex.exec(content)) !== null) {
-      plans.push({ id: match[1], content: match[2].trim() });
+      plans.push({ id: match[1].toUpperCase(), content: match[2].trim() });
     }
     return plans;
   };
@@ -242,11 +242,12 @@ export default function Chat() {
   // Clean content for display (remove markers)
   const cleanContent = (content: string) => {
     return content
-      .replace(/\*\*\[PLAN_OPTIONS\]\*\*/g, '')
-      .replace(/\[PLAN_(A|B|C)\][\s\S]*?\[\/PLAN_\1\]/g, '')
-      .replace(/\[\/PLAN_OPTIONS\]/g, '')
-      .replace(/\*\*\[STAGE_TRANSITION\]\*\*/g, '')
-      .replace(/\[STAGE_TRANSITION\]/g, '')
+      .replace(/\*\*\[PLAN_OPTIONS\]\*\*/gi, '')
+      .replace(/\[PLAN_OPTIONS\]/gi, '')
+      .replace(/\[PLAN[_\s]?([A-Z0-9]+)\][\s\S]*?\[\/PLAN[_\s]?\1\]/gi, '')
+      .replace(/\[\/PLAN_OPTIONS\]/gi, '')
+      .replace(/\*\*\[STAGE_TRANSITION\]\*\*/gi, '')
+      .replace(/\[STAGE_TRANSITION\]/gi, '')
       .trim();
   };
 
@@ -1003,16 +1004,23 @@ export default function Chat() {
 
     const previous = currentCampaign?.quizData ?? {};
     const next: Record<string, string> = { ...previous };
-    if (targetStage < 3) delete next.phase;
-    if (targetStage < 2) delete next.phase;
-    if (targetStage < 1) {
-      delete next.selectedPlan;
+
+    // Clear progression markers based on target stage
+    if (targetStage < 3) {
+      delete next.phase;
     }
+    if (targetStage < 2) {
+      delete next.selectedPlan;
+      // Also clear phase just in case, though handled above
+      delete next.phase;
+    }
+    
     if (targetStage === 0) {
       // Wipe all quiz answers but keep the campaign so logs survive.
       Object.keys(next).forEach(k => { delete next[k]; });
     } else if (targetStage === 1) {
-      // Drop phase-specific answers; keep base quiz answers + selectedPlan.
+      // We are in Stage 1: Keep quiz answers, but clear selectedPlan to allow re-selection.
+      delete next.selectedPlan;
       delete next.phase;
     }
 
@@ -2118,7 +2126,10 @@ export default function Chat() {
                                       whileTap={{ scale: 0.98 }}
                                     >
                                       <div className="plan-card-badge">
-                                        {plan.id === 'A' ? <Zap size={16} /> : plan.id === 'B' ? <Target size={16} /> : <Award size={16} />}
+                                        {plan.id === 'A' || plan.id === '1' ? <Zap size={16} /> : 
+                                         plan.id === 'B' || plan.id === '2' ? <Target size={16} /> : 
+                                         plan.id === 'C' || plan.id === '3' ? <Award size={16} /> : 
+                                         <Sparkles size={16} />}
                                       </div>
                                       <ReactMarkdown>{plan.content}</ReactMarkdown>
                                       {(selectedPlanInChat === plan.id || currentCampaign?.quizData?.selectedPlan === plan.id) && (
@@ -2731,11 +2742,21 @@ export default function Chat() {
                         : 'AdVisor bien mot bai quiz ngan thanh ke hoach marketing day du. AI dan ban qua 4 giai doan: kham pha, chien luoc & chon plan, tinh chinh, va toi uu lien tuc.'}
                     </p>
                     <ul className="guide-list">
-                      <li>{lang === 'en' ? 'Stage 0 - Quick Setup quiz captures your product, audience, goal, budget.' : 'Giai doan 0 - Quick Setup ghi nhan san pham, doi tuong, muc tieu, ngan sach.'}</li>
-                      <li>{lang === 'en' ? 'Stage 1 - AI proposes three plans (A / B / C). You pick the best fit.' : 'Giai doan 1 - AI de xuat ba ke hoach (A / B / C). Ban chon plan phu hop.'}</li>
-                      <li>{lang === 'en' ? 'Stage 2 - Phase 2 quiz refines messaging, channels, KPIs.' : 'Giai doan 2 - Quiz Phase 2 tinh chinh thong diep, kenh, KPI.'}</li>
-                      <li>{lang === 'en' ? 'Stage 3 - Submit metrics snapshots; AI analyses trends.' : 'Giai doan 3 - Nhap so lieu dinh ky; AI phan tich xu huong.'}</li>
+                      <li>{lang === 'en' ? 'Stage 0 - Discovery: Answer the initial quiz to let AdVisor understand your business context.' : 'Giai đoạn 0 - Khám phá: Trả lời quiz ban đầu để AdVisor hiểu bối cảnh doanh nghiệp.'}</li>
+                      <li>{lang === 'en' ? 'Stage 1 - Strategy: Compare AI-generated plans. You must select one to proceed.' : 'Giai đoạn 1 - Chiến lược: So sánh các kế hoạch do AI tạo. Bạn cần chọn 1 plan để tiếp tục.'}</li>
+                      <li>{lang === 'en' ? 'Stage 2 - Refinement: Answer follow-up questions to lock in audience, budget, and KPIs.' : 'Giai đoạn 2 - Chi tiết hoá: Trả lời các câu hỏi bổ sung về đối tượng, ngân sách và KPI.'}</li>
+                      <li>{lang === 'en' ? 'Stage 3 - Optimisation: Submit metrics periodically. AI will analyze trends and suggest fixes.' : 'Giai đoạn 3 - Tối ưu: Nộp số liệu định kỳ để AI phân tích xu hướng và đề xuất cải thiện.'}</li>
                     </ul>
+                    <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(124, 58, 237, 0.1)', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-border)' }}>
+                      <p style={{ fontSize: '0.85rem', fontWeight: '500', color: 'var(--accent)', marginBottom: '0.25rem' }}>
+                        {lang === 'en' ? 'Pro Tip:' : 'Mẹo nhỏ:'}
+                      </p>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        {lang === 'en' 
+                          ? 'You can always return to a previous stage by clicking its name in the header timeline. Progress from later stages will be reset.' 
+                          : 'Bạn luôn có thể quay lại giai đoạn trước bằng cách nhấn vào tên giai đoạn trên thanh tiêu đề. Tiến trình ở các giai đoạn sau sẽ bị xóa.'}
+                      </p>
+                    </div>
                   </div>
                 )}
 
@@ -2797,23 +2818,29 @@ export default function Chat() {
 
                 {guideActiveTab === 'faq' && (
                   <div className="guide-section">
-                    <h4>{lang === 'en' ? 'Can I redo a stage?' : 'Co the lam lai mot giai doan?'}</h4>
+                    <h4>{lang === 'en' ? 'How do I advance to the next stage?' : 'Làm sao để chuyển sang giai đoạn tiếp theo?'}</h4>
                     <p>
                       {lang === 'en'
-                        ? 'Yes. Click any earlier stage in the indicator to roll back. Activity log entries are preserved.'
-                        : 'Co. Bam vao giai doan truoc trong stage indicator de quay lai. Lich su van duoc giu.'}
+                        ? 'Look for interactive buttons in the chat: picking a Plan card in Stage 1, or clicking the "Go to Stage X" button that appears after AI finishes its analysis.'
+                        : 'Hãy tìm các nút tương tác trong chat: chọn thẻ Plan ở Giai đoạn 1, hoặc nhấn nút "Sang Giai đoạn X" xuất hiện sau khi AI hoàn tất phân tích.'}
                     </p>
-                    <h4>{lang === 'en' ? 'Why is the Content Writer disabled?' : 'Tai sao Content Writer bi tat?'}</h4>
+                    <h4>{lang === 'en' ? 'Can I redo a stage?' : 'Có thể làm lại một giai đoạn?'}</h4>
                     <p>
                       {lang === 'en'
-                        ? 'Until you select a plan in Stage 1 the Content Writer has no context. Finish Quick Setup, choose a plan, then it unlocks.'
-                        : 'Truoc khi ban chon plan o Giai doan 1, Content Writer chua co ngu canh. Hoan thanh Quick Setup va chon plan thi se mo khoa.'}
+                        ? 'Yes. Click any completed stage in the header timeline to roll back. Note: Rolling back will reset your progress for all stages ahead of it.'
+                        : 'Có. Nhấn vào bất kỳ giai đoạn đã hoàn thành nào trên thanh tiêu đề để quay lại. Lưu ý: Quay lại sẽ đặt lại tiến trình của tất cả các giai đoạn phía sau.'}
                     </p>
-                    <h4>{lang === 'en' ? 'Where do I see my answers?' : 'Xem lai cau tra loi o dau?'}</h4>
+                    <h4>{lang === 'en' ? 'Why is the Content Writer disabled?' : 'Tại sao Content Writer bị tắt?'}</h4>
                     <p>
                       {lang === 'en'
-                        ? 'Open Insights for the full activity log: every quiz answer, plan selection, stage transition, content generation, and metrics snapshot.'
-                        : 'Mo Insights de xem toan bo nhat ky: cau tra loi quiz, plan da chon, chuyen giai doan, content da tao, snapshot.'}
+                        ? 'The Content Writer needs a selected plan for context. It unlocks automatically as soon as you choose a Plan in Stage 1.'
+                        : 'Content Writer cần một plan đã chọn để lấy ngữ cảnh. Nó sẽ tự động mở khóa ngay khi bạn chọn một Plan ở Giai đoạn 1.'}
+                    </p>
+                    <h4>{lang === 'en' ? 'Where do I see my historical answers?' : 'Xem lại các câu trả lời cũ ở đâu?'}</h4>
+                    <p>
+                      {lang === 'en'
+                        ? 'Open the Insights panel (Bar Chart icon) to see the full activity log, including every quiz answer and plan selection.'
+                        : 'Mở bảng Insights (biểu tượng biểu đồ) để xem toàn bộ nhật ký hoạt động, bao gồm mọi câu trả lời quiz và lựa chọn plan.'}
                     </p>
                   </div>
                 )}

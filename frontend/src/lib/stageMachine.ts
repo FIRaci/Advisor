@@ -38,44 +38,44 @@ export const STAGE_DESCRIPTORS: Record<Stage, StageDescriptor> = {
       vi: 'Cung cấp thông tin doanh nghiệp để AdVisor xây dựng chiến lược phù hợp.'
     },
     nextAction: {
-      en: 'Run the Quick Setup (5 questions) or open the Full Quiz to begin.',
-      vi: 'Hoàn thành Quick Setup (5 câu) hoặc mở Quiz đầy đủ để bắt đầu.'
+      en: 'Complete the 5-question Quick Setup or the Full Quiz to unlock your Strategy options.',
+      vi: 'Hoàn thành Quick Setup (5 câu) hoặc Quiz đầy đủ để mở khóa các lựa chọn Chiến lược.'
     }
   },
   1: {
     stage: 1,
     title: { en: 'Strategy & Plan', vi: 'Chiến lược & Kế hoạch' },
     subtitle: {
-      en: 'Three tailored plans are ready. Compare them, then pick the one that fits.',
-      vi: 'Ba kế hoạch đã được đề xuất. Hãy so sánh và chọn một kế hoạch phù hợp.'
+      en: 'Review the AI-generated plans. Once you select a plan, you can move to Stage 2.',
+      vi: 'Xem các kế hoạch do AI tạo. Sau khi chọn một kế hoạch, bạn có thể sang Giai đoạn 2.'
     },
     nextAction: {
-      en: 'Select Plan A, B, or C to advance to Stage 2.',
-      vi: 'Chọn Plan A, B hoặc C để chuyển sang Giai đoạn 2.'
+      en: 'Select a plan card (Plan A, B, C...) then click "Go to Stage 2" to continue.',
+      vi: 'Chọn một thẻ kế hoạch (Plan A, B, C...) sau đó nhấn "Sang Giai đoạn 2" để tiếp tục.'
     }
   },
   2: {
     stage: 2,
     title: { en: 'Refinement', vi: 'Chi tiết hoá' },
     subtitle: {
-      en: 'Lock down audience, KPIs, and budget split before launch.',
-      vi: 'Chốt chi tiết đối tượng, KPI và phân bổ ngân sách trước khi triển khai.'
+      en: 'Define your audience, KPIs, and budget. AI will confirm once everything is locked.',
+      vi: 'Xác định đối tượng, KPI và ngân sách. AI sẽ xác nhận khi mọi thứ đã sẵn sàng.'
     },
     nextAction: {
-      en: 'Answer the Stage 2 follow-up questions to fully refine the plan.',
-      vi: 'Trả lời các câu hỏi Giai đoạn 2 để hoàn tất chi tiết kế hoạch.'
+      en: 'Complete the follow-up questions from AI, then click the "Go to Stage 3" prompt.',
+      vi: 'Trả lời các câu hỏi bổ sung từ AI, sau đó nhấn nút "Sang Giai đoạn 3" khi xuất hiện.'
     }
   },
   3: {
     stage: 3,
     title: { en: 'Optimisation', vi: 'Tối ưu' },
     subtitle: {
-      en: 'Submit periodic metrics. AdVisor will recommend adjustments each cycle.',
-      vi: 'Nộp dữ liệu hiệu suất định kỳ để AdVisor đề xuất tinh chỉnh mỗi chu kỳ.'
+      en: 'Track performance and iterate. Upload metrics to get AI optimization advice.',
+      vi: 'Theo dõi hiệu suất và tinh chỉnh. Tải số liệu để nhận tư vấn tối ưu từ AI.'
     },
     nextAction: {
-      en: 'Upload a CSV or fill in the metrics form, then ask for analysis.',
-      vi: 'Tải CSV hoặc điền số liệu, sau đó yêu cầu AdVisor phân tích.'
+      en: 'Add a Metrics Snapshot in the Insights panel to get periodic analysis.',
+      vi: 'Thêm Snapshot số liệu trong phần Insights để nhận phân tích định kỳ.'
     }
   }
 };

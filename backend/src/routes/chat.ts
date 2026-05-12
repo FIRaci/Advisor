@@ -143,13 +143,13 @@ router.post('/message', async (req: AuthRequest, res) => {
         const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
         const phase = (aiContext.quizData as any)?.phase || '1';
         let stageInstructions = '';
-        
+
         if (phase === '1') {
           stageInstructions = `
 You are currently in Stage 1 (Strategy Formulation).
 IMPORTANT INSTRUCTIONS:
 1. First, provide a highly detailed, insightful analysis of the user's business, target audience, and goals. Provide actionable suggestions and explain the "why" behind your thinking. Do NOT just give options immediately. Give them a robust strategy breakdown first.
-2. After your detailed analysis, provide between 1 to 3 strategic plan options (depending on what you think is most effective) using the exact formatting below:
+2. After your detailed analysis, provide between 1 to 4 strategic plan options (depending on what you think is most effective) using the exact formatting below:
 **[PLAN_OPTIONS]**
 [PLAN_A]
 **Plan A: <Title>**
@@ -158,7 +158,7 @@ IMPORTANT INSTRUCTIONS:
 - Timeline: ...
 - Expected ROI: ...
 [/PLAN_A]
-... (Repeat for PLAN_B and PLAN_C if needed)
+... (Repeat for PLAN_B, PLAN_C, and PLAN_D if needed)
 [/PLAN_OPTIONS]`;
         } else if (phase === '2') {
           stageInstructions = `
@@ -191,7 +191,7 @@ User: ${message}`;
     } catch (aiError) {
       usedFallback = true;
       console.error('AI upstream error (falling back to mock):', aiError);
-      
+
       const msgLower = message.toLowerCase();
       const quizData = campaign ? await prisma.campaign.findUnique({ where: { id: campaign.id }, select: { quizData: true } }) : null;
       const phase = (quizData?.quizData as any)?.phase || '1';
@@ -251,8 +251,8 @@ Here is your detailed execution plan:
           const business = (quizData?.quizData as any)?.business || 'your business';
           const goal = (quizData?.quizData as any)?.goal || 'your primary goal';
           const audience = (quizData?.quizData as any)?.audience || 'target audience';
-        
-        aiText = `## Strategic Analysis & Recommendations
+
+          aiText = `## Strategic Analysis & Recommendations
 
 I've carefully analyzed your profile for **${business}**. To achieve your goal of **${goal}** with the **${audience}** segment, I recommend a multi-channel approach that prioritizes high-intent search traffic combined with social proof.
 
@@ -424,7 +424,7 @@ router.post('/assist', async (req: AuthRequest, res) => {
       orderBy: { createdAt: 'asc' },
       take: 10
     });
-    
+
     const historyText = chatHistory
       .filter(msg => msg.pane === 'STRATEGY')
       .map(msg => `${msg.role}: ${msg.content}`)
@@ -445,7 +445,7 @@ router.post('/assist', async (req: AuthRequest, res) => {
       if (shouldUseLiveAi()) {
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
-        
+
         const assistPrompt = `You are AdVisor Content Assistant, an expert marketing copywriter. Generate high-quality ${contentTypeLabels[type]} content.
 
 Campaign context:
@@ -473,7 +473,7 @@ Format with clear markdown.`;
       }
     } catch (aiError) {
       usedFallback = true;
-      
+
       if (type === 'email') {
         assistText = `## Marketing Email Draft
 
@@ -593,14 +593,14 @@ ${customPrompt ? `Here is a drafted response based on: "${customPrompt}"\n\n[Thi
         fallback: usedFallback,
         userMessage: savedUserPrompt
           ? {
-              id: savedUserPrompt.id,
-              role: 'USER',
-              pane: 'CONTENT',
-              kind: 'content_prompt',
-              metadata: { contentType: type },
-              content: customPrompt,
-              createdAt: savedUserPrompt.createdAt
-            }
+            id: savedUserPrompt.id,
+            role: 'USER',
+            pane: 'CONTENT',
+            kind: 'content_prompt',
+            metadata: { contentType: type },
+            content: customPrompt,
+            createdAt: savedUserPrompt.createdAt
+          }
           : null,
         assistantMessage: {
           id: savedAssistant.id,
