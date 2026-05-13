@@ -21,14 +21,28 @@ function shouldUseLiveAi(): boolean {
 }
 
 /** Keep parsing rules aligned with frontend `src/lib/planMarkers.ts`. */
-function normalizePlanContent(content: string): string {
-  let s = content.replace(/[\u200B-\u200D\uFEFF]/g, '');
-  s = s.replace(/\*{1,3}\s*(?=\[\s*\/?\s*PLAN\b)/gi, '');
-  s = s.replace(/\[\s*(\/?)\s*PLAN\s+([A-Za-z0-9]+)\s*\]/gi, '[$1PLAN_$2]');
-  return s;
+const PLAN_TAG_BACKEND = /\[\s*(\/?)\s*plan\s*[_\s\-\u2013\u2014]?\s*([a-z0-9]+)\s*\]/gi;
+
+function toAsciiBrackets(s: string): string {
+  return s
+    .replace(/\uFF3B/g, '[')
+    .replace(/\uFF3D/g, ']')
+    .replace(/\u3010/g, '[')
+    .replace(/\u3011/g, ']');
 }
 
-const PLAN_BRACKET_RE_BACKEND = /\[\s*(\/?)\s*PLAN\s*[_\s]?\s*([A-Za-z0-9]+)\s*\]/gi;
+function normalizePlanContent(content: string): string {
+  let s = content.replace(/[\u200B-\u200D\uFEFF]/g, '');
+  try {
+    s = s.normalize('NFKC');
+  } catch {
+    /* ignore */
+  }
+  s = toAsciiBrackets(s);
+  s = s.replace(/\*{1,3}\s*(?=\[\s*\/?\s*plan\b)/gi, '');
+  s = s.replace(/\[\s*(\/?)\s*plan\s+([a-z0-9]+)\s*\]/gi, '[$1PLAN_$2]');
+  return s;
+}
 
 type PlanBracketMatch = {
   index: number;
@@ -39,9 +53,9 @@ type PlanBracketMatch = {
 
 function scanPlanBrackets(normalized: string): PlanBracketMatch[] {
   const out: PlanBracketMatch[] = [];
-  PLAN_BRACKET_RE_BACKEND.lastIndex = 0;
+  PLAN_TAG_BACKEND.lastIndex = 0;
   let m: RegExpExecArray | null;
-  while ((m = PLAN_BRACKET_RE_BACKEND.exec(normalized))) {
+  while ((m = PLAN_TAG_BACKEND.exec(normalized))) {
     const isClose = m[1] === '/';
     const id = m[2].toUpperCase();
     out.push({ index: m.index, end: m.index + m[0].length, isClose, id });
@@ -98,8 +112,44 @@ function extractPlanBlocks(normalized: string): { id: string; content: string }[
   return plans.slice(0, 6);
 }
 
+function hasEmbeddedPlanOpen(body: string): boolean {
+  return /\[\s*(?!\/)\s*plan\s*[_\s\-\u2013\u2014]?\s*[a-z0-9]+\s*\]/i.test(body);
+}
+
+function stripPlanTagResiduals(text: string): string {
+  if (!text) return text;
+  return text
+    .replace(/\[\s*\/?\s*plan\s*[_\s\-\u2013\u2014]?\s*[a-z0-9]+\s*\]/gi, '')
+    .replace(/\*{1,3}\s*$/gm, '')
+    .trim();
+}
+
+function rescueMonolithicPlans(plans: { id: string; content: string }[]): { id: string; content: string }[] {
+  if (plans.length !== 1) return plans;
+  const only = plans[0];
+  if (!hasEmbeddedPlanOpen(only.content)) return plans;
+
+  const innerNorm = normalizePlanContent(only.content);
+  const inner = extractPlanBlocks(innerNorm);
+  if (inner.length < 2) return plans;
+
+  const firstOpen = only.content.search(/\[\s*(?!\/)\s*plan\b/i);
+  const lead = firstOpen >= 0 ? only.content.slice(0, firstOpen).trim() : '';
+  if (lead) {
+    const hasA = inner.some((p) => p.id === 'A');
+    if (!hasA) {
+      return [{ id: 'A', content: stripPlanTagResiduals(lead) }, ...inner];
+    }
+    return [{ ...inner[0], content: `${lead}\n\n${inner[0].content}`.trim() }, ...inner.slice(1)];
+  }
+  return inner;
+}
+
 function countPlanBlocks(content: string): number {
-  return extractPlanBlocks(normalizePlanContent(content)).length;
+  const normalized = normalizePlanContent(content);
+  let plans = extractPlanBlocks(normalized);
+  plans = rescueMonolithicPlans(plans);
+  return plans.length;
 }
 
 function hasPlanTags(content: string): boolean {

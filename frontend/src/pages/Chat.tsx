@@ -1963,36 +1963,48 @@ export default function Chat() {
                         <div className="message-content">
                           {msg.role === 'ASSISTANT' ? (
                             <>
-                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanContent(msg.content)}</ReactMarkdown>
-
-                              {/* Plan selection cards */}
                               {(() => {
+                                const introMd = cleanContent(msg.content);
                                 const parsedPlans = parsePlanOptions(msg.content);
-                                if (parsedPlans.length === 0) return null;
                                 return (
-                                <div className="plan-cards">
-                                  {parsedPlans.map(plan => (
-                                    <motion.button
-                                      key={plan.id}
-                                      className={`plan-card ${selectedPlanInChat === plan.id || currentCampaign?.quizData?.selectedPlan === plan.id ? 'selected' : ''}`}
-                                      onClick={() => handleSelectPlan(plan.id, plan.content)}
-                                      disabled={loading || !!currentCampaign?.quizData?.selectedPlan}
-                                      whileHover={{ scale: 1.02 }}
-                                      whileTap={{ scale: 0.98 }}
-                                    >
-                                      <div className="plan-card-badge">
-                                        {plan.id === 'A' || plan.id === '1' ? <Zap size={16} /> : 
-                                         plan.id === 'B' || plan.id === '2' ? <Target size={16} /> : 
-                                         plan.id === 'C' || plan.id === '3' ? <Award size={16} /> : 
-                                         <Sparkles size={16} />}
+                                  <>
+                                    {introMd.trim() ? (
+                                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{introMd}</ReactMarkdown>
+                                    ) : null}
+                                    {parsedPlans.length > 0 ? (
+                                      <div className="plan-cards">
+                                        {parsedPlans.map((plan) => (
+                                          <motion.button
+                                            key={plan.id}
+                                            className={`plan-card ${selectedPlanInChat === plan.id || currentCampaign?.quizData?.selectedPlan === plan.id ? 'selected' : ''}`}
+                                            onClick={() => handleSelectPlan(plan.id, plan.content)}
+                                            disabled={loading || !!currentCampaign?.quizData?.selectedPlan}
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
+                                          >
+                                            <div className="plan-card-badge">
+                                              {plan.id === 'A' || plan.id === '1' ? (
+                                                <Zap size={16} />
+                                              ) : plan.id === 'B' || plan.id === '2' ? (
+                                                <Target size={16} />
+                                              ) : plan.id === 'C' || plan.id === '3' ? (
+                                                <Award size={16} />
+                                              ) : (
+                                                <Sparkles size={16} />
+                                              )}
+                                            </div>
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{plan.content}</ReactMarkdown>
+                                            {(selectedPlanInChat === plan.id ||
+                                              currentCampaign?.quizData?.selectedPlan === plan.id) && (
+                                              <div className="plan-card-check">
+                                                <Check size={16} />
+                                              </div>
+                                            )}
+                                          </motion.button>
+                                        ))}
                                       </div>
-                                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{plan.content}</ReactMarkdown>
-                                      {(selectedPlanInChat === plan.id || currentCampaign?.quizData?.selectedPlan === plan.id) && (
-                                        <div className="plan-card-check"><Check size={16} /></div>
-                                      )}
-                                    </motion.button>
-                                  ))}
-                                </div>
+                                    ) : null}
+                                  </>
                                 );
                               })()}
 

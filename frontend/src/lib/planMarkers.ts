@@ -1,19 +1,37 @@
 /**
  * Parse [PLAN_X] … [/PLAN_X] blocks from assistant markdown.
- * Robust to stray markdown (e.g. "** [PLAN_A]"), inner spaces in brackets,
- * mixed-case ids, and tag letter spacing — cases that break simple RegExp pairs.
+ * Robust to stray markdown, Unicode brackets, case variants, inner spaces,
+ * and monolithic blobs where one “plan” body still contains the next [PLAN_*] opener.
  */
+
+const PLAN_TAG =
+  /\[\s*(\/?)\s*plan\s*[_\s\-\u2013\u2014]?\s*([a-z0-9]+)\s*\]/gi;
+
+/** First *opening* plan tag only (must not match `[/PLAN_A]`). */
+const FIRST_OPEN_PLAN = /\[\s*(?!\/)\s*plan\s*[_\s\-\u2013\u2014]?\s*[a-z0-9]+\s*\]/i;
+
+function toAsciiBrackets(s: string): string {
+  return s
+    .replace(/\uFF3B/g, '[')
+    .replace(/\uFF3D/g, ']')
+    .replace(/\u3010/g, '[')
+    .replace(/\u3011/g, ']');
+}
 
 export function normalizePlanContent(content: string): string {
   let s = content.replace(/[\u200B-\u200D\uFEFF]/g, '');
-  // Strip emphasis immediately before plan tags ("** [PLAN_A]")
-  s = s.replace(/\*{1,3}\s*(?=\[\s*\/?\s*PLAN\b)/gi, '');
-  // "[PLAN A]" → canonical "[PLAN_A]"
-  s = s.replace(/\[\s*(\/?)\s*PLAN\s+([A-Za-z0-9]+)\s*\]/gi, '[$1PLAN_$2]');
+  try {
+    s = s.normalize('NFKC');
+  } catch {
+    /* ignore */
+  }
+  s = toAsciiBrackets(s);
+  // Strip emphasis immediately before any plan tag ("** [PLAN_A]", "**[/PLAN_A]")
+  s = s.replace(/\*{1,3}\s*(?=\[\s*\/?\s*plan\b)/gi, '');
+  // "[PLAN A]" → "[PLAN_A]" (space-separated id)
+  s = s.replace(/\[\s*(\/?)\s*plan\s+([a-z0-9]+)\s*\]/gi, '[$1PLAN_$2]');
   return s;
 }
-
-const PLAN_BRACKET_RE = /\[\s*(\/?)\s*PLAN\s*[_\s]?\s*([A-Za-z0-9]+)\s*\]/gi;
 
 export interface PlanBracketMatch {
   index: number;
@@ -25,9 +43,9 @@ export interface PlanBracketMatch {
 
 export function scanPlanBrackets(normalized: string): PlanBracketMatch[] {
   const out: PlanBracketMatch[] = [];
-  PLAN_BRACKET_RE.lastIndex = 0;
+  PLAN_TAG.lastIndex = 0;
   let m: RegExpExecArray | null;
-  while ((m = PLAN_BRACKET_RE.exec(normalized))) {
+  while ((m = PLAN_TAG.exec(normalized))) {
     const isClose = m[1] === '/';
     const id = m[2].toUpperCase();
     out.push({
@@ -89,12 +107,51 @@ export function extractPlanBlocks(normalized: string): { id: string; content: st
   return plans.slice(0, 6);
 }
 
-/** Raw assistant message → up to six plan bodies (ids A/B/C…) for selection cards */
-export function parsePlanOptions(content: string): { id: string; content: string }[] {
-  return extractPlanBlocks(normalizePlanContent(content));
+/** True if body still contains another opening plan tag (parser merge bug or malformed AI). */
+function hasEmbeddedPlanOpen(body: string): boolean {
+  return /\[\s*(?!\/)\s*plan\s*[_\s\-\u2013\u2014]?\s*[a-z0-9]+\s*\]/i.test(body);
 }
 
-const FIRST_OPEN_PLAN = /\[\s*PLAN\s*[_\s]?\s*[A-Za-z0-9]+\s*\]/i;
+/**
+ * If the model dumped multiple plans into one body, re-parse inner text so each card stays clean.
+ */
+function rescueMonolithicPlans(plans: { id: string; content: string }[]): { id: string; content: string }[] {
+  if (plans.length !== 1) return plans;
+  const only = plans[0];
+  if (!hasEmbeddedPlanOpen(only.content)) return plans;
+
+  const innerNorm = normalizePlanContent(only.content);
+  const inner = extractPlanBlocks(innerNorm);
+  if (inner.length < 2) return plans;
+
+  const firstOpen = only.content.search(/\[\s*(?!\/)\s*plan\b/i);
+  const lead = firstOpen >= 0 ? only.content.slice(0, firstOpen).trim() : '';
+  if (lead) {
+    const hasA = inner.some((p) => p.id === 'A');
+    if (!hasA) {
+      return [{ id: 'A', content: stripPlanTagResiduals(lead) }, ...inner];
+    }
+    return [{ ...inner[0], content: `${lead}\n\n${inner[0].content}`.trim() }, ...inner.slice(1)];
+  }
+  return inner;
+}
+
+/** Remove any leftover plan markers so ReactMarkdown never shows raw tags. */
+export function stripPlanTagResiduals(text: string): string {
+  if (!text) return text;
+  return text
+    .replace(/\[\s*\/?\s*plan\s*[_\s\-\u2013\u2014]?\s*[a-z0-9]+\s*\]/gi, '')
+    .replace(/\*{1,3}\s*$/gm, '')
+    .trim();
+}
+
+/** Raw assistant message → up to six plan bodies (ids A/B/C…) for selection cards */
+export function parsePlanOptions(content: string): { id: string; content: string }[] {
+  const normalized = normalizePlanContent(content);
+  let plans = extractPlanBlocks(normalized);
+  plans = rescueMonolithicPlans(plans);
+  return plans.map((p) => ({ ...p, content: stripPlanTagResiduals(p.content) })).slice(0, 6);
+}
 
 /** Intro-only markdown: everything before the first plan open tag, with helper markers stripped. */
 export function cleanStrategyIntroMarkdown(content: string): string {
@@ -108,6 +165,6 @@ export function cleanStrategyIntroMarkdown(content: string): string {
     .replace(/\*\*\[STAGE_TRANSITION\]\*\*/gi, '')
     .replace(/\[STAGE_TRANSITION\]/gi, '')
     .replace(/^\s*\*\*\s*$/gm, '')
-    .replace(/\[\s*\/?\s*PLAN\s*[_\s]?\s*[A-Za-z0-9]+\s*\]/gi, '')
+    .replace(/\[\s*\/?\s*plan\s*[_\s\-\u2013\u2014]?\s*[a-z0-9]+\s*\]/gi, '')
     .trim();
 }
