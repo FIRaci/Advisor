@@ -14,12 +14,14 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+
 // Middleware
 app.use(cors({
-  origin: true, // Allow all origins for testing
+  origin: [FRONTEND_URL, 'http://localhost:3000'],
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -87,9 +89,11 @@ app.listen(PORT, async () => {
 });
 
 // Graceful shutdown
-process.on('SIGTERM', async () => {
+const gracefulShutdown = async () => {
   await prisma.$disconnect();
   process.exit(0);
-});
+};
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
 
 export { prisma };

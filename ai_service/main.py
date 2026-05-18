@@ -15,6 +15,7 @@ from google import genai
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from examples import EXAMPLE_PROMPTS, build_few_shot_examples
+from prompt_helpers import get_stage_instructions, append_fallback_tags_if_missing
 
 # Configure logging
 logging.basicConfig(
@@ -190,6 +191,12 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=10000)
     context: Optional[dict] = Field(default=None)
 
+class AssistRequest(BaseModel):
+    """Assist request for content generation"""
+    type: str
+    message: Optional[str] = Field(default="")
+    context: Optional[dict] = Field(default=None)
+
 
 class ChatResponse(BaseModel):
     """Chat response"""
@@ -289,14 +296,24 @@ async def chat_endpoint(request: ChatRequest):
     try:
         few_shot_context = build_few_shot_examples(limit=3)
 
+        # Extract phase from context
+        phase = "1"
+        if request.context and "quizData" in request.context:
+            quiz_data = request.context.get("quizData", {})
+            if isinstance(quiz_data, dict) and "phase" in quiz_data:
+                phase = str(quiz_data["phase"])
+
+        stage_instructions = get_stage_instructions(phase)
+
         # Build context string if provided
         context_str = ""
         if request.context:
-            context_str = f"\n\nContext about the business:\n{request.context}\n\n"
+            context_str = f"\n\nContext about the campaign:\n{request.context}\n\n"
         
-        prompt = f"{SYSTEM_PROMPT}\n\n{few_shot_context}{context_str}User: {request.message}"
+        prompt = f"{SYSTEM_PROMPT}\n\n{stage_instructions}\n\n{few_shot_context}{context_str}User: {request.message}"
         
         response_text = await gemini_service.generate(prompt)
+        response_text = append_fallback_tags_if_missing(response_text, phase)
         
         return ChatResponse(response=response_text)
     
@@ -305,6 +322,51 @@ async def chat_endpoint(request: ChatRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process chat message"
+        )
+
+
+@app.post("/assist", response_model=ChatResponse)
+async def assist_endpoint(request: AssistRequest):
+    """Content Assistant for generating marketing copy"""
+    try:
+        content_type_labels = {
+            "email": "Marketing Email",
+            "ad_copy": "Ad Copy",
+            "social_post": "Social Media Post",
+            "landing_page": "Landing Page Copy",
+            "custom": "Custom Content"
+        }
+        
+        label = content_type_labels.get(request.type, "Custom Content")
+        
+        context_str = ""
+        if request.context:
+            context_str = f"\n\nCampaign context:\n{request.context}\n\n"
+            
+        custom_prompt = ""
+        if request.message:
+            custom_prompt = f"User's content request: {request.message}\n\n"
+
+        prompt = f"""You are AdVisor Content Assistant, an expert marketing copywriter. Generate high-quality {label} content.
+
+{context_str}
+{custom_prompt}
+Generate professional, engaging {label} content ready to use. Include:
+1. The actual content (ready to copy-paste)
+2. Key messaging points used
+3. A/B variant suggestion
+
+Format with clear markdown."""
+        
+        response_text = await gemini_service.generate(prompt)
+        
+        return ChatResponse(response=response_text)
+    
+    except Exception as e:
+        logger.error(f"Assist endpoint error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to process assist message"
         )
 
 

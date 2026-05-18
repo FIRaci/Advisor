@@ -2,8 +2,7 @@ import { Router } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { prisma } from '../index';
 import { z } from 'zod';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
+// Removed GoogleGenerativeAI import as we now proxy to ai_service
 const router = Router();
 
 router.use(authMiddleware);
@@ -12,6 +11,15 @@ const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://ai_service:8000';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const AI_MODE = process.env.AI_MODE || 'auto'; // 'auto' | 'mock' | 'live'
 const AI_TIMEOUT_MS = 12_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('AI request timed out')), ms)
+    )
+  ]);
+}
 
 function shouldUseLiveAi(): boolean {
   if (AI_MODE === 'mock') return false;
@@ -288,9 +296,8 @@ router.post('/message', async (req: AuthRequest, res) => {
       }
     }
 
-    const effectivePhase = typeof (aiContext.quizData as any)?.phase === 'string'
-      ? (aiContext.quizData as any).phase
-      : '1';
+    const quizDataObj = aiContext.quizData && typeof aiContext.quizData === 'object' ? aiContext.quizData as Record<string, unknown> : {};
+    const effectivePhase = typeof quizDataObj.phase === 'string' ? quizDataObj.phase : '1';
 
     // Call AI service with timeout and graceful fallback
     let aiText = '';
@@ -298,65 +305,26 @@ router.post('/message', async (req: AuthRequest, res) => {
 
     try {
       if (shouldUseLiveAi()) {
-        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const phase = effectivePhase;
-        let stageInstructions = '';
+        const response = await withTimeout(
+          fetch(`${AI_SERVICE_URL}/chat`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              message,
+              context: aiContext
+            })
+          }),
+          AI_TIMEOUT_MS
+        );
 
-        if (phase === '1') {
-          stageInstructions = `
-You are currently in Stage 1 (Strategy Formulation). 
-MANDATORY: You MUST provide exactly 3 or 4 selectable plan options using the [PLAN_A], [PLAN_B], etc. tags.
-
-CRITICAL FORMATTING RULES:
-1. Start with 2-3 paragraphs of analysis.
-2. Then, you MUST provide the plans inside exactly ONE [PLAN_OPTIONS] block.
-3. EACH PLAN MUST BE WRAPPED IN [PLAN_X] AND [/PLAN_X] TAGS.
-4. DO NOT USE "Plan 1", "Plan 2". USE "[PLAN_A]", "[PLAN_B]", "[PLAN_C]".
-5. Never repeat plan blocks or duplicate the same plan ID.
-6. When showing structured comparisons, use valid markdown tables (| col | col |), not plain-text pseudo tables.
-5. Example of required format:
-**[PLAN_OPTIONS]**
-[PLAN_A]
-**Plan A: <Title>**
-| Category | Detail |
-| :--- | :--- |
-| ... | ... |
-[/PLAN_A]
-[PLAN_B]
-...
-[/PLAN_B]
-[/PLAN_OPTIONS]
-
-If you do not include these tags, the user CANNOT select a plan and CANNOT move to the next stage. YOUR RESPONSE IS USELESS WITHOUT THESE TAGS.`;
-        } else if (phase === '2') {
-          stageInstructions = `
-You are currently in Stage 2 (Execution Plan).
-IMPORTANT INSTRUCTIONS:
-1. Provide a highly detailed execution plan based on the user's chosen plan from Stage 1. Break down the channel strategy, timeline, milestones, and budget. Explain why this execution plan will work.
-2. Use proper markdown tables for timeline, KPIs, and budget split where useful.
-3. If quizData includes Stage 2 targets (deadline, target_ctr, target_cvr, target_roas), include a "Target KPI Benchmarks" table and explicitly reference these targets in your recommendations.
-4. If latestMetrics are available, include a concise "Target vs Actual" table comparing actual values to target benchmarks.
-5. At the very end of your response, you MUST include this exact string to allow the user to transition to Stage 3:
-**[STAGE_TRANSITION]** You have completed Stage 2! You can now move to **Stage 3: Ongoing Optimization**.`;
-        } else if (phase === '3') {
-          stageInstructions = `
-You are currently in Stage 3 (Ongoing Optimization).
-IMPORTANT INSTRUCTIONS:
-1. Analyze any metrics snapshots provided. Give a highly detailed breakdown of performance, identify bottlenecks, and suggest concrete optimizations (e.g., budget shifts, new creatives). Provide deep reasoning for your suggestions.`;
+        if (!response.ok) {
+          throw new Error(`AI Service returned ${response.status}`);
         }
 
-        const prompt = `You are AdVisor, an expert AI marketing strategist. Your role is to help businesses create effective marketing campaigns. Provide actionable advice, consider budget constraints, and focus on ROI.
-
-${stageInstructions}
-
-Context about the campaign:
-${JSON.stringify(aiContext, null, 2)}
-
-User: ${message}`;
-
-        const result = await model.generateContent(prompt);
-        aiText = result.response.text();
+        const data = await response.json() as { response: string };
+        aiText = data.response;
       } else {
         throw new Error('Using mock mode');
       }
@@ -621,31 +589,32 @@ router.post('/assist', async (req: AuthRequest, res) => {
 
     try {
       if (shouldUseLiveAi()) {
-        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+        const aiContext = {
+          quizData,
+          historyText
+        };
+        
+        const response = await withTimeout(
+          fetch(`${AI_SERVICE_URL}/assist`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              type,
+              message: customPrompt || "",
+              context: aiContext
+            })
+          }),
+          AI_TIMEOUT_MS
+        );
 
-        const assistPrompt = `You are AdVisor Content Assistant, an expert marketing copywriter. Generate high-quality ${contentTypeLabels[type]} content.
+        if (!response.ok) {
+          throw new Error(`AI Service returned ${response.status}`);
+        }
 
-Campaign context:
-- Product: ${productName}
-- Target Audience: ${audience}  
-- Goal: ${goal}
-- Full quiz data: ${JSON.stringify(quizData)}
-
-Recent Strategy Discussion:
-${historyText || 'No previous discussion.'}
-
-${customPrompt ? `User's content request: ${customPrompt}` : ''}
-
-Generate professional, engaging ${contentTypeLabels[type]} content ready to use. Include:
-1. The actual content (ready to copy-paste)
-2. Key messaging points used
-3. A/B variant suggestion
-
-Format with clear markdown.`;
-
-        const result = await model.generateContent(assistPrompt);
-        assistText = result.response.text();
+        const data = await response.json() as { response: string };
+        assistText = data.response;
       } else {
         throw new Error('Using mock mode');
       }

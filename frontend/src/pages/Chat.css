@@ -581,17 +581,22 @@ body.chat-page-active {
 }
 
 .insights-grid {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
 .insights-card {
+  flex: 1 1 260px;
+  min-width: 0;
   border-radius: var(--radius-lg);
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(18, 18, 22, 0.7);
   overflow: hidden;
+  transition: all 0.3s ease;
 }
+
+
 
 .insights-card-header {
   display: flex;
@@ -854,6 +859,7 @@ body.chat-page-active {
 .chat-pane-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0.8rem 1.25rem;
   border-bottom: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.02);
@@ -863,6 +869,33 @@ body.chat-page-active {
   font-size: 0.85rem;
   font-weight: 600;
   margin: 0;
+}
+
+.content-pane-restore-btn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.65rem 0.35rem;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-right: none;
+  border-radius: 0.5rem 0 0 0.5rem;
+  background: rgba(16, 185, 129, 0.08);
+  color: #34d399;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+  writing-mode: vertical-lr;
+}
+
+.content-pane-restore-btn:hover {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.5);
+  padding-right: 0.5rem;
 }
 
 .chat-messages {
@@ -2698,8 +2731,8 @@ body.chat-page-active {
   border-radius: var(--radius-xl);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 0 40px rgba(124, 58, 237, 0.2), 0 0 80px rgba(0, 0, 0, 0.8);
-  width: 94%;
-  max-width: 1100px;
+  width: 98vw;
+  max-width: 1600px;
   max-height: 85vh;
   overflow: hidden;
 }
@@ -2751,6 +2784,162 @@ body.chat-page-active {
 .insights-close-btn:hover {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-primary);
+}
+
+.insights-modal-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 0.85rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.06), rgba(16, 185, 129, 0.04));
+}
+
+.insights-modal-toolbar-hint {
+  margin: 0;
+  flex: 1 1 220px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.insights-ai-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.95rem;
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(167, 139, 250, 0.45);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.35), rgba(236, 72, 153, 0.2));
+  color: #f5f3ff;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.insights-ai-submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.35);
+}
+
+.insights-ai-submit-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.insights-card-pad {
+  padding: 0.75rem 1rem 1rem;
+}
+
+.insights-section-head {
+  margin-bottom: 0.35rem;
+}
+
+.insights-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.45rem 0.55rem;
+  margin: 0 0 0.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.insights-section-toggle:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(167, 139, 250, 0.35);
+  color: var(--text-primary);
+}
+
+.insights-section-toggle--flush {
+  margin-bottom: 0.65rem;
+}
+
+.insights-section-toggle--activity {
+  width: auto;
+  margin: 0;
+  border: none;
+  background: transparent;
+  padding: 0.15rem 0;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.insights-section-toggle--activity:hover {
+  background: transparent;
+  border-color: transparent;
+  color: var(--accent);
+}
+
+.insights-section-toggle--activity h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: inherit;
+}
+
+.activity-log-header--toggle {
+  margin-bottom: 0.75rem;
+}
+
+.insights-field-hint {
+  font-weight: 500;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.insights-stage-compare--tight {
+  margin-top: 0.35rem;
+}
+
+.insights-chart-panel {
+  margin-bottom: 0.75rem;
+  padding: 0.65rem 0.5rem 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.insights-mini-chart-wrap {
+  width: 100%;
+  max-height: 120px;
+}
+
+.insights-mini-chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.metrics-compare.metrics-compare--insights {
+  padding-top: 0.65rem;
+}
+
+.metrics-compare.metrics-compare--insights .metrics-compare-list {
+  margin-top: 0;
+}
+
+.insights-card-pad .metrics-form {
+  padding: 0.5rem 0 0;
+}
+
+.metrics-label-with-hint {
+  display: block;
+  line-height: 1.35;
+  font-size: 0.72rem;
 }
 
 .insights-modal-body {

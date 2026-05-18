@@ -98,6 +98,26 @@ const PageWrapper = ({ children }: { children: React.ReactNode }) => (
   </motion.div>
 );
 
+function NotFound() {
+  return (
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column' as const,
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'var(--bg-primary)',
+      color: 'var(--text-primary)',
+      textAlign: 'center' as const,
+      padding: '2rem'
+    }}>
+      <h1 style={{ fontSize: '4rem', marginBottom: '0.5rem', background: 'linear-gradient(135deg, #a78bfa, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>404</h1>
+      <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', fontSize: '1.1rem' }}>Page not found</p>
+      <a href="/" style={{ color: '#a78bfa', textDecoration: 'none', fontSize: '1rem' }}>← Back to Home</a>
+    </div>
+  );
+}
+
 function AppRoutes() {
   const location = useLocation();
   
@@ -111,6 +131,7 @@ function AppRoutes() {
         <Route path="/chat" element={<PageWrapper><Chat /></PageWrapper>} />
         <Route path="/chat/:campaignId" element={<PageWrapper><Chat /></PageWrapper>} />
         <Route path="/settings" element={<PageWrapper><Settings /></PageWrapper>} />
+        <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
       </Routes>
     </AnimatePresence>
   );

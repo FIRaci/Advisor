@@ -103,12 +103,25 @@ router.get('/me', async (req, res) => {
 
   try {
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    const user = await prisma.user.findUnique({ 
-      where: { id: decoded.userId },
+    let userId: string | null = null;
+
+    // Try local JWT
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+      userId = decoded.userId;
+    } catch {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
       select: { id: true, email: true, name: true, role: true }
     });
-    
+
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }

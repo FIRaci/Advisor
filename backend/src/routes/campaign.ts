@@ -296,9 +296,13 @@ router.get('/:id/metrics', async (req: AuthRequest, res) => {
 // Delete campaign
 router.delete('/:id', async (req: AuthRequest, res) => {
   try {
-    await prisma.campaign.deleteMany({
+    const result = await prisma.campaign.deleteMany({
       where: { id: req.params.id, userId: req.userId }
     });
+
+    if (result.count === 0) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
 
     res.json({ success: true });
   } catch (error) {

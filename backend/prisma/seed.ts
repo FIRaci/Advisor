@@ -10,7 +10,7 @@ async function main() {
 
   // Create demo user
   const demoEmail = 'demo@advisor.ai';
-  const demoPassword = 'demo123';
+  const demoPassword = 'demo1234';
   const hashedPassword = await bcrypt.hash(demoPassword, 10);
   
   const demoUser = await prisma.user.upsert({

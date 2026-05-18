@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Send, Sparkles, Trash2, Plus, MessageSquare, ChevronLeft, ChevronRight,
+  Send, Sparkles, Trash2, Plus, Minus, MessageSquare, ChevronLeft, ChevronRight,
   Settings, LogOut, MoreHorizontal, Pencil, Star, Copy, Check, ListChecks,
   BarChart3, BookOpen, Package, Building, Users, RefreshCw, Zap, ArrowRight, Award,
   Target, Megaphone, DollarSign, Globe, Clock, Briefcase, X, HelpCircle,
@@ -34,20 +34,53 @@ import './Chat.css';
 
 type Message = ChatMessage;
 
-const metricsFields = [
-  { key: 'cpc', label: 'CPC' },
-  { key: 'cpm', label: 'CPM' },
-  { key: 'cpa', label: 'CPA' },
-  { key: 'cpl', label: 'CPL' },
-  { key: 'cac', label: 'CAC' },
-  { key: 'ltv', label: 'LTV' },
-  { key: 'retentionRate', label: 'Retention Rate (%)' },
-  { key: 'churnRate', label: 'Churn Rate (%)' },
-  { key: 'engagementRate', label: 'Engagement Rate (%)' },
-  { key: 'bounceRate', label: 'Bounce Rate (%)' },
-  { key: 'sessionDuration', label: 'Session Duration (sec)' },
-  { key: 'roas', label: 'ROAS' }
+type MetricFieldDef = {
+  key: string;
+  label: string;
+  hint: string;
+};
+
+const metricsFields: MetricFieldDef[] = [
+  { key: 'cpc', label: 'CPC', hint: 'Cost Per Click' },
+  { key: 'cpm', label: 'CPM', hint: 'Cost Per Mille (per 1k impressions)' },
+  { key: 'cpa', label: 'CPA', hint: 'Cost Per Acquisition' },
+  { key: 'cpl', label: 'CPL', hint: 'Cost Per Lead' },
+  { key: 'cac', label: 'CAC', hint: 'Customer Acquisition Cost' },
+  { key: 'ltv', label: 'LTV', hint: 'Lifetime Value' },
+  { key: 'retentionRate', label: 'Retention Rate', hint: 'Share of customers retained' },
+  { key: 'churnRate', label: 'Churn Rate', hint: 'Share of customers lost' },
+  { key: 'engagementRate', label: 'Engagement Rate', hint: 'Interactions vs impressions' },
+  { key: 'bounceRate', label: 'Bounce Rate', hint: 'Single-page sessions / entries' },
+  { key: 'sessionDuration', label: 'Session Duration', hint: 'Average time on site (sec)' },
+  { key: 'roas', label: 'ROAS', hint: 'Return on Ad Spend' }
 ];
+
+const metricLabelWithHint = (f: MetricFieldDef) => `${f.label} (${f.hint})`;
+
+const INSIGHT_QUIZ_HINTS: Partial<Record<string, string>> = {
+  productName: 'Offer name',
+  business: 'Industry / model',
+  stage: 'Company maturity',
+  audience: 'Who you sell to',
+  region: 'Geography',
+  platform: 'Touchpoints',
+  priceRange: 'Pricing tier',
+  goal: 'Primary objective',
+  usp: 'Unique Selling Proposition',
+  channels: 'Marketing mix',
+  currentMarketing: 'Where you are today',
+  experience: 'Team skill level',
+  competitors: 'Market context',
+  timeline: 'Results horizon',
+  budget: 'Spend level',
+  seasonality: 'Demand peaks',
+  contentFormat: 'Creative formats',
+  offerType: 'Deal style',
+  deadline: 'Stage 2 target date',
+  target_ctr: 'Click-through target',
+  target_cvr: 'Conversion target',
+  target_roas: 'Efficiency target'
+};
 
 interface Campaign extends Pick<ApiCampaign, 'id' | 'name' | 'createdAt' | 'isFavorite'> {
   status?: ApiCampaign['status'];
@@ -173,6 +206,14 @@ export default function Chat() {
   const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [insightsOpen, setInsightsOpen] = useState(false);
+  const [insightSections, setInsightSections] = useState({
+    quizProgress: true,
+    quizAnswers: true,
+    stage2Targets: true,
+    metricsSnapshot: true,
+    trends: true,
+    activity: true
+  });
   const [guidePopupOpen, setGuidePopupOpen] = useState(false);
   const [guideActiveTab, setGuideActiveTab] = useState<'overview' | 'stages' | 'panes' | 'metrics' | 'faq'>('overview');
   const [selectedPlanInChat, setSelectedPlanInChat] = useState<string | null>(null);
@@ -180,6 +221,7 @@ export default function Chat() {
   const [contentInput, setContentInput] = useState('');
   const [strategyWidth, setStrategyWidth] = useState(60);
   const [isDraggingPane, setIsDraggingPane] = useState(false);
+  const [contentPaneCollapsed, setContentPaneCollapsed] = useState(false);
   const [metricsSnapshots, setMetricsSnapshots] = useState<MetricsSnapshot[]>([]);
   const [metricsLabel, setMetricsLabel] = useState('');
   const [metricsPeriodStart, setMetricsPeriodStart] = useState('');
@@ -194,6 +236,7 @@ export default function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const autostartTriggeredRef = useRef(false);
 
 
 
@@ -319,6 +362,9 @@ export default function Chat() {
     return () => {
       document.documentElement.classList.remove('chat-page-active');
       document.body.classList.remove('chat-page-active');
+      // Force reset styles immediately for SPA navigation to other pages (e.g. Quiz)
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
     };
   }, []);
 
@@ -338,7 +384,8 @@ export default function Chat() {
     const today = now.toISOString().slice(0, 10);
     setMetricsPeriodStart(startOfMonth);
     setMetricsPeriodEnd(today);
-  }, [metricsInputs]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -371,7 +418,8 @@ export default function Chat() {
   }, [input]);
 
   useEffect(() => {
-    if (searchParams.get('autostart') === 'true' && messages.length === 0 && !loading && !initialLoading) {
+    if (searchParams.get('autostart') === 'true' && !autostartTriggeredRef.current && messages.length === 0 && !loading && !initialLoading) {
+      autostartTriggeredRef.current = true;
       generateInitialStrategy();
     }
   }, [searchParams, initialLoading, messages.length]);
@@ -660,6 +708,7 @@ export default function Chat() {
   const handleClear = async () => {
     if (!campaignId) {
       setMessages([]);
+      setSelectedPlanInChat(null);
       setClearModalOpen(false);
       return;
     }
@@ -667,6 +716,7 @@ export default function Chat() {
     const res = await api.clearChatHistory(campaignId);
     if (res.success) {
       setMessages([]);
+      setSelectedPlanInChat(null);
       setClearModalOpen(false);
     }
   };
@@ -1016,6 +1066,7 @@ export default function Chat() {
       ]);
     }
     setAssistLoading(false);
+    setContentPaneCollapsed(false);
   };
 
   const handleSendContent = async () => {
@@ -1068,6 +1119,7 @@ export default function Chat() {
       ]);
     }
     setAssistLoading(false);
+    setContentPaneCollapsed(false);
   };
 
   const handleLogout = () => {
@@ -1085,10 +1137,40 @@ export default function Chat() {
     const reader = new FileReader();
     reader.onload = (evt) => {
       const text = evt.target?.result as string;
-      const lines = text.trim().split('\n');
-      if (lines.length < 2) return;
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-      const values = lines[1].split(',').map(v => v.trim());
+      const lines = text.trim().split(/\r?\n/);
+      if (lines.length < 2) {
+        appendAssistantMessage('CSV file seems empty or invalid. Please check the format.');
+        return;
+      }
+
+      // Simple CSV parser for quoted fields
+      const parseCsvLine = (line: string) => {
+        const result: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            result.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        result.push(current.trim());
+        return result;
+      };
+
+      const headers = parseCsvLine(lines[0]).map(h => h.toLowerCase());
+      
+      if (lines.length > 2) {
+        appendAssistantMessage(`CSV contains ${lines.length - 1} data rows. Only the last row will be loaded into the form.`);
+      }
+      
+      const values = parseCsvLine(lines[lines.length - 1]);
+      
       const newInputs: Record<string, string> = {};
       metricsFields.forEach(field => {
         const idx = headers.findIndex(h =>
@@ -1100,6 +1182,7 @@ export default function Chat() {
         }
       });
       setMetricsInputs(prev => ({ ...prev, ...newInputs }));
+      
       // Try to set label from headers
       const labelIdx = headers.findIndex(h => h === 'label' || h === 'period');
       if (labelIdx >= 0 && values[labelIdx]) setMetricsLabel(values[labelIdx]);
@@ -1108,46 +1191,291 @@ export default function Chat() {
     e.target.value = '';
   };
 
-  // SVG Mini Bar Chart for metrics visualization
-  const MiniBarChart = ({ data, height = 80 }: { data: { label: string; value: number; color?: string }[]; height?: number }) => {
-    if (!data.length || data.every(d => d.value === 0)) return null;
-    const maxVal = Math.max(...data.map(d => d.value));
-    const barWidth = Math.min(32, Math.floor(240 / data.length) - 4);
-    const chartWidth = data.length * (barWidth + 4);
+  // Multi-line chart grid for metrics history
+  const TrendLineCharts = ({
+    snapshots
+  }: {
+    snapshots: MetricsSnapshot[];
+  }) => {
+    const [expandedKey, setExpandedKey] = useState<string | null>(null);
+
+    if (!snapshots || snapshots.length === 0) return null;
+    
+    // Determine which metrics have at least one non-zero value
+    const activeKeys = metricsFields.filter(f => 
+      snapshots.some(s => {
+        const val = parseFloat(String((s.metrics as any)?.[f.key] || '0'));
+        return val > 0;
+      })
+    ).slice(0, 8); // Show up to 8 active metrics
+
+    if (activeKeys.length === 0) return null;
+    
+    const sortedSnapshots = [...snapshots].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+    if (expandedKey) {
+      const field = activeKeys.find(k => k.key === expandedKey);
+      if (!field) {
+        setExpandedKey(null);
+        return null;
+      }
+      const values = sortedSnapshots.map(s => parseFloat(String((s.metrics as any)?.[field.key] || '0')) || 0);
+      const maxVal = Math.max(...values, 1e-6);
+      const minVal = Math.min(...values);
+      const range = maxVal - minVal || 1;
+      
+      const VB_W = 800;
+      const VB_H = 300;
+      const padX = 40;
+      const padYTop = 30;
+      const padYBot = 60;
+      const innerH = VB_H - padYTop - padYBot;
+      
+      const points = values.map((v, i) => {
+        const x = values.length === 1 ? VB_W / 2 : padX + (i / (values.length - 1)) * (VB_W - padX * 2);
+        const y = padYTop + innerH - ((v - minVal) / range) * innerH;
+        return `${x},${y}`;
+      }).join(' ');
+
+      const isCostOrRate = ['cpc', 'cpm', 'cpa', 'cpl', 'cac', 'churnRate', 'bounceRate'].includes(field.key);
+      const startVal = values[0];
+      const endVal = values[values.length - 1];
+      const improved = isCostOrRate ? endVal <= startVal : endVal >= startVal;
+      const color = improved ? '#34d399' : '#f43f5e';
+      const formatVal = (v: number) => v >= 10 ? v.toFixed(0) : v.toFixed(2);
+
+      return (
+        <div style={{ padding: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <button onClick={() => setExpandedKey(null)} className="btn-ghost" style={{ padding: '0.4rem', borderRadius: '50%' }}>
+                <ArrowRight size={18} style={{ transform: 'rotate(180deg)' }} />
+              </button>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>{field.label} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 400 }}>{field.hint}</span></h3>
+            </div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 700, color: color }}>
+              {formatVal(endVal)}
+            </div>
+          </div>
+
+          <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(255,255,255,0.08)', padding: '1.5rem' }}>
+            <svg viewBox={`0 0 ${VB_W} ${VB_H}`} style={{ width: '100%', height: 'auto', maxHeight: '400px', overflow: 'visible' }}>
+              <defs>
+                <filter id={`glow-exp-${field.key}`} x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="3" result="blur" />
+                  <feComponentTransfer in="blur" result="glow">
+                    <feFuncA type="linear" slope="0.5" />
+                  </feComponentTransfer>
+                  <feMerge>
+                    <feMergeNode in="glow" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+                <linearGradient id={`gradient-exp-${field.key}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+                  <stop offset="100%" stopColor={color} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+
+              {/* Grid lines */}
+              {[0, 0.5, 1].map(t => {
+                const y = padYTop + innerH * t;
+                const val = minVal + range * (1 - t);
+                return (
+                  <g key={t}>
+                    <line x1={padX} x2={VB_W - padX} y1={y} y2={y} stroke="rgba(255,255,255,0.06)" strokeDasharray="4 4" />
+                    <text x={padX - 8} y={y + 4} fill="rgba(255,255,255,0.3)" fontSize="11" textAnchor="end">{formatVal(val)}</text>
+                  </g>
+                );
+              })}
+
+              {values.length > 1 && (
+                <>
+                  <polygon 
+                    points={`${padX},${padYTop + innerH} ${points} ${VB_W - padX},${padYTop + innerH}`} 
+                    fill={`url(#gradient-exp-${field.key})`} 
+                  />
+                  <motion.polyline
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ duration: 1, ease: 'easeOut' }}
+                    fill="none"
+                    stroke={color}
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    points={points}
+                    filter={`url(#glow-exp-${field.key})`}
+                  />
+                </>
+              )}
+              {values.map((v, i) => {
+                const x = values.length === 1 ? VB_W / 2 : padX + (i / (values.length - 1)) * (VB_W - padX * 2);
+                const y = padYTop + innerH - ((v - minVal) / range) * innerH;
+                const snapshot = sortedSnapshots[i];
+                const dateStr = snapshot.periodEnd ? new Date(snapshot.periodEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : new Date(snapshot.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                return (
+                  <g key={i}>
+                    <motion.circle
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.5 + i * 0.05, type: 'spring' }}
+                      cx={x}
+                      cy={y}
+                      r="5"
+                      fill={color}
+                      stroke="rgba(18,18,22,1)"
+                      strokeWidth="2"
+                    />
+                    <motion.text
+                      initial={{ opacity: 0, y: y + 10 }}
+                      animate={{ opacity: 1, y: y - 12 }}
+                      transition={{ delay: 0.6 + i * 0.05 }}
+                      x={x}
+                      textAnchor="middle"
+                      fill="rgba(255,255,255,0.9)"
+                      fontSize="12"
+                      fontWeight="600"
+                    >
+                      {formatVal(v)}
+                    </motion.text>
+                    <text
+                      x={x}
+                      y={VB_H - 25}
+                      textAnchor="middle"
+                      fill="rgba(255,255,255,0.4)"
+                      fontSize="11"
+                    >
+                      {dateStr}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <svg width={chartWidth} height={height + 20} viewBox={`0 0 ${chartWidth} ${height + 20}`} style={{ display: 'block', margin: '0.75rem auto 0' }}>
-        {data.map((d, i) => {
-          const barH = maxVal > 0 ? (d.value / maxVal) * height : 0;
+      <div className="insights-trends-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+        {activeKeys.map((field, idx) => {
+          const values = sortedSnapshots.map(s => parseFloat(String((s.metrics as any)?.[field.key] || '0')) || 0);
+          
+          const maxVal = Math.max(...values, 1e-6);
+          const minVal = Math.min(...values);
+          const range = maxVal - minVal || 1;
+          
+          const VB_W = 200;
+          const VB_H = 76;
+          const padX = 14;
+          const padYTop = 10;
+          const padYBot = 20;
+          const innerH = VB_H - padYTop - padYBot;
+          
+          const points = values.map((v, i) => {
+            const x = values.length === 1 ? VB_W / 2 : padX + (i / (values.length - 1)) * (VB_W - padX * 2);
+            const y = padYTop + innerH - ((v - minVal) / range) * innerH;
+            return `${x},${y}`;
+          }).join(' ');
+
+          const isCostOrRate = ['cpc', 'cpm', 'cpa', 'cpl', 'cac', 'churnRate', 'bounceRate'].includes(field.key);
+          const startVal = values[0];
+          const endVal = values[values.length - 1];
+          // Determine if the trend is improving
+          const improved = isCostOrRate ? endVal <= startVal : endVal >= startVal;
+          const color = improved ? '#34d399' : '#f43f5e';
+          
+          const formatVal = (v: number) => v >= 10 ? v.toFixed(0) : v.toFixed(2);
+
           return (
-            <g key={i}>
-              <rect
-                x={i * (barWidth + 4)}
-                y={height - barH}
-                width={barWidth}
-                height={barH}
-                rx={4}
-                fill={d.color || 'url(#barGrad)'}
-                opacity={0.85}
-              />
-              <text
-                x={i * (barWidth + 4) + barWidth / 2}
-                y={height + 14}
-                textAnchor="middle"
-                fill="var(--text-muted)"
-                fontSize="8"
-              >
-                {d.label.slice(0, 4)}
-              </text>
-            </g>
+            <div 
+              key={field.key} 
+              onClick={() => setExpandedKey(field.key)}
+              style={{ 
+                background: 'rgba(255,255,255,0.03)', 
+                borderRadius: 'var(--radius-md)', 
+                padding: '0.6rem 0.75rem', 
+                border: '1px solid rgba(255,255,255,0.06)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }} title={field.hint}>{field.label}</span>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+                  {formatVal(endVal)}
+                </span>
+              </div>
+              <svg viewBox={`0 0 ${VB_W} ${VB_H}`} style={{ width: '100%', height: '56px', overflow: 'visible' }}>
+                <defs>
+                  <filter id={`glow-${field.key}`} x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="2" result="blur" />
+                    <feComponentTransfer in="blur" result="glow">
+                      <feFuncA type="linear" slope="0.4" />
+                    </feComponentTransfer>
+                    <feMerge>
+                      <feMergeNode in="glow" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                  <linearGradient id={`gradient-${field.key}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={color} stopOpacity={0.25} />
+                    <stop offset="100%" stopColor={color} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                {values.length > 1 && (
+                  <>
+                    <polygon 
+                      points={`${padX},${padYTop + innerH} ${points} ${VB_W - padX},${padYTop + innerH}`} 
+                      fill={`url(#gradient-${field.key})`} 
+                    />
+                    <motion.polyline
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: 0.8, ease: 'easeOut', delay: idx * 0.05 }}
+                      fill="none"
+                      stroke={color}
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      points={points}
+                      filter={`url(#glow-${field.key})`}
+                    />
+                    <text x={padX} y={VB_H - 4} fontSize="7" fill="rgba(255,255,255,0.4)" textAnchor="start" fontWeight="500">
+                      {sortedSnapshots[0].periodEnd ? new Date(sortedSnapshots[0].periodEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : new Date(sortedSnapshots[0].createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </text>
+                    <text x={VB_W - padX} y={VB_H - 4} fontSize="7" fill="rgba(255,255,255,0.4)" textAnchor="end" fontWeight="500">
+                      {sortedSnapshots[values.length - 1].periodEnd ? new Date(sortedSnapshots[values.length - 1].periodEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : new Date(sortedSnapshots[values.length - 1].createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </text>
+                  </>
+                )}
+                {values.map((v, i) => {
+                  const x = values.length === 1 ? VB_W / 2 : padX + (i / (values.length - 1)) * (VB_W - padX * 2);
+                  const y = padYTop + innerH - ((v - minVal) / range) * innerH;
+                  return (
+                    <g key={i}>
+                      <motion.circle
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: idx * 0.05 + 0.5 + i * 0.1, type: 'spring' }}
+                        cx={x}
+                        cy={y}
+                        r="3.5"
+                        fill={color}
+                        stroke="rgba(18,18,22,1)"
+                        strokeWidth="1.5"
+                      />
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
           );
         })}
-        <defs>
-          <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#7c3aed" />
-            <stop offset="100%" stopColor="#ec4899" />
-          </linearGradient>
-        </defs>
-      </svg>
+      </div>
     );
   };
 
@@ -1194,9 +1522,25 @@ export default function Chat() {
   };
 
   const handleCopyMessage = async (content: string, id: string) => {
-    await navigator.clipboard.writeText(content);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      // Fallback for insecure contexts
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = content;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        setCopiedId(id);
+        setTimeout(() => setCopiedId(null), 2000);
+      } catch { /* ignore */ }
+    }
   };
 
   const handleMetricsInputChange = (key: string, value: string) => {
@@ -1223,7 +1567,12 @@ export default function Chat() {
     }
 
     const metrics = buildMetricsPayload();
+    if (Object.keys(metrics).length === 0) {
+      appendAssistantMessage('Please fill in at least one metric before saving.');
+      return;
+    }
     if (!metricsPeriodStart || !metricsPeriodEnd) {
+      appendAssistantMessage('Please set both period start and end dates.');
       return;
     }
 
@@ -1291,6 +1640,8 @@ export default function Chat() {
         setCurrentCampaign(null);
         navigate('/chat');
       }
+    } else {
+      appendAssistantMessage('Failed to delete campaign. Please try again.');
     }
 
     setDeleteModalOpen(false);
@@ -1367,12 +1718,13 @@ export default function Chat() {
       target_roas: 'Target ROAS'
     };
 
-    const items: { icon: ReactNode; label: string; value: string }[] = [];
+    const items: { icon: ReactNode; label: string; value: string; key: string }[] = [];
     for (const field of QUIZ_ACTIVITY_FIELDS) {
       const raw = field.read(qd);
       const value = formatQuizAnswerForDisplay(field.key, raw);
       if (!value) continue;
       items.push({
+        key: field.key,
         icon: icons[field.key] ?? <Sparkles size={16} />,
         label: labelOverride[field.key] ?? field.label,
         value
@@ -1401,6 +1753,141 @@ export default function Chat() {
   const ctrStatus = getKpiStatus(actualCtr, targetCtr);
   const cvrStatus = getKpiStatus(actualCvr, targetCvr);
   const roasStatus = getKpiStatus(actualRoas, targetRoas);
+
+  const buildInsightsAiPrompt = (): string => {
+    const lines: string[] = [
+      '# 📊 Campaign Performance Report',
+      '',
+      `**Campaign:** ${currentCampaign?.name ?? 'Untitled'}`,
+      `**Current Stage:** ${currentStage} • ${stageDescriptor.title}`,
+      `**Report Date:** ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`,
+      ''
+    ];
+
+    // Discovery Profile table
+    lines.push('## 1. Business Profile');
+    if (fullQuizProfile.length === 0) {
+      lines.push('_(No quiz answers stored yet)_');
+    } else {
+      lines.push('| Field | Value |');
+      lines.push('|:------|:------|');
+      fullQuizProfile.forEach((row) => {
+        const hint = INSIGHT_QUIZ_HINTS[row.key];
+        const label = hint ? `${row.label} (${hint})` : row.label;
+        lines.push(`| ${label} | ${row.value} |`);
+      });
+    }
+    lines.push('');
+
+    // Stage 2 targets
+    const qd = currentCampaign?.quizData;
+    const hasTargets = (targetCtr > 0 || targetCvr > 0 || targetRoas > 0 || (qd?.deadline && qd.deadline !== 'not_sure'));
+    if (hasTargets) {
+      lines.push('## 2. KPI Targets');
+      lines.push('| KPI | Target | Actual | Status |');
+      lines.push('|:----|:-------|:-------|:-------|');
+      if (qd?.deadline && qd.deadline !== 'not_sure') {
+        lines.push(`| Deadline | ${qd.deadline} | — | — |`);
+      }
+      if (targetCtr > 0) {
+        lines.push(`| CTR (%) | ${targetCtr.toFixed(2)} | ${actualCtr.toFixed(2)} | ${ctrStatus.label} |`);
+      }
+      if (targetCvr > 0) {
+        lines.push(`| Conversion Rate (%) | ${targetCvr.toFixed(2)} | ${actualCvr.toFixed(2)} | ${cvrStatus.label} |`);
+      }
+      if (targetRoas > 0) {
+        lines.push(`| ROAS | ${targetRoas.toFixed(2)} | ${actualRoas.toFixed(2)} | ${roasStatus.label} |`);
+      }
+      lines.push('');
+    }
+
+    // Metrics comparison table
+    if (latestSnapshot) {
+      lines.push('## 3. Metrics Comparison');
+      lines.push(`> Latest: **${latestSnapshot.label || 'Untitled'}** (${latestSnapshot.periodStart?.slice(0, 10) ?? '—'} → ${latestSnapshot.periodEnd?.slice(0, 10) ?? '—'})`);
+      if (previousSnapshot) {
+        lines.push(`> Previous: **${previousSnapshot.label || 'Untitled'}** (${previousSnapshot.periodStart?.slice(0, 10) ?? '—'} → ${previousSnapshot.periodEnd?.slice(0, 10) ?? '—'})`);
+      }
+      lines.push('');
+      lines.push('| Metric | Latest | Previous | Change |');
+      lines.push('|:-------|-------:|---------:|-------:|');
+      const lm = (latestSnapshot.metrics ?? {}) as Record<string, unknown>;
+      const pm = previousSnapshot ? (previousSnapshot.metrics ?? {}) as Record<string, unknown> : {};
+      metricsFields.forEach((f) => {
+        const cur = lm[f.key];
+        const prev = pm[f.key];
+        if (cur === undefined && prev === undefined) return;
+        const curStr = formatMetricValue(cur);
+        const prevStr = previousSnapshot ? formatMetricValue(prev) : '—';
+        const delta = computeMetricDelta(cur, prev);
+        const changeStr = delta
+          ? `${delta.diff >= 0 ? '+' : ''}${delta.percent !== null ? delta.percent.toFixed(1) + '%' : delta.diff.toFixed(2)}`
+          : '—';
+        lines.push(`| ${f.label} (${f.hint}) | ${curStr} | ${prevStr} | ${changeStr} |`);
+      });
+    } else {
+      lines.push('## 3. Metrics');
+      lines.push('_No snapshots recorded yet. Please submit your first metrics snapshot._');
+    }
+    lines.push('');
+
+    // AI instructions
+    lines.push('## Instructions');
+    lines.push('Based on the data above, please provide:');
+    lines.push('1. **Performance Summary** — Key highlights and concerns in 2–3 sentences');
+    lines.push('2. **Risk Analysis** — Any metrics trending in the wrong direction or missing targets');
+    lines.push('3. **Opportunities** — Where can we scale or improve efficiency');
+    lines.push('4. **Action Plan** — 3–5 specific, prioritised next steps with expected impact');
+    lines.push('5. **Data Gaps** — What additional data would improve this analysis');
+    lines.push('');
+    lines.push('Format your response with clear headings and use comparison tables where useful.');
+    return lines.join('\n');
+  };
+
+  const handleSendInsightsToAi = async () => {
+    if (!campaignId || loading) return;
+    const text = buildInsightsAiPrompt();
+    setInsightsOpen(false);
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'USER',
+      pane: 'STRATEGY',
+      kind: null,
+      metadata: null,
+      content: text,
+      createdAt: new Date().toISOString()
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setLoading(true);
+
+    const glossaryMatches = findGlossaryMatches(
+      `${text} ${Object.values(currentCampaign?.quizData || {}).join(' ')}`,
+      6
+    );
+    const glossaryContext = summarizeGlossary(glossaryMatches);
+    const context = glossaryContext.length > 0 ? { glossary: glossaryContext } : undefined;
+
+    try {
+      const res = await api.sendMessage(text, campaignId, context);
+      if (res.success && res.data) {
+        const { userMessage: savedUserMsg, assistantMessage } = res.data;
+        setMessages((prev) => {
+          const filtered = prev.filter((m) => m.id !== userMessage.id);
+          return [...filtered, savedUserMsg, assistantMessage];
+        });
+      } else {
+        appendAssistantMessage(getGenericAiErrorMessage());
+      }
+    } catch {
+      appendAssistantMessage(getGenericAiErrorMessage());
+    } finally {
+      setLoading(false);
+      setTimeout(() => textareaRef.current?.focus(), 100);
+    }
+  };
+
   const progressPercent = Math.round((currentStage / 4) * 100);
   const completedStages = currentStage;
   const totalStages = 4;
@@ -1536,7 +2023,7 @@ export default function Chat() {
     return p === 'STRATEGY' || p === 'SYSTEM';
   });
   const contentMessages = messages.filter(m => classifyPane(m) === 'CONTENT');
-  const showContentPane = currentStage > 0 || analystMessages.length > 0;
+  const showContentPane = !contentPaneCollapsed && (currentStage > 0 || analystMessages.length > 0);
 
   const ConfirmationModal = ({
     isOpen,
@@ -2069,6 +2556,16 @@ export default function Chat() {
                                 </div>
                               )}
                             </>
+                          ) : msg.content.startsWith('# 📊 Campaign Performance Report') ? (
+                            <div style={{ background: 'rgba(255,255,255,0.04)', padding: '0.75rem 1rem', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.08)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                                <BarChart3 size={16} style={{ color: '#34d399' }} />
+                                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Campaign Data Provided to AI</span>
+                              </div>
+                              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
+                                Includes current stage, quiz answers, KPI targets, and latest metrics snapshots.
+                              </p>
+                            </div>
                           ) : (
                             <p>{msg.content}</p>
                           )}
@@ -2173,6 +2670,19 @@ export default function Chat() {
             </div>
           </div>
 
+          {/* Content Pane Restore Button */}
+          {contentPaneCollapsed && (currentStage > 0 || analystMessages.length > 0) && (
+            <button
+              type="button"
+              className="content-pane-restore-btn"
+              onClick={() => setContentPaneCollapsed(false)}
+              title="Show Content Writer"
+            >
+              <FileText size={14} />
+              <ChevronLeft size={14} />
+            </button>
+          )}
+
           {/* Resizer */}
           {showContentPane && (
             <div
@@ -2192,6 +2702,15 @@ export default function Chat() {
                   <FileText size={16} style={{ color: '#34d399' }} />
                   <h3 style={{ color: '#34d399' }}>{'Content Writer'}</h3>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setContentPaneCollapsed(true)}
+                  className="btn-ghost"
+                  title="Hide Content Writer"
+                  style={{ width: '28px', height: '28px' }}
+                >
+                  <X size={14} />
+                </button>
               </div>
               <div className="chat-messages">
                 {contentMessages.length === 0 ? (
@@ -2492,7 +3011,10 @@ export default function Chat() {
                       {'Campaign Insights is the single place to review structured inputs and outputs: the Quiz Answers card wraps long multi-select values across lines, Stage 2 targets sit beside your latest snapshot, and the activity log lists chronologically—with Profile rows for Discovery answers, Targets rows for deadline and KPIs, plus plans, stages, content, metrics, and any extra campaign fields.'}
                     </p>
                     <p>
-                      {'When you file a snapshot, capture impressions, clicks, conversions, CPC, CPA, CTR, conversion rate, ROAS, plus any custom columns you rely on. The mini chart highlights the first six core fields so you can sanity-check direction before saving.'}
+                      {'Use Ask AI to review to send quiz answers, Stage 2 targets, and your latest (and previous) metrics snapshot to the strategist in one chat message. Section headers use + / − so you can hide quiz blocks, the snapshot form, performance trends, or the activity log when you want a calmer view.'}
+                    </p>
+                    <p>
+                      {'Metric labels spell out acronyms in parentheses (for example CPC (Cost Per Click), ROAS (Return on Ad Spend)). Hover labels or chart bars for the same hints. The snapshot mini chart plots the first six core fields with a grid and gradient bars; Performance trends compares each field to the prior snapshot when one exists.'}
                     </p>
                     <ul className="guide-list">
                       <li>{'Each snapshot is stored per campaign with its label and timestamp for easy audits.'}</li>
@@ -2580,6 +3102,21 @@ export default function Chat() {
                 </button>
               </div>
 
+              <div className="insights-modal-toolbar">
+                <p className="insights-modal-toolbar-hint">
+                  {'Send this panel’s quiz answers, targets, and latest snapshots to the strategist in one message.'}
+                </p>
+                <button
+                  type="button"
+                  className="insights-ai-submit-btn"
+                  onClick={handleSendInsightsToAi}
+                  disabled={loading || !campaignId}
+                >
+                  <Sparkles size={15} />
+                  {'Ask AI to review'}
+                </button>
+              </div>
+
               <div className="insights-modal-body">
                 <div className="insights-grid">
                   {/* Left Column - Quiz Progress */}
@@ -2589,100 +3126,153 @@ export default function Chat() {
                         <ListChecks size={16} style={{ color: 'var(--accent)' }} />
                         <h3>{'Quiz Progress'}</h3>
                       </div>
-                      <span className="insights-pill">{progressPercent}%</span>
-                    </div>
-                    <div className="insights-progress">
-                      <div className="insights-progress-bar">
-                        <div className="insights-progress-fill" style={{ width: `${progressPercent}%` }} />
-                      </div>
-                      <div className="insights-progress-meta">
-                        <span>
-                          {`${completedStages} / ${totalStages || '-'} stages`}
-                        </span>
-                        {currentCampaign.quizProgress?.lastUpdated && (
-                          <span style={{ fontSize: '0.72rem' }}>
-                            {new Date(currentCampaign.quizProgress.lastUpdated).toLocaleDateString('en-US')}
-                          </span>
-                        )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span className="insights-pill">{progressPercent}%</span>
                       </div>
                     </div>
-
-                    {/* Quiz Summary */}
-                    <div className="insights-stage-compare">
-                      <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <BookOpen size={14} style={{ color: 'var(--accent)' }} />
-                        {'Quiz Answers'}
-                      </h4>
-                      <div className="insights-stage-list">
-                        {fullQuizProfile.length === 0 ? (
-                          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                            {'No data yet.'}
-                          </p>
-                        ) : (
-                          fullQuizProfile.slice(0, 14).map((item, idx) => (
-                            <div key={idx} className="insights-stage-item">
-                              <span className="insights-stage-key" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
-                                {item.icon}
-                                {item.label}
+                      <div className="insights-card-pad">
+                        <button
+                          type="button"
+                          className="insights-section-toggle"
+                          aria-expanded={insightSections.quizProgress}
+                          onClick={() => setInsightSections((s) => ({ ...s, quizProgress: !s.quizProgress }))}
+                        >
+                          {insightSections.quizProgress ? <Minus size={14} /> : <Plus size={14} />}
+                          <span>{'Stage overview'}</span>
+                        </button>
+                        {insightSections.quizProgress && (
+                          <div className="insights-progress">
+                            <div className="insights-progress-bar">
+                              <div className="insights-progress-fill" style={{ width: `${progressPercent}%` }} />
+                            </div>
+                            <div className="insights-progress-meta">
+                              <span>
+                                {`${completedStages} / ${totalStages || '-'} stages`}
                               </span>
-                              <span className="insights-stage-value">{item.value}</span>
+                              {currentCampaign.quizProgress?.lastUpdated && (
+                                <span style={{ fontSize: '0.72rem' }}>
+                                  {new Date(currentCampaign.quizProgress.lastUpdated).toLocaleDateString('en-US')}
+                                </span>
+                              )}
                             </div>
-                          ))
+                          </div>
                         )}
-                      </div>
-                    </div>
-                    {(targetCtr > 0 || targetCvr > 0 || targetRoas > 0 || currentCampaign.quizData?.deadline) && (
-                      <div className="insights-stage-compare" style={{ borderTop: '1px solid rgba(16,185,129,0.2)' }}>
-                        <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <Target size={14} style={{ color: '#34d399' }} />
-                          {'Stage 2 Targets vs Latest'}
-                        </h4>
-                        <div className="insights-stage-list">
-                          {currentCampaign.quizData?.deadline && currentCampaign.quizData.deadline !== 'not_sure' && (
-                            <div className="insights-stage-item">
-                              <span className="insights-stage-key">Deadline</span>
-                              <span className="insights-stage-value">{currentCampaign.quizData.deadline}</span>
-                            </div>
-                          )}
-                          {targetCtr > 0 && (
-                            <div className="insights-kpi-row">
-                              <div className="insights-kpi-head">
-                                <span className="insights-stage-key">CTR</span>
-                                <span className={`insights-kpi-status insights-kpi-status--${ctrStatus.tone}`}>{ctrStatus.label}</span>
-                              </div>
-                              <div className="insights-kpi-track">
-                                <div className={`insights-kpi-fill insights-kpi-fill--${ctrStatus.tone}`} style={{ width: `${Math.min(100, ctrStatus.pct)}%` }} />
-                              </div>
-                              <span className="insights-stage-value">{`${actualCtr.toFixed(2)}% / ${targetCtr.toFixed(2)}%`}</span>
-                            </div>
-                          )}
-                          {targetCvr > 0 && (
-                            <div className="insights-kpi-row">
-                              <div className="insights-kpi-head">
-                                <span className="insights-stage-key">Conversion Rate</span>
-                                <span className={`insights-kpi-status insights-kpi-status--${cvrStatus.tone}`}>{cvrStatus.label}</span>
-                              </div>
-                              <div className="insights-kpi-track">
-                                <div className={`insights-kpi-fill insights-kpi-fill--${cvrStatus.tone}`} style={{ width: `${Math.min(100, cvrStatus.pct)}%` }} />
-                              </div>
-                              <span className="insights-stage-value">{`${actualCvr.toFixed(2)}% / ${targetCvr.toFixed(2)}%`}</span>
-                            </div>
-                          )}
-                          {targetRoas > 0 && (
-                            <div className="insights-kpi-row">
-                              <div className="insights-kpi-head">
-                                <span className="insights-stage-key">ROAS</span>
-                                <span className={`insights-kpi-status insights-kpi-status--${roasStatus.tone}`}>{roasStatus.label}</span>
-                              </div>
-                              <div className="insights-kpi-track">
-                                <div className={`insights-kpi-fill insights-kpi-fill--${roasStatus.tone}`} style={{ width: `${Math.min(100, roasStatus.pct)}%` }} />
-                              </div>
-                              <span className="insights-stage-value">{`${actualRoas.toFixed(2)} / ${targetRoas.toFixed(2)}`}</span>
+
+                        <div className="insights-stage-compare insights-stage-compare--tight">
+                          <div className="insights-section-head">
+                            <button
+                              type="button"
+                              className="insights-section-toggle"
+                              aria-expanded={insightSections.quizAnswers}
+                              onClick={() => setInsightSections((s) => ({ ...s, quizAnswers: !s.quizAnswers }))}
+                            >
+                              {insightSections.quizAnswers ? <Minus size={14} /> : <Plus size={14} />}
+                              <BookOpen size={14} style={{ color: 'var(--accent)' }} />
+                              <span>{'Quiz Answers'}</span>
+                            </button>
+                          </div>
+                          {insightSections.quizAnswers && (
+                            <div className="insights-stage-list">
+                              {fullQuizProfile.length === 0 ? (
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                                  {'No data yet.'}
+                                </p>
+                              ) : (
+                                fullQuizProfile.slice(0, 14).map((item, idx) => {
+                                  const qh = INSIGHT_QUIZ_HINTS[item.key];
+                                  return (
+                                    <div key={idx} className="insights-stage-item">
+                                      <span className="insights-stage-key" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
+                                        {item.icon}
+                                        <span>
+                                          {item.label}
+                                          {qh && <span className="insights-field-hint">{` (${qh})`}</span>}
+                                        </span>
+                                      </span>
+                                      <span className="insights-stage-value">{item.value}</span>
+                                    </div>
+                                  );
+                                })
+                              )}
                             </div>
                           )}
                         </div>
-                      </div>
-                    )}
+
+                      {(targetCtr > 0 || targetCvr > 0 || targetRoas > 0 || currentCampaign.quizData?.deadline) && (
+                        <div className="insights-stage-compare" style={{ borderTop: '1px solid rgba(16,185,129,0.2)' }}>
+                          <div className="insights-section-head">
+                            <button
+                              type="button"
+                              className="insights-section-toggle"
+                              aria-expanded={insightSections.stage2Targets}
+                              onClick={() => setInsightSections((s) => ({ ...s, stage2Targets: !s.stage2Targets }))}
+                            >
+                              {insightSections.stage2Targets ? <Minus size={14} /> : <Plus size={14} />}
+                              <Target size={14} style={{ color: '#34d399' }} />
+                              <span>{'Stage 2 targets vs latest'}</span>
+                            </button>
+                          </div>
+                          {insightSections.stage2Targets && (
+                            <div className="insights-stage-list">
+                              {currentCampaign.quizData?.deadline && currentCampaign.quizData.deadline !== 'not_sure' && (
+                                <div className="insights-stage-item">
+                                  <span className="insights-stage-key">
+                                    {'Deadline'}
+                                    <span className="insights-field-hint">{' (launch or review date)'}</span>
+                                  </span>
+                                  <span className="insights-stage-value">{currentCampaign.quizData.deadline}</span>
+                                </div>
+                              )}
+                              {targetCtr > 0 && (
+                                <div className="insights-kpi-row">
+                                  <div className="insights-kpi-head">
+                                    <span className="insights-stage-key">
+                                      {'CTR'}
+                                      <span className="insights-field-hint">{' (Click-through rate %)'}</span>
+                                    </span>
+                                    <span className={`insights-kpi-status insights-kpi-status--${ctrStatus.tone}`}>{ctrStatus.label}</span>
+                                  </div>
+                                  <div className="insights-kpi-track">
+                                    <div className={`insights-kpi-fill insights-kpi-fill--${ctrStatus.tone}`} style={{ width: `${Math.min(100, ctrStatus.pct)}%` }} />
+                                  </div>
+                                  <span className="insights-stage-value">{`${actualCtr.toFixed(2)}% / ${targetCtr.toFixed(2)}%`}</span>
+                                </div>
+                              )}
+                              {targetCvr > 0 && (
+                                <div className="insights-kpi-row">
+                                  <div className="insights-kpi-head">
+                                    <span className="insights-stage-key">
+                                      {'Conversion rate'}
+                                      <span className="insights-field-hint">{' (% of sessions that convert)'}</span>
+                                    </span>
+                                    <span className={`insights-kpi-status insights-kpi-status--${cvrStatus.tone}`}>{cvrStatus.label}</span>
+                                  </div>
+                                  <div className="insights-kpi-track">
+                                    <div className={`insights-kpi-fill insights-kpi-fill--${cvrStatus.tone}`} style={{ width: `${Math.min(100, cvrStatus.pct)}%` }} />
+                                  </div>
+                                  <span className="insights-stage-value">{`${actualCvr.toFixed(2)}% / ${targetCvr.toFixed(2)}%`}</span>
+                                </div>
+                              )}
+                              {targetRoas > 0 && (
+                                <div className="insights-kpi-row">
+                                  <div className="insights-kpi-head">
+                                    <span className="insights-stage-key">
+                                      {'ROAS'}
+                                      <span className="insights-field-hint">{' (Return on ad spend)'}</span>
+                                    </span>
+                                    <span className={`insights-kpi-status insights-kpi-status--${roasStatus.tone}`}>{roasStatus.label}</span>
+                                  </div>
+                                  <div className="insights-kpi-track">
+                                    <div className={`insights-kpi-fill insights-kpi-fill--${roasStatus.tone}`} style={{ width: `${Math.min(100, roasStatus.pct)}%` }} />
+                                  </div>
+                                  <span className="insights-stage-value">{`${actualRoas.toFixed(2)} / ${targetRoas.toFixed(2)}`}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Right Column - Metrics */}
@@ -2702,7 +3292,8 @@ export default function Chat() {
                           onChange={handleCsvUpload}
                         />
                         <button
-                          onClick={() => csvInputRef.current?.click()}
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); csvInputRef.current?.click(); }}
                           style={{
                             background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)',
                             color: '#34d399', cursor: 'pointer', padding: '0.3rem 0.6rem',
@@ -2716,98 +3307,125 @@ export default function Chat() {
                       </div>
                     </div>
 
-                    {/* Mini Chart - show when snapshots exist */}
-                    {metricsSnapshots.length > 0 && (
-                      <div style={{ padding: '0.75rem', borderBottom: '1px solid var(--border)' }}>
-                        <MiniBarChart
-                          data={metricsFields.slice(0, 6).map(f => ({
-                            label: f.key,
-                            value: parseFloat(String((latestSnapshot?.metrics as Record<string, any>)?.[f.key] || '0')) || 0
-                          }))}
-                        />
-                      </div>
-                    )}
-
-                    <div className="metrics-form">
-                      <div className="metrics-row">
-                        <label>
-                          {'Label'}
-                          <input
-                            type="text"
-                            value={metricsLabel}
-                            placeholder={'Baseline, Month 1...'}
-                            onChange={(e) => setMetricsLabel(e.target.value)}
-                          />
-                        </label>
-                      </div>
-                      <div className="metrics-row">
-                        <label>
-                          {'Start date'}
-                          <input
-                            type="date"
-                            value={metricsPeriodStart}
-                            onChange={(e) => setMetricsPeriodStart(e.target.value)}
-                          />
-                        </label>
-                        <label>
-                          {'End date'}
-                          <input
-                            type="date"
-                            value={metricsPeriodEnd}
-                            onChange={(e) => setMetricsPeriodEnd(e.target.value)}
-                          />
-                        </label>
-                      </div>
-                      <div className="metrics-grid">
-                        {metricsFields.map((field) => (
-                          <label key={field.key}>
-                            {field.label}
-                            <input
-                              type="text"
-                              value={metricsInputs[field.key] || ''}
-                              onChange={(e) => handleMetricsInputChange(field.key, e.target.value)}
-                            />
-                          </label>
-                        ))}
-                      </div>
-                      <button className="metrics-save" onClick={handleSaveMetrics}>
-                        <Check size={14} />
-                        {'Save Snapshot'}
+                      <div className="insights-card-pad">
+                      <button
+                        type="button"
+                        className="insights-section-toggle"
+                        aria-expanded={insightSections.metricsSnapshot}
+                        onClick={() => setInsightSections((s) => ({ ...s, metricsSnapshot: !s.metricsSnapshot }))}
+                      >
+                        {insightSections.metricsSnapshot ? <Minus size={14} /> : <Plus size={14} />}
+                        <BarChart3 size={14} style={{ color: '#34d399' }} />
+                        <span>{'Snapshot chart & entry form'}</span>
                       </button>
-                    </div>
+                      {insightSections.metricsSnapshot && (
+                        <>
+                          {metricsSnapshots.length > 0 && (
+                            <div className="insights-chart-panel" style={{ padding: '0.5rem 0' }}>
+                              <TrendLineCharts snapshots={metricsSnapshots} />
+                            </div>
+                          )}
 
-                    {/* Comparison with trend indicators */}
-                    <div className="metrics-compare">
-                      <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <TrendingUp size={14} style={{ color: '#34d399' }} />
-                        {'Performance Trends'}
-                      </h4>
-                      {latestSnapshot ? (
-                        <div className="metrics-compare-list">
-                          {metricsFields.map((field) => {
-                            const current = latestSnapshot.metrics?.[field.key];
-                            const previous = previousSnapshot?.metrics?.[field.key];
-                            const delta = computeMetricDelta(current, previous);
-                            const isPositive = delta && delta.diff >= 0;
-                            return (
-                              <div key={field.key} className="metrics-compare-item">
-                                <span className="metrics-compare-label">{field.label}</span>
-                                <span className="metrics-compare-value">{formatMetricValue(current)}</span>
-                                <span className={`metrics-compare-delta ${isPositive ? 'up' : 'down'}`}>
-                                  {delta ? (
-                                    <>
-                                      {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                                      {delta.percent !== null ? `${delta.percent.toFixed(1)}%` : delta.diff.toFixed(2)}
-                                    </>
-                                  ) : '-'}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{'Add a snapshot to see trends.'}</p>
+                          <div className="metrics-form">
+                            <div className="metrics-row">
+                              <label>
+                                {'Label'}
+                                <input
+                                  type="text"
+                                  value={metricsLabel}
+                                  placeholder={'Baseline, Month 1...'}
+                                  onChange={(e) => setMetricsLabel(e.target.value)}
+                                />
+                              </label>
+                            </div>
+                            <div className="metrics-row">
+                              <label>
+                                {'Start date'}
+                                <input
+                                  type="date"
+                                  value={metricsPeriodStart}
+                                  onChange={(e) => setMetricsPeriodStart(e.target.value)}
+                                />
+                              </label>
+                              <label>
+                                {'End date'}
+                                <input
+                                  type="date"
+                                  value={metricsPeriodEnd}
+                                  onChange={(e) => setMetricsPeriodEnd(e.target.value)}
+                                />
+                              </label>
+                            </div>
+                            <div className="metrics-grid">
+                              {metricsFields.map((field) => (
+                                <label key={field.key}>
+                                  <span className="metrics-label-with-hint" title={field.hint}>
+                                    {metricLabelWithHint(field)}
+                                  </span>
+                                  <input
+                                    type="text"
+                                    value={metricsInputs[field.key] || ''}
+                                    onChange={(e) => handleMetricsInputChange(field.key, e.target.value)}
+                                  />
+                                </label>
+                              ))}
+                            </div>
+                            <button type="button" className="metrics-save" onClick={handleSaveMetrics}>
+                              <Check size={14} />
+                              {'Save Snapshot'}
+                            </button>
+                          </div>
+                        </>
                       )}
+
+                      <div className="metrics-compare metrics-compare--insights">
+                        <button
+                          type="button"
+                          className="insights-section-toggle insights-section-toggle--flush"
+                          aria-expanded={insightSections.trends}
+                          onClick={() => setInsightSections((s) => ({ ...s, trends: !s.trends }))}
+                        >
+                          {insightSections.trends ? <Minus size={14} /> : <Plus size={14} />}
+                          <TrendingUp size={14} style={{ color: '#34d399' }} />
+                          <span>{'Performance trends'}</span>
+                        </button>
+                        {insightSections.trends && (
+                          <>
+                            {latestSnapshot ? (
+                              <div className="metrics-compare-list">
+                                {metricsFields.map((field) => {
+                                  const current = latestSnapshot.metrics?.[field.key];
+                                  const previous = previousSnapshot?.metrics?.[field.key];
+                                  const delta = computeMetricDelta(current, previous);
+                                  const isPositive = delta && delta.diff >= 0;
+                                  return (
+                                    <div key={field.key} className="metrics-compare-item">
+                                      <span className="metrics-compare-label" title={field.hint}>
+                                        {metricLabelWithHint(field)}
+                                      </span>
+                                      <span className="metrics-compare-value">{formatMetricValue(current)}</span>
+                                      <span className={`metrics-compare-delta ${isPositive ? 'up' : 'down'}`}>
+                                        {delta ? (
+                                          <>
+                                            {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                                            {delta.percent !== null ? `${delta.percent.toFixed(1)}%` : delta.diff.toFixed(2)}
+                                          </>
+                                        ) : (
+                                          '-'
+                                        )}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0.35rem 0 0' }}>
+                                {'Add a snapshot to see trends.'}
+                              </p>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2816,11 +3434,19 @@ export default function Chat() {
                     in the campaign so the user has a clean audit trail of
                     what happened and when. */}
                 <div className="activity-log">
-                  <div className="activity-log-header">
-                    <BookOpen size={16} style={{ color: 'var(--accent)' }} />
-                    <h3>{'Activity Log'}</h3>
+                  <div className="activity-log-header activity-log-header--toggle">
+                    <button
+                      type="button"
+                      className="insights-section-toggle insights-section-toggle--activity"
+                      aria-expanded={insightSections.activity}
+                      onClick={() => setInsightSections((s) => ({ ...s, activity: !s.activity }))}
+                    >
+                      {insightSections.activity ? <Minus size={14} /> : <Plus size={14} />}
+                      <BookOpen size={16} style={{ color: 'var(--accent)' }} />
+                      <h3>{'Activity Log'}</h3>
+                    </button>
                   </div>
-                  {(() => {
+                  {insightSections.activity && (() => {
                     if (activityEvents.length === 0) {
                       return (
                         <div className="activity-log-empty">
