@@ -21,12 +21,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   ]);
 }
 
-function shouldUseLiveAi(): boolean {
-  if (AI_MODE === 'mock') return false;
-  if (AI_MODE === 'live') return true;
-  // auto: live only when key looks valid (length-based heuristic)
-  return GEMINI_API_KEY.length > 30;
-}
+// shouldUseLiveAi removed, backend now delegates to ai_service
 
 /** Keep parsing rules aligned with frontend `src/lib/planMarkers.ts`. */
 const PLAN_TAG_BACKEND = /\[\s*(\/?)\s*plan\s*[_\s\-\u2013\u2014]?\s*([a-z0-9]+)\s*\]/gi;
@@ -304,30 +299,26 @@ router.post('/message', async (req: AuthRequest, res) => {
     let usedFallback = false;
 
     try {
-      if (shouldUseLiveAi()) {
-        const response = await withTimeout(
-          fetch(`${AI_SERVICE_URL}/chat`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              message,
-              context: aiContext
-            })
-          }),
-          AI_TIMEOUT_MS
-        );
+      const response = await withTimeout(
+        fetch(`${AI_SERVICE_URL}/chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message,
+            context: aiContext
+          })
+        }),
+        AI_TIMEOUT_MS
+      );
 
-        if (!response.ok) {
-          throw new Error(`AI Service returned ${response.status}`);
-        }
-
-        const data = await response.json() as { response: string };
-        aiText = data.response;
-      } else {
-        throw new Error('Using mock mode');
+      if (!response.ok) {
+        throw new Error(`AI Service returned ${response.status}`);
       }
+
+      const data = await response.json() as { response: string };
+      aiText = data.response;
     } catch (aiError) {
       usedFallback = true;
       console.error('AI upstream error (falling back to mock):', aiError);
@@ -588,36 +579,32 @@ router.post('/assist', async (req: AuthRequest, res) => {
     };
 
     try {
-      if (shouldUseLiveAi()) {
-        const aiContext = {
-          quizData,
-          historyText
-        };
-        
-        const response = await withTimeout(
-          fetch(`${AI_SERVICE_URL}/assist`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              type,
-              message: customPrompt || "",
-              context: aiContext
-            })
-          }),
-          AI_TIMEOUT_MS
-        );
+      const aiContext = {
+        quizData,
+        historyText
+      };
+      
+      const response = await withTimeout(
+        fetch(`${AI_SERVICE_URL}/assist`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type,
+            message: customPrompt || "",
+            context: aiContext
+          })
+        }),
+        AI_TIMEOUT_MS
+      );
 
-        if (!response.ok) {
-          throw new Error(`AI Service returned ${response.status}`);
-        }
-
-        const data = await response.json() as { response: string };
-        assistText = data.response;
-      } else {
-        throw new Error('Using mock mode');
+      if (!response.ok) {
+        throw new Error(`AI Service returned ${response.status}`);
       }
+
+      const data = await response.json() as { response: string };
+      assistText = data.response;
     } catch (aiError) {
       usedFallback = true;
 
