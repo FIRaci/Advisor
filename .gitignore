@@ -15,6 +15,7 @@ ai_service/__pycache__/
 .env
 .env.*
 !.env.example
+!frontend/.env.production
 
 # Logs
 *.log
