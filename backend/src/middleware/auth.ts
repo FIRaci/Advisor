@@ -16,7 +16,11 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
   const token = authHeader.split(' ')[1];
   
   try {
-    const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      console.error('JWT_SECRET environment variable is missing!');
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
     req.userId = decoded.userId;
     return next();
