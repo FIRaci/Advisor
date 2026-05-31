@@ -1849,22 +1849,85 @@ export default function Chat() {
 
   const latestSnapshot = metricsSnapshots[0];
   const previousSnapshot = metricsSnapshots[1];
-  const targetCtr = Number(currentCampaign?.quizData?.target_ctr || 0);
-  const targetCvr = Number(currentCampaign?.quizData?.target_cvr || 0);
-  const targetRoas = Number(currentCampaign?.quizData?.target_roas || 0);
-  const actualCtr = Number(latestSnapshot?.metrics?.ctr || 0);
-  const actualCvr = Number(latestSnapshot?.metrics?.conversionRate || 0);
-  const actualRoas = Number(latestSnapshot?.metrics?.roas || 0);
-  const getKpiStatus = (actual: number, target: number) => {
+
+  const getKpiStatus = (actual: number, target: number, isCost: boolean) => {
     if (!target || target <= 0) return { label: 'No target', tone: 'neutral' as const, pct: 0 };
-    const pct = Math.max(0, Math.min(140, (actual / target) * 100));
-    if (actual >= target) return { label: 'On track', tone: 'good' as const, pct };
-    if (actual >= target * 0.8) return { label: 'Close', tone: 'warn' as const, pct };
-    return { label: 'Behind', tone: 'bad' as const, pct };
+    let pct: number;
+    let label: string;
+    let tone: 'good' | 'warn' | 'bad' | 'neutral';
+
+    if (isCost) {
+      pct = Math.max(0, Math.min(140, (target / (actual || 0.001)) * 100));
+      if (actual <= target) { label = 'On track'; tone = 'good' as const; }
+      else if (actual <= target * 1.2) { label = 'Close'; tone = 'warn' as const; }
+      else { label = 'Behind'; tone = 'bad' as const; }
+    } else {
+      pct = Math.max(0, Math.min(140, (actual / target) * 100));
+      if (actual >= target) { label = 'On track'; tone = 'good' as const; }
+      else if (actual >= target * 0.8) { label = 'Close'; tone = 'warn' as const; }
+      else { label = 'Behind'; tone = 'bad' as const; }
+    }
+    return { label, tone, pct };
   };
-  const ctrStatus = getKpiStatus(actualCtr, targetCtr);
-  const cvrStatus = getKpiStatus(actualCvr, targetCvr);
-  const roasStatus = getKpiStatus(actualRoas, targetRoas);
+
+  const activeTargets = useMemo(() => {
+    const targets: Array<{
+      key: string;
+      label: string;
+      target: number;
+      actual: number;
+      status: { label: string; tone: string; pct: number };
+      isCost: boolean;
+      hint: string;
+    }> = [];
+    
+    if (!currentCampaign?.quizData) return targets;
+
+    const quizData = currentCampaign.quizData;
+    
+    const metricMeta: Record<string, { label: string, hint: string, isCost: boolean }> = {
+      ctr: { label: 'CTR', hint: 'Click-through rate %', isCost: false },
+      cvr: { label: 'Conversion rate', hint: '% of sessions that convert', isCost: false },
+      conversionrate: { label: 'Conversion rate', hint: '% of sessions that convert', isCost: false },
+      roas: { label: 'ROAS', hint: 'Return on ad spend', isCost: false },
+      cac: { label: 'CAC', hint: 'Cost per acquisition', isCost: true },
+      cpc: { label: 'CPC', hint: 'Cost per click', isCost: true },
+      cpa: { label: 'CPA', hint: 'Cost per action', isCost: true },
+      cpl: { label: 'CPL', hint: 'Cost per lead', isCost: true },
+      cpm: { label: 'CPM', hint: 'Cost per mille (1000)', isCost: true },
+      engagementrate: { label: 'Engagement rate', hint: '% of engaged users', isCost: false },
+      retentionrate: { label: 'Retention rate', hint: '% of returning users', isCost: false },
+      churnrate: { label: 'Churn rate', hint: '% of lost users', isCost: true },
+      bouncerate: { label: 'Bounce rate', hint: '% of single-page sessions', isCost: true },
+    };
+
+    Object.entries(quizData).forEach(([key, value]) => {
+      if (key.startsWith('target_')) {
+        const metricKey = key.replace('target_', '').toLowerCase();
+        const targetVal = Number(value);
+        if (targetVal > 0) {
+          const actualVal = Number(latestSnapshot?.metrics?.[metricKey] || 0);
+          const meta = metricMeta[metricKey] || { 
+            label: metricKey.toUpperCase(), 
+            hint: 'Custom metric', 
+            isCost: false 
+          };
+
+          targets.push({
+            key: metricKey,
+            label: meta.label,
+            target: targetVal,
+            actual: actualVal,
+            status: getKpiStatus(actualVal, targetVal, meta.isCost),
+            isCost: meta.isCost,
+            hint: meta.hint
+          });
+        }
+      }
+    });
+
+    return targets;
+  }, [currentCampaign?.quizData, latestSnapshot?.metrics]);
 
   const buildInsightsAiPrompt = (): string => {
     const lines: string[] = [
@@ -1893,7 +1956,7 @@ export default function Chat() {
 
     // Stage 2 targets
     const qd = currentCampaign?.quizData;
-    const hasTargets = (targetCtr > 0 || targetCvr > 0 || targetRoas > 0 || (qd?.deadline && qd.deadline !== 'not_sure'));
+    const hasTargets = (activeTargets.length > 0 || (qd?.deadline && qd.deadline !== 'not_sure'));
     if (hasTargets) {
       lines.push('## 2. KPI Targets');
       lines.push('| KPI | Target | Actual | Status |');
@@ -1901,15 +1964,9 @@ export default function Chat() {
       if (qd?.deadline && qd.deadline !== 'not_sure') {
         lines.push(`| Deadline | ${qd.deadline} | — | — |`);
       }
-      if (targetCtr > 0) {
-        lines.push(`| CTR (%) | ${targetCtr.toFixed(2)} | ${actualCtr.toFixed(2)} | ${ctrStatus.label} |`);
-      }
-      if (targetCvr > 0) {
-        lines.push(`| Conversion Rate (%) | ${targetCvr.toFixed(2)} | ${actualCvr.toFixed(2)} | ${cvrStatus.label} |`);
-      }
-      if (targetRoas > 0) {
-        lines.push(`| ROAS | ${targetRoas.toFixed(2)} | ${actualRoas.toFixed(2)} | ${roasStatus.label} |`);
-      }
+      activeTargets.forEach(t => {
+        lines.push(`| ${t.label} | ${t.target.toFixed(2)} | ${t.actual.toFixed(2)} | ${t.status.label} |`);
+      });
       lines.push('');
     }
 
@@ -2747,7 +2804,7 @@ export default function Chat() {
                       </div>
                       <div className="message-content typing-bubble">
                         <div className="typing-indicator">
-                          <span /><span /><span />
+                          <span /><span /><span /><span />
                         </div>
                       </div>
                     </div>
@@ -2866,7 +2923,7 @@ export default function Chat() {
                     <div className="message-avatar assistant-avatar" style={{ background: 'linear-gradient(135deg, #10b981, #3b82f6)' }}><FileText size={16} /></div>
                     <div className="message-main">
                       <div className="message-content typing-bubble">
-                        <div className="typing-indicator"><span /><span /><span /></div>
+                        <div className="typing-indicator"><span /><span /><span /><span /></div>
                       </div>
                     </div>
                   </div>
@@ -3291,7 +3348,7 @@ export default function Chat() {
                           )}
                         </div>
 
-                      {(targetCtr > 0 || targetCvr > 0 || targetRoas > 0 || currentCampaign.quizData?.deadline) && (
+                      {(activeTargets.length > 0 || currentCampaign.quizData?.deadline) && (
                         <div className="insights-stage-compare" style={{ borderTop: '1px solid rgba(16,185,129,0.2)' }}>
                           <div className="insights-section-head">
                             <button
@@ -3302,7 +3359,7 @@ export default function Chat() {
                             >
                               {insightSections.stage2Targets ? <Minus size={14} /> : <Plus size={14} />}
                               <Target size={14} style={{ color: '#34d399' }} />
-                              <span>{'Stage 2 targets vs latest'}</span>
+                              <span>{'Active Targets & Milestones'}</span>
                             </button>
                           </div>
                           {insightSections.stage2Targets && (
@@ -3316,51 +3373,23 @@ export default function Chat() {
                                   <span className="insights-stage-value">{currentCampaign.quizData.deadline}</span>
                                 </div>
                               )}
-                              {targetCtr > 0 && (
-                                <div className="insights-kpi-row">
+                              {activeTargets.map(t => (
+                                <div className="insights-kpi-row" key={t.key}>
                                   <div className="insights-kpi-head">
                                     <span className="insights-stage-key">
-                                      {'CTR'}
-                                      <span className="insights-field-hint">{' (Click-through rate %)'}</span>
+                                      {t.label}
+                                      <span className="insights-field-hint">{` (${t.hint})`}</span>
                                     </span>
-                                    <span className={`insights-kpi-status insights-kpi-status--${ctrStatus.tone}`}>{ctrStatus.label}</span>
+                                    <span className={`insights-kpi-status insights-kpi-status--${t.status.tone}`}>{t.status.label}</span>
                                   </div>
                                   <div className="insights-kpi-track">
-                                    <div className={`insights-kpi-fill insights-kpi-fill--${ctrStatus.tone}`} style={{ width: `${Math.min(100, ctrStatus.pct)}%` }} />
+                                    <div className={`insights-kpi-fill insights-kpi-fill--${t.status.tone}`} style={{ width: `${Math.min(100, t.status.pct)}%` }} />
                                   </div>
-                                  <span className="insights-stage-value">{`${actualCtr.toFixed(2)}% / ${targetCtr.toFixed(2)}%`}</span>
+                                  <span className="insights-stage-value">
+                                    {t.isCost ? `$${t.actual.toFixed(2)} / $${t.target.toFixed(2)}` : `${t.actual.toFixed(2)}% / ${t.target.toFixed(2)}%`}
+                                  </span>
                                 </div>
-                              )}
-                              {targetCvr > 0 && (
-                                <div className="insights-kpi-row">
-                                  <div className="insights-kpi-head">
-                                    <span className="insights-stage-key">
-                                      {'Conversion rate'}
-                                      <span className="insights-field-hint">{' (% of sessions that convert)'}</span>
-                                    </span>
-                                    <span className={`insights-kpi-status insights-kpi-status--${cvrStatus.tone}`}>{cvrStatus.label}</span>
-                                  </div>
-                                  <div className="insights-kpi-track">
-                                    <div className={`insights-kpi-fill insights-kpi-fill--${cvrStatus.tone}`} style={{ width: `${Math.min(100, cvrStatus.pct)}%` }} />
-                                  </div>
-                                  <span className="insights-stage-value">{`${actualCvr.toFixed(2)}% / ${targetCvr.toFixed(2)}%`}</span>
-                                </div>
-                              )}
-                              {targetRoas > 0 && (
-                                <div className="insights-kpi-row">
-                                  <div className="insights-kpi-head">
-                                    <span className="insights-stage-key">
-                                      {'ROAS'}
-                                      <span className="insights-field-hint">{' (Return on ad spend)'}</span>
-                                    </span>
-                                    <span className={`insights-kpi-status insights-kpi-status--${roasStatus.tone}`}>{roasStatus.label}</span>
-                                  </div>
-                                  <div className="insights-kpi-track">
-                                    <div className={`insights-kpi-fill insights-kpi-fill--${roasStatus.tone}`} style={{ width: `${Math.min(100, roasStatus.pct)}%` }} />
-                                  </div>
-                                  <span className="insights-stage-value">{`${actualRoas.toFixed(2)} / ${targetRoas.toFixed(2)}`}</span>
-                                </div>
-                              )}
+                              ))}
                             </div>
                           )}
                         </div>

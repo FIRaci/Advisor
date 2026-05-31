@@ -3134,27 +3134,35 @@ body.chat-page-active {
 }
 
 .typing-indicator {
-  gap: 0.4rem;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
   background: linear-gradient(135deg, rgba(124, 58, 237, 0.16), rgba(37, 99, 235, 0.12));
   border: 1px solid rgba(167, 139, 250, 0.35);
-  box-shadow: 0 10px 24px rgba(124, 58, 237, 0.18);
+  box-shadow: 0 10px 24px rgba(124, 58, 237, 0.18), inset 0 0 10px rgba(255,255,255,0.05);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  height: 28px;
 }
 
 .typing-indicator span {
-  width: 7px;
-  height: 7px;
-  background: linear-gradient(135deg, #a78bfa, #60a5fa);
-  opacity: 0.35;
-  animation: typingPulse 1.1s infinite ease-in-out;
+  width: 4px;
+  height: 8px;
+  background: linear-gradient(180deg, #a78bfa, #3b82f6);
+  border-radius: 4px;
+  opacity: 0.8;
+  animation: audioWave 1.2s infinite ease-in-out;
 }
 
 .typing-indicator span:nth-child(1) { animation-delay: 0s; }
-.typing-indicator span:nth-child(2) { animation-delay: 0.18s; }
-.typing-indicator span:nth-child(3) { animation-delay: 0.36s; }
+.typing-indicator span:nth-child(2) { animation-delay: -1.0s; }
+.typing-indicator span:nth-child(3) { animation-delay: -0.8s; }
+.typing-indicator span:nth-child(4) { animation-delay: -0.6s; }
 
-@keyframes typingPulse {
-  0%, 80%, 100% { transform: translateY(0) scale(0.9); opacity: 0.35; }
-  40% { transform: translateY(-5px) scale(1.12); opacity: 1; }
+@keyframes audioWave {
+  0%, 100% { transform: scaleY(0.5); opacity: 0.4; }
+  50% { transform: scaleY(1.8); opacity: 1; filter: drop-shadow(0 0 5px rgba(167, 139, 250, 0.8)); }
 }
 
 .insights-card {
