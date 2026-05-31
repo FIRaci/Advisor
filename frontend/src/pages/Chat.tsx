@@ -1629,6 +1629,39 @@ export default function Chat() {
     }
   };
 
+  const handleExtractTargets = async (content: string) => {
+    if (!campaignId) return;
+    const loadingToast = toast.loading("Extracting targets...");
+    try {
+      const res = await api.assistContent(
+        'custom',
+        campaignId,
+        `Extract the KPI/metric targets from the following text. Return ONLY a JSON object exactly like {"targets": {"cpa": 1.2, "retentionRate": 15}}. Map metric names to these exact keys: cpc, cpm, cpa, cpl, cac, ctr, conversionRate, roas, churnRate, bounceRate, retentionRate, engagementRate. Text: ${content}`
+      );
+      toast.dismiss(loadingToast);
+      
+      if (res.success && res.data) {
+        const jsonMatch = res.data.content.match(/```(?:json)?\n([\s\S]*?)\n```/) || res.data.content.match(/({[\s\S]*})/);
+        if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[1]);
+            if (parsed.targets) {
+               handleApplyTargets(parsed.targets);
+               return;
+            }
+        }
+        toast.error('Could not find any targets.');
+      }
+    } catch (err) {
+      toast.dismiss(loadingToast);
+      toast.error('Failed to extract targets.');
+    }
+  };
+
+  const hasTargetKeywords = (text: string) => {
+    const t = text.toLowerCase();
+    return t.includes('target') || t.includes('milestone') || t.includes('kpi') || t.includes('benchmark');
+  };
+
   const reactMarkdownComponents = useMemo(() => ({
     code({ node, inline, className, children, ...props }: any) {
       const match = /language-(\w+)/.exec(className || '');
@@ -2671,6 +2704,16 @@ export default function Chat() {
                               style={{ color: '#34d399' }}
                             >
                               <ArrowRight size={14} />
+                            </button>
+                          )}
+                          {msg.role === 'ASSISTANT' && hasTargetKeywords(msg.content) && (
+                            <button
+                              className="message-copy-btn"
+                              onClick={() => handleExtractTargets(msg.content)}
+                              title={'Extract & Apply Targets'}
+                              style={{ color: '#3b82f6' }}
+                            >
+                              <Target size={14} />
                             </button>
                           )}
                           <button
