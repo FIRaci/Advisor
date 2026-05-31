@@ -3186,7 +3186,7 @@ body.chat-page-active {
 .btn-scroll-down {
   position: absolute;
   bottom: 80px; /* Above the input box */
-  right: 24px;
+  left: 50%;
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -3211,6 +3211,39 @@ body.chat-page-active {
 @media (max-width: 768px) {
   .btn-scroll-down {
     bottom: 70px;
+    right: 16px;
+  }
+}
+
+/* Back to top button */
+.btn-back-to-top {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 50;
+  transition: all 0.2s ease;
+}
+
+.btn-back-to-top:hover {
+  background: var(--bg-secondary);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+@media (max-width: 768px) {
+  .btn-back-to-top {
+    bottom: 16px;
     right: 16px;
   }
 }

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Send, Sparkles, Trash2, Plus, Minus, MessageSquare, ChevronLeft, ChevronRight,
   Settings, LogOut, MoreHorizontal, Pencil, Star, Copy, Check, ListChecks,
-  BarChart3, BookOpen, Package, Building, Users, RefreshCw, Zap, ArrowRight, ArrowDown, Award,
+  BarChart3, BookOpen, Package, Building, Users, RefreshCw, Zap, ArrowRight, ArrowDown, ArrowUp, Award,
   Target, Megaphone, DollarSign, Globe, Clock, Briefcase, X, HelpCircle,
   Mail, FileText, Palette, Upload, TrendingUp, TrendingDown, Heart, Smartphone, ShoppingBag
 } from 'lucide-react';
@@ -238,6 +238,8 @@ export default function Chat() {
   const contentMessagesEndRef = useRef<HTMLDivElement>(null);
   const analystScrollContainerRef = useRef<HTMLDivElement>(null);
   const contentScrollContainerRef = useRef<HTMLDivElement>(null);
+  const sidebarScrollRef = useRef<HTMLDivElement>(null);
+  const insightsScrollRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const autostartTriggeredRef = useRef(false);
@@ -253,6 +255,8 @@ export default function Chat() {
   const [phase2TextInput, setPhase2TextInput] = useState('');
   const [showAnalystScrollDown, setShowAnalystScrollDown] = useState(false);
   const [showContentScrollDown, setShowContentScrollDown] = useState(false);
+  const [showSidebarBackToTop, setShowSidebarBackToTop] = useState(false);
+  const [showInsightsBackToTop, setShowInsightsBackToTop] = useState(false);
 
   useEffect(() => {
     if (!phase2PopupOpen) return;
@@ -440,6 +444,18 @@ export default function Chat() {
 
   const scrollToBottom = (ref: React.RefObject<HTMLDivElement | null>) => {
     ref.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleScrollToTopVisible = (
+    e: React.UIEvent<HTMLDivElement>,
+    setShowBackToTop: React.Dispatch<React.SetStateAction<boolean>>
+  ) => {
+    const target = e.target as HTMLDivElement;
+    setShowBackToTop(target.scrollTop > 200);
+  };
+
+  const scrollToTop = (ref: React.RefObject<HTMLDivElement | null>) => {
+    ref.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   useEffect(() => {
@@ -2293,7 +2309,12 @@ export default function Chat() {
             {'New Chat'}
           </button>
 
-          <div className="sidebar-section" data-lenis-prevent="true">
+          <div 
+            className="sidebar-section" 
+            data-lenis-prevent="true"
+            ref={sidebarScrollRef}
+            onScroll={(e) => handleScrollToTopVisible(e, setShowSidebarBackToTop)}
+          >
             <span className="section-label">{'Saved Campaigns'}</span>
             <div className="campaigns-list">
               {sortedCampaigns.map((campaign) => (
@@ -2320,6 +2341,23 @@ export default function Chat() {
               {sortedCampaigns.length === 0 && <p className="no-campaigns">{'No campaigns yet'}</p>}
             </div>
           </div>
+
+          <AnimatePresence>
+            {showSidebarBackToTop && (
+              <motion.button
+                className="btn-back-to-top"
+                initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => scrollToTop(sidebarScrollRef)}
+                aria-label="Back to top"
+              >
+                <ArrowUp size={20} />
+              </motion.button>
+            )}
+          </AnimatePresence>
 
           <div className="sidebar-footer">
             <div className="user-menu-wrapper" ref={userMenuRef}>
@@ -2848,9 +2886,9 @@ export default function Chat() {
               {showAnalystScrollDown && (
                 <motion.button
                   className="btn-scroll-down"
-                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                  initial={{ opacity: 0, y: 10, scale: 0.9, x: "-50%" }}
+                  animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
+                  exit={{ opacity: 0, y: 10, scale: 0.9, x: "-50%" }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => scrollToBottom(messagesEndRef)}
@@ -2986,9 +3024,9 @@ export default function Chat() {
                 {showContentScrollDown && (
                   <motion.button
                     className="btn-scroll-down"
-                    initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                    initial={{ opacity: 0, y: 10, scale: 0.9, x: "-50%" }}
+                    animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
+                    exit={{ opacity: 0, y: 10, scale: 0.9, x: "-50%" }}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => scrollToBottom(contentMessagesEndRef)}
@@ -3337,7 +3375,12 @@ export default function Chat() {
                 </button>
               </div>
 
-              <div className="insights-modal-body" data-lenis-prevent="true">
+              <div 
+                className="insights-modal-body" 
+                data-lenis-prevent="true"
+                ref={insightsScrollRef}
+                onScroll={(e) => handleScrollToTopVisible(e, setShowInsightsBackToTop)}
+              >
                 <div className="insights-grid">
                   {/* Left Column - Quiz Progress */}
                   <div className="insights-card">
@@ -3679,6 +3722,23 @@ export default function Chat() {
                   })()}
                 </div>
               </div>
+
+              <AnimatePresence>
+                {showInsightsBackToTop && (
+                  <motion.button
+                    className="btn-back-to-top"
+                    initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => scrollToTop(insightsScrollRef)}
+                    aria-label="Back to top"
+                  >
+                    <ArrowUp size={20} />
+                  </motion.button>
+                )}
+              </AnimatePresence>
             </motion.div>
           </motion.div>
         )}
