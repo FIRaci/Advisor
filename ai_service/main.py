@@ -274,6 +274,19 @@ Guidelines:
 - Provide examples when helpful
 - Consider budget constraints
 - Focus on ROI and measurable outcomes
+- IMPORTANT: If you suggest specific KPI/metric targets, you MUST output them at the end of your response in a JSON block exactly like this:
+```json
+{
+  "type": "metrics_targets",
+  "targets": {
+    "cpc": 0.5,
+    "cpa": 15,
+    "roas": 3.0,
+    "retentionRate": 15
+  }
+}
+```
+Use only standard metric keys (e.g., cpc, cpm, cpa, cpl, cac, ctr, conversionRate, roas, churnRate, bounceRate, retentionRate, engagementRate).
 
 Respond in the same language the user writes in (English or Vietnamese)."""
 
