@@ -15,7 +15,7 @@ export default function Landing() {
   
   // Advanced Scroll Tracking for the Hero section
   const heroOpacity = useTransform(scrollY, [0, 400], [1, 0]);
-  const heroScale = useTransform(scrollY, [0, 400], [1, 0.9]);
+  const heroScale = useTransform(scrollY, [0, 400], [1, 0.85]);
   const heroY = useTransform(scrollY, [0, 400], [0, 100]);
 
   const { t } = useTranslation();

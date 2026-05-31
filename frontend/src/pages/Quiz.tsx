@@ -1056,24 +1056,36 @@ export default function Quiz() {
                 </AnimatePresence>
 
                 {/* Options Grid */}
-                <div className={`options-grid cols-${(currentQuestion.options?.length || 0) <= 4 ? '2' : '2'}`}>
-                  {currentQuestion.options?.map((option, index) => (
+                <motion.div 
+                  className={`options-grid cols-${(currentQuestion.options?.length || 0) <= 4 ? '2' : '2'}`}
+                  variants={{
+                    hidden: { opacity: 0 },
+                    show: {
+                      opacity: 1,
+                      transition: { staggerChildren: 0.05, delayChildren: 0.1 }
+                    }
+                  }}
+                  initial="hidden"
+                  animate="show"
+                >
+                  {currentQuestion.options?.map((option) => (
                     <motion.button
                       key={option.value}
                       className={`option-btn ${currentQuestion.allowMultiple
                         ? (multiSelections.includes(option.value) ? 'selected' : '')
                         : (answers[currentQuestion.id] === option.value ? 'selected' : '')}`}
                       onClick={() => { handleSelect(option.value); setCustomInputOpen(false); }}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.03 }}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                      variants={{
+                        hidden: { opacity: 0, y: 15 },
+                        show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 400, damping: 25 } }
+                      }}
+                      whileHover={{ scale: 1.02, y: -2, boxShadow: '0 4px 12px rgba(168, 85, 247, 0.15)' }}
+                      whileTap={{ scale: 0.98, y: 0 }}
                     >
                       {option.label}
                     </motion.button>
                   ))}
-                </div>
+                </motion.div>
                 {currentQuestion.allowMultiple && (
                   <div className="multi-select-actions">
                     <button

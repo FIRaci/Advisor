@@ -196,6 +196,12 @@ select:focus-visible {
 .btn-primary:hover {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.25);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
 }
 
 .btn-secondary {
@@ -207,6 +213,11 @@ select:focus-visible {
 .btn-secondary:hover {
   background: var(--bg-tertiary);
   border-color: var(--border-hover);
+  transform: translateY(-2px);
+}
+
+.btn-secondary:active {
+  transform: translateY(0);
 }
 
 .btn-lg {
@@ -229,7 +240,8 @@ select:focus-visible {
   outline: 2px solid transparent;
   outline-offset: 2px;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-muted);
+  box-shadow: 0 0 0 3px var(--accent-muted), 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
 }
 
 .input::placeholder {

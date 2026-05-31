@@ -300,17 +300,33 @@ export default function Chat() {
           <Sparkles size={16} className="text-accent" />
           <h3>{'Campaign Discovery Profile'}</h3>
         </div>
-        <div className="profile-grid">
+        <motion.div 
+          className="profile-grid"
+          variants={{
+            hidden: { opacity: 0 },
+            show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+          }}
+          initial="hidden"
+          animate="show"
+        >
           {profile.map((item, idx) => (
-            <div key={idx} className="profile-item">
+            <motion.div 
+              key={idx} 
+              className="profile-item"
+              variants={{
+                hidden: { opacity: 0, scale: 0.9, y: 10 },
+                show: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+              }}
+              whileHover={{ y: -2, backgroundColor: 'rgba(255,255,255,0.08)' }}
+            >
               <span className="profile-icon">{item.icon}</span>
               <div className="profile-info">
                 <span className="profile-label">{item.label}</span>
                 <span className="profile-value">{item.value}</span>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </motion.div>
     );
   };
