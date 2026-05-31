@@ -2,7 +2,7 @@ import express from 'express';
 import 'express-async-errors';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './db';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/user';
 import campaignRoutes from './routes/campaign';
