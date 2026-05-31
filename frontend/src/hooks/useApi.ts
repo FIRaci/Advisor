@@ -114,21 +114,7 @@ function clearAuthSession(): void {
   try {
     useAuthStore.getState().logout();
   } catch {
-    // Ignore store errors and still clear persisted token.
-  }
-
-  try {
-    localStorage.removeItem('advisor-auth');
-  } catch {
-    // Ignore localStorage errors.
-  }
-}
-
-function getTokenFromStorage(): string | null {
-  try {
-    return useAuthStore.getState().token;
-  } catch {
-    return null;
+    // Ignore store errors.
   }
 }
 
@@ -136,16 +122,14 @@ async function request<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
-  const token = getTokenFromStorage();
-
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
     ...options.headers
   };
 
   try {
     const res = await fetch(`${API_URL}${endpoint}`, {
+      credentials: 'include',
       ...options,
       headers
     });
@@ -156,7 +140,7 @@ async function request<T>(
       : null;
 
     if (!res.ok) {
-      if (res.status === 401 && token) {
+      if (res.status === 401) {
         clearAuthSession();
         return { success: false, error: SESSION_EXPIRED_ERROR };
       }

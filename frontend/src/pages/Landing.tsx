@@ -1,12 +1,23 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'motion/react';
+import { motion, useScroll, useTransform } from 'motion/react';
 import { ArrowRight, Sparkles, BarChart3, FileText, Zap, Shield, TrendingUp, Play, CheckCircle2, MessageSquare, LogOut, Settings, ListChecks, Target, Wand2, LineChart, GraduationCap, BookOpen, MessageCircle, ShoppingBag, Briefcase, Building2, Github } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useState, useRef, useEffect } from 'react';
+import SplitText from '../components/SplitText';
 import './Landing.css';
 
 export default function Landing() {
+  const { scrollY } = useScroll();
+  const y1 = useTransform(scrollY, [0, 1000], [0, 300]);
+  const y2 = useTransform(scrollY, [0, 1000], [0, -250]);
+  const y3 = useTransform(scrollY, [0, 1000], [0, 150]);
+  
+  // Advanced Scroll Tracking for the Hero section
+  const heroOpacity = useTransform(scrollY, [0, 400], [1, 0]);
+  const heroScale = useTransform(scrollY, [0, 400], [1, 0.9]);
+  const heroY = useTransform(scrollY, [0, 400], [0, 100]);
+
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuthStore();
@@ -111,14 +122,14 @@ export default function Landing() {
     <div className="landing">
       {/* Animated Background */}
       <div className="animated-bg">
-        <div className="gradient-orb orb-1" />
-        <div className="gradient-orb orb-2" />
-        <div className="gradient-orb orb-3" />
+        <motion.div className="gradient-orb orb-1" style={{ y: y1 }} />
+        <motion.div className="gradient-orb orb-2" style={{ y: y2 }} />
+        <motion.div className="gradient-orb orb-3" style={{ y: y3 }} />
       </div>
 
       {/* Navigation */}
       <motion.nav 
-        className="nav"
+        className="nav glass-panel"
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.5 }}
@@ -211,37 +222,37 @@ export default function Landing() {
       <section className="hero">
         <motion.div 
           className="hero-content"
+          style={{ opacity: heroOpacity, scale: heroScale, y: heroY }}
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         >
           <motion.span 
             className="hero-badge"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
+            transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.8, delay: 0.2 }}
           >
             <Sparkles size={14} className="badge-icon" />
             {t('hero.badge')}
             <span className="badge-new">NEW</span>
           </motion.span>
 
-          <motion.h1 
-            className="hero-title"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            {t('hero.title')}<br />
-            <span className="gradient-text">{t('hero.titleHighlight')}</span><br />
-            {t('hero.titleEnd')}
-          </motion.h1>
+          <h1 className="hero-title">
+            <SplitText text={t('hero.title')} delay={0.2} />
+            <br />
+            <span className="gradient-text">
+              <SplitText text={t('hero.titleHighlight')} delay={0.4} />
+            </span>
+            <br />
+            <SplitText text={t('hero.titleEnd')} delay={0.6} />
+          </h1>
 
           <motion.p 
             className="hero-subtitle"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
+            transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.8, delay: 0.4 }}
           >
             {t('hero.subtitle')}
           </motion.p>
@@ -250,7 +261,7 @@ export default function Landing() {
             className="hero-cta"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
+            transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.8, delay: 0.5 }}
           >
             <motion.button 
               className="btn btn-primary btn-lg btn-glow"
@@ -276,7 +287,7 @@ export default function Landing() {
             className="hero-benefits"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
+            transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.8, delay: 0.6 }}
           >
             {benefits.map((benefit, i) => (
               <span key={i} className="benefit-item">
@@ -297,7 +308,7 @@ export default function Landing() {
             className="features-header"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-50px" }}
           >
             <span className="section-badge">Features</span>
             <h2>{t('features.title')}</h2>
@@ -308,12 +319,12 @@ export default function Landing() {
             {features.map((feature, i) => (
               <motion.div 
                 key={i}
-                className="feature-card"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                whileHover={{ y: -8, borderColor: feature.color }}
+                className="feature-card glass-panel"
+                initial={{ opacity: 0, y: 40, scale: 0.95 }}
+                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.8, delay: i * 0.1 }}
+                whileHover={{ y: -8, scale: 1.02, borderColor: feature.color, boxShadow: `0 10px 30px -10px ${feature.color}` }}
               >
                 <motion.div 
                   className="feature-icon"
@@ -337,7 +348,7 @@ export default function Landing() {
             className="features-header"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-50px" }}
           >
             <span className="section-badge">How it works</span>
             <h2>Four stages, no surprises</h2>
@@ -350,11 +361,12 @@ export default function Landing() {
               return (
                 <motion.div
                   key={i}
-                  className="how-step"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.08 }}
+                  className="how-step glass-panel"
+                  initial={{ opacity: 0, x: -30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true, margin: "-100px" }}
+                  transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.8, delay: i * 0.15 }}
+                  whileHover={{ scale: 1.02, backgroundColor: 'rgba(255,255,255,0.05)' }}
                 >
                   <div className="how-step-num">{i}</div>
                   <div className="how-step-icon"><Icon size={22} /></div>
@@ -374,7 +386,7 @@ export default function Landing() {
             className="features-header"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-50px" }}
           >
             <span className="section-badge">Use cases</span>
             <h2>Built for marketers, students, and small teams</h2>
@@ -386,12 +398,12 @@ export default function Landing() {
               return (
                 <motion.div
                   key={i}
-                  className="use-case-card"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.08 }}
-                  whileHover={{ y: -4 }}
+                  className="use-case-card glass-panel"
+                  initial={{ opacity: 0, y: 30, rotateX: 15 }}
+                  whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
+                  viewport={{ once: true, margin: "-100px" }}
+                  transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.8, delay: i * 0.1 }}
+                  whileHover={{ y: -8, scale: 1.03, boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}
                 >
                   <div className="use-case-icon"><Icon size={20} /></div>
                   <h3>{uc.title}</h3>
@@ -410,7 +422,7 @@ export default function Landing() {
             className="features-header"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-50px" }}
           >
             <span className="section-badge">Pricing</span>
             <h2>Free, forever</h2>
@@ -418,10 +430,12 @@ export default function Landing() {
           </motion.div>
 
           <motion.div
-            className="pricing-card"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            className="pricing-card glass-panel"
+            initial={{ opacity: 0, scale: 0.9, y: 40 }}
+            whileInView={{ opacity: 1, scale: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ type: "spring", stiffness: 100, damping: 20 }}
+            whileHover={{ boxShadow: '0 0 50px rgba(168, 85, 247, 0.2)' }}
           >
             <div className="pricing-tier">Free tier</div>
             <div className="pricing-price">
@@ -454,7 +468,7 @@ export default function Landing() {
             className="features-header"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-50px" }}
           >
             <span className="section-badge">FAQ</span>
             <h2>Frequently asked questions</h2>
@@ -468,8 +482,8 @@ export default function Landing() {
                   className="faq-item"
                   initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.05 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.8, delay: i * 0.05 }}
                 >
                   <summary>{qa.q}</summary>
                   <p>{qa.a}</p>

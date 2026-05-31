@@ -8,6 +8,10 @@ const Register = lazy(() => import('./pages/Register'));
 const Quiz = lazy(() => import('./pages/Quiz'));
 const Chat = lazy(() => import('./pages/Chat'));
 const Settings = lazy(() => import('./pages/Settings'));
+import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
+import useAuthStore from './store/authStore';
+import { api } from './hooks/useApi'; // Will verify this import below
 
 function AppLoader() {
   return (
@@ -127,33 +131,55 @@ function AppRoutes() {
         <Route path="/" element={<PageWrapper><Landing /></PageWrapper>} />
         <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
         <Route path="/register" element={<PageWrapper><Register /></PageWrapper>} />
-        <Route path="/quiz" element={<PageWrapper><Quiz /></PageWrapper>} />
-        <Route path="/chat" element={<PageWrapper><Chat /></PageWrapper>} />
-        <Route path="/chat/:campaignId" element={<PageWrapper><Chat /></PageWrapper>} />
-        <Route path="/settings" element={<PageWrapper><Settings /></PageWrapper>} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/quiz" element={<PageWrapper><Quiz /></PageWrapper>} />
+          <Route path="/chat" element={<PageWrapper><Chat /></PageWrapper>} />
+          <Route path="/chat/:campaignId" element={<PageWrapper><Chat /></PageWrapper>} />
+          <Route path="/settings" element={<PageWrapper><Settings /></PageWrapper>} />
+        </Route>
         <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
       </Routes>
     </AnimatePresence>
   );
 }
 
+import SmoothScroll from './components/SmoothScroll';
+
 function App() {
+  const { setAuth, setInitializing } = useAuthStore();
+
   useEffect(() => {
     const storedTheme = localStorage.getItem('advisor-theme') || 'dark';
     document.documentElement.setAttribute('data-theme', storedTheme);
     document.documentElement.classList.toggle('dark', storedTheme === 'dark');
+
+    // Hydrate auth state
+    api.me()
+      .then((res) => {
+        if (res.success && res.data) {
+          setAuth(res.data);
+        } else {
+          setAuth(null);
+        }
+      })
+      .catch(() => setAuth(null))
+      .finally(() => setInitializing(false));
   }, []);
 
   return (
-    <BrowserRouter>
-      <Suspense fallback={<AppLoader />}>
-        <AppMeta />
-        <a className="skip-link" href="#main-content">Skip to main content</a>
-        <main id="main-content">
-          <AppRoutes />
-        </main>
-      </Suspense>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <SmoothScroll>
+          <Suspense fallback={<AppLoader />}>
+            <AppMeta />
+            <a className="skip-link" href="#main-content">Skip to main content</a>
+            <main id="main-content">
+              <AppRoutes />
+            </main>
+          </Suspense>
+        </SmoothScroll>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

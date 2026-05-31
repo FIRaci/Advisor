@@ -7,10 +7,13 @@ import userRoutes from './routes/user';
 import campaignRoutes from './routes/campaign';
 import chatRoutes from './routes/chat';
 import { rateLimit } from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
 
 dotenv.config();
 
 const app = express();
+app.set('trust proxy', 1);
+
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 
@@ -20,7 +23,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 app.use(cors({
   origin: function (origin, callback) {
     const allowedOrigins = [FRONTEND_URL, 'http://localhost:3000', 'https://advisorai-eight.vercel.app'];
-    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -29,6 +32,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json({ limit: '5mb' }));
+app.use(cookieParser());
 
 // Rate limiting
 const limiter = rateLimit({
@@ -70,30 +74,12 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-// Backfill legacy chat rows that lack pane classification.
-// Strategy/Content split was previously inferred from content prefixes; we set the
-// proper pane field for older data on first boot after the schema migration.
-async function backfillChatPanes(): Promise<void> {
-  try {
-    const contentResult = await prisma.$executeRawUnsafe(
-      `UPDATE "Chat" SET "pane" = 'CONTENT'::"ChatPane"
-       WHERE ("content" LIKE '[Content Assistant%' OR "content" LIKE '[Content Prompt]%')
-         AND "pane" = 'STRATEGY'::"ChatPane"`
-    );
-
-    if (typeof contentResult === 'number' && contentResult > 0) {
-      console.log(`[backfill] Reclassified ${contentResult} legacy chat row(s) as CONTENT pane.`);
-    }
-  } catch (err) {
-    console.warn('[backfill] Skipped Chat pane backfill:', err);
-  }
-}
-
 // Start server
-app.listen(PORT, async () => {
-  console.log(`AdVisor API running on port ${PORT}`);
-  await backfillChatPanes();
-});
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`AdVisor API running on port ${PORT}`);
+  });
+}
 
 // Graceful shutdown
 const gracefulShutdown = async () => {
@@ -103,4 +89,4 @@ const gracefulShutdown = async () => {
 process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
 
-export { prisma };
+export { app, prisma };

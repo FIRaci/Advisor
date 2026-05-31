@@ -40,13 +40,19 @@ router.post('/register', async (req, res) => {
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
+    res.cookie('advisor_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
     res.json({
       success: true,
       data: {
         id: user.id,
         email: user.email,
-        name: user.name,
-        token
+        name: user.name
       }
     });
   } catch (error) {
@@ -76,13 +82,19 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
+    res.cookie('advisor_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
     res.json({
       success: true,
       data: {
         id: user.id,
         email: user.email,
-        name: user.name,
-        token
+        name: user.name
       }
     });
   } catch (error) {
@@ -94,15 +106,28 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Logout
+router.post('/logout', (req, res) => {
+  res.clearCookie('advisor_token');
+  res.json({ success: true });
+});
+
 // Verify token
 router.get('/me', async (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
+  let token = req.cookies?.advisor_token;
+  
+  if (!token) {
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    }
+  }
+
+  if (!token) {
     return res.status(401).json({ error: 'No token' });
   }
 
   try {
-    const token = authHeader.split(' ')[1];
     let userId: string | null = null;
 
     // Try local JWT

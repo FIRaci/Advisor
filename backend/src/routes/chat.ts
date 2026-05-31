@@ -15,13 +15,21 @@ router.use(authMiddleware);
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://ai_service:8000';
 const AI_TIMEOUT_MS = 12_000;
 
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('AI request timed out')), ms)
-    )
-  ]);
+async function fetchWithTimeout(url: string, options: RequestInit, ms: number): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), ms);
+  
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    return response;
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error('AI request timed out');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 const sendMessageSchema = z.object({
@@ -109,8 +117,9 @@ router.post('/message', async (req: AuthRequest, res) => {
     let usedFallback = false;
 
     try {
-      const response = await withTimeout(
-        fetch(`${AI_SERVICE_URL}/chat`, {
+      const response = await fetchWithTimeout(
+        `${AI_SERVICE_URL}/chat`,
+        {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -119,7 +128,7 @@ router.post('/message', async (req: AuthRequest, res) => {
             message,
             context: aiContext
           })
-        }),
+        },
         AI_TIMEOUT_MS
       );
 
@@ -394,8 +403,9 @@ router.post('/assist', async (req: AuthRequest, res) => {
         historyText
       };
       
-      const response = await withTimeout(
-        fetch(`${AI_SERVICE_URL}/assist`, {
+      const response = await fetchWithTimeout(
+        `${AI_SERVICE_URL}/assist`,
+        {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -405,7 +415,7 @@ router.post('/assist', async (req: AuthRequest, res) => {
             message: customPrompt || "",
             context: aiContext
           })
-        }),
+        },
         AI_TIMEOUT_MS
       );
 

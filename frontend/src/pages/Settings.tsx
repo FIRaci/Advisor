@@ -10,7 +10,7 @@ import './Settings.css';
 export default function Settings() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user, token, setAuth } = useAuthStore();
+  const { user, setAuth } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'preferences'>('profile');
@@ -28,10 +28,10 @@ export default function Settings() {
   ));
 
   useEffect(() => {
-    if (!token) {
+    if (!user) {
       navigate('/login');
     }
-  }, [token, navigate]);
+  }, [user, navigate]);
 
   useEffect(() => {
     setName(user?.name || '');
@@ -45,7 +45,7 @@ export default function Settings() {
     localStorage.setItem('advisor-theme', theme);
   }, [theme]);
 
-  if (!token) {
+  if (!user) {
     return null;
   }
 
@@ -77,10 +77,7 @@ export default function Settings() {
 
     const res = await api.updateMe({ name: nextName, email: nextEmail, avatar: avatar || undefined });
     if (res.success && res.data) {
-      setAuth(
-        { id: res.data.id, email: res.data.email, name: res.data.name, avatar: res.data.avatar },
-        token
-      );
+      setAuth(res.data);
       setSavedMessage(t('settings.saveChanges') + '!');
       setTimeout(() => setSavedMessage(''), 3000);
       setProfileSaving(false);

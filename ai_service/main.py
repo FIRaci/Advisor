@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from google import genai
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Literal, Any, Dict
 from examples import EXAMPLE_PROMPTS, build_few_shot_examples
 from prompt_helpers import get_stage_instructions, append_fallback_tags_if_missing
 
@@ -51,31 +52,26 @@ class GeminiService:
         self._initialize()
     
     def _initialize(self) -> None:
-        """Initialize Gemini client"""
+        """Initialize Gemini client without blocking network calls"""
         if not settings.is_api_key_valid:
             logger.warning("No valid API key - using mock mode")
             return
         
         try:
             self.client = genai.Client(api_key=settings.gemini_api_key)
-            # Test connection
-            response = self.client.models.generate_content(
-                model=settings.model_name,
-                contents="Hello"
-            )
             self.use_mock = False
-            logger.info("Gemini AI connected successfully")
+            logger.info("Gemini AI client initialized successfully")
         except Exception as e:
             logger.error(f"Gemini initialization failed: {e}")
             logger.info("Falling back to mock mode")
     
     async def generate(self, prompt: str) -> str:
-        """Generate AI response with fallback"""
+        """Generate AI response asynchronously with fallback"""
         if self.use_mock:
             return self._get_mock_response(prompt)
         
         try:
-            response = self.client.models.generate_content(
+            response = await self.client.aio.models.generate_content(
                 model=settings.model_name,
                 contents=prompt
             )
@@ -193,9 +189,20 @@ class ChatRequest(BaseModel):
 
 class AssistRequest(BaseModel):
     """Assist request for content generation"""
-    type: str
-    message: Optional[str] = Field(default="")
-    context: Optional[dict] = Field(default=None)
+    type: Literal['email', 'ad_copy', 'social_post', 'landing_page', 'custom']
+    message: Optional[str] = Field(default="", max_length=2000)
+    context: Optional[Dict[str, Any]] = Field(default=None)
+
+class QuizAnalysisRequest(BaseModel):
+    """Quiz analysis payload validation"""
+    business: Optional[str] = Field(default="", max_length=500)
+    goal: Optional[str] = Field(default="", max_length=500)
+    audience: Optional[str] = Field(default="", max_length=500)
+    budget: Optional[str] = Field(default="", max_length=50)
+    timeframe: Optional[str] = Field(default="", max_length=50)
+    productName: Optional[str] = Field(default="", max_length=200)
+    phase: Optional[str] = Field(default="1", max_length=10)
+    selectedPlan: Optional[str] = Field(default="", max_length=50)
 
 
 class ChatResponse(BaseModel):
@@ -222,6 +229,7 @@ class ExamplesResponse(BaseModel):
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     logger.info("Starting AdVisor AI Service")
+    gemini_service._initialize()
     yield
     logger.info("Shutting down AdVisor AI Service")
 
@@ -310,7 +318,7 @@ async def chat_endpoint(request: ChatRequest):
         if request.context:
             context_str = f"\n\nContext about the campaign:\n{request.context}\n\n"
         
-        prompt = f"{SYSTEM_PROMPT}\n\n{stage_instructions}\n\n{few_shot_context}{context_str}User: {request.message}"
+        prompt = f"{SYSTEM_PROMPT}\n\n{stage_instructions}\n\n{few_shot_context}{context_str}User Request: <user_input>{request.message}</user_input>"
         
         response_text = await gemini_service.generate(prompt)
         response_text = append_fallback_tags_if_missing(response_text, phase)
@@ -345,7 +353,7 @@ async def assist_endpoint(request: AssistRequest):
             
         custom_prompt = ""
         if request.message:
-            custom_prompt = f"User's content request: {request.message}\n\n"
+            custom_prompt = f"User's content request: <user_input>{request.message}</user_input>\n\n"
 
         prompt = f"""You are AdVisor Content Assistant, an expert marketing copywriter. Generate high-quality {label} content.
 
@@ -371,14 +379,19 @@ Format with clear markdown."""
 
 
 @app.post("/analyze-quiz")
-async def analyze_quiz(data: dict):
+async def analyze_quiz(data: QuizAnalysisRequest):
     """Analyze quiz responses and generate marketing recommendations"""
     try:
+        # Stringify only the validated schema fields to prevent massive payload injection
+        validated_data = data.model_dump(exclude_none=True)
+        
         prompt = f"""{SYSTEM_PROMPT}
 
 Based on the following business information, provide a comprehensive marketing strategy:
 
-{data}
+<user_input>
+{validated_data}
+</user_input>
 
 Please provide:
 1. Target Audience Analysis

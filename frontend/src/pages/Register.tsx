@@ -29,11 +29,7 @@ export default function Register() {
       const res = await api.register(email, password, name);
       
       if (res.success && res.data) {
-        setAuth({
-          id: res.data.id,
-          email: res.data.email,
-          name: res.data.name
-        }, res.data.token);
+        setAuth({ id: res.data.id, email: res.data.email, name: res.data.name });
         navigate('/', { replace: true });
       } else {
         setError(res.error || 'Registration failed');

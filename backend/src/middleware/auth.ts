@@ -7,14 +7,19 @@ export interface AuthRequest extends Request {
 }
 
 export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
+  let token = req.cookies?.advisor_token;
   
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!token) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    }
+  }
+
+  if (!token) {
     return res.status(401).json({ error: 'No token provided' });
   }
 
-  const token = authHeader.split(' ')[1];
-  
   try {
     const JWT_SECRET = process.env.JWT_SECRET;
     if (!JWT_SECRET) {
@@ -22,6 +27,16 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
       return res.status(500).json({ error: 'Server configuration error' });
     }
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    
+    // DB Check to prevent Zombie JWTs (ensure user still exists)
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId }
+    });
+    
+    if (!user) {
+      return res.status(401).json({ error: 'User no longer exists' });
+    }
+
     req.userId = decoded.userId;
     return next();
   } catch (error) {

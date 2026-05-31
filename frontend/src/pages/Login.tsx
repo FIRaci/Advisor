@@ -27,11 +27,7 @@ export default function Login() {
     try {
       const res = await api.login(email, password);
       if (res.success && res.data) {
-        setAuth({
-          id: res.data.id,
-          email: res.data.email,
-          name: res.data.name
-        }, res.data.token);
+        setAuth({ id: res.data.id, email: res.data.email, name: res.data.name });
         navigate('/', { replace: true });
       } else {
         setError(res.error || 'Login failed');

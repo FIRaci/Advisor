@@ -364,7 +364,7 @@ export default function Quiz() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { token } = useAuthStore();
+  const { user } = useAuthStore();
 
   const [stageIndex, setStageIndex] = useState(0);
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -408,7 +408,7 @@ export default function Quiz() {
   const resumeCampaignId = searchParams.get('campaignId');
 
   useEffect(() => {
-    if (!resumeCampaignId || !token) {
+    if (!resumeCampaignId || !user) {
       return;
     }
 
@@ -436,7 +436,7 @@ export default function Quiz() {
     };
 
     loadCampaign();
-  }, [resumeCampaignId, token]);
+  }, [resumeCampaignId, user]);
 
   const decodeMultiValue = (value?: string) => {
     if (!value || value === 'not_sure' || value.startsWith('custom: ')) return [];
@@ -537,7 +537,7 @@ export default function Quiz() {
 
   const ensureCampaign = async (payload: Record<string, string>, stage: QuizStage, index: number) => {
     if (campaignId) return campaignId;
-    if (!token) {
+    if (!user) {
       navigate('/login');
       return null;
     }
@@ -736,7 +736,7 @@ export default function Quiz() {
   };
 
   const handleSubmit = async (finalAnswers: Record<string, string>) => {
-    if (!token) {
+    if (!user) {
       navigate('/login');
       return;
     }

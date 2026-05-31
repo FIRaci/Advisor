@@ -170,7 +170,7 @@ export default function Chat() {
   const { campaignId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { token, user, logout } = useAuthStore();
+  const { user, logout } = useAuthStore();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -263,7 +263,7 @@ export default function Chat() {
     return findGlossaryMatches(`${quizContext} ${recentMessages}`);
   }, [currentCampaign, messages]);
 
-  const isLoggedIn = Boolean(token);
+  const isLoggedIn = Boolean(user);
 
   // Compute current stage from quizData using the shared state-machine helper.
   // The helper validates internal consistency (e.g. phase=2 with no selectedPlan
@@ -664,7 +664,7 @@ export default function Chat() {
 
     const targetCampaignId = await ensureCampaignForMessage(nextInput);
     if (!targetCampaignId) {
-      if (!useAuthStore.getState().token) {
+      if (!useAuthStore.getState().user) {
         setLoading(false);
         navigate('/login');
         return;
