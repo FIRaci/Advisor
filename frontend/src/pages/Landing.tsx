@@ -368,7 +368,7 @@ export default function Landing() {
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true, margin: "-100px" }}
                   transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.8, delay: i * 0.15 }}
-                  whileHover={{ scale: 1.02, backgroundColor: 'rgba(255,255,255,0.05)' }}
+                  whileHover={{ scale: 1.02 }}
                 >
                   <div className="how-step-num">{i}</div>
                   <div className="how-step-icon"><Icon size={22} /></div>
