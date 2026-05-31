@@ -493,6 +493,38 @@
   overflow: hidden;
 }
 
+/* Landing scroll buttons */
+.landing-scroll-btns {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 100;
+}
+
+.landing-scroll-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.landing-scroll-btn:hover {
+  background: var(--bg-secondary);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .features::before {
   content: '';
   position: absolute;
@@ -961,7 +993,7 @@
   font-size: 0.78rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #c4b5fd;
+  color: var(--accent);
   margin-bottom: 1rem;
 }
 
@@ -975,7 +1007,7 @@
 .pricing-price-num {
   font-size: 3rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #c4b5fd, #f9a8d4);
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -983,7 +1015,7 @@
 
 .pricing-price-meta {
   font-size: 0.95rem;
-  color: var(--text-muted, rgba(255,255,255,0.6));
+  color: var(--text-muted);
 }
 
 .pricing-list {
@@ -1002,11 +1034,11 @@
   align-items: center;
   gap: 0.55rem;
   font-size: 0.92rem;
-  color: rgba(255,255,255,0.85);
+  color: var(--text-secondary);
 }
 
 .pricing-list svg {
-  color: #34d399;
+  color: var(--success);
   flex-shrink: 0;
 }
 

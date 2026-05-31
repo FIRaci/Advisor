@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { motion, useScroll, useTransform } from 'motion/react';
-import { ArrowRight, Sparkles, BarChart3, FileText, Zap, Shield, TrendingUp, Play, CheckCircle2, MessageSquare, LogOut, Settings, ListChecks, Target, Wand2, LineChart, GraduationCap, BookOpen, MessageCircle, ShoppingBag, Briefcase, Building2, Github } from 'lucide-react';
+import { motion, useScroll, useTransform, AnimatePresence } from 'motion/react';
+import { ArrowRight, Sparkles, BarChart3, FileText, Zap, Shield, TrendingUp, Play, CheckCircle2, MessageSquare, LogOut, Settings, ListChecks, Target, Wand2, LineChart, GraduationCap, BookOpen, MessageCircle, ShoppingBag, Briefcase, Building2, Github, ArrowUp, ArrowDown } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useState, useRef, useEffect } from 'react';
 import SplitText from '../components/SplitText';
@@ -23,7 +23,27 @@ export default function Landing() {
   const { isAuthenticated, user, logout } = useAuthStore();
   const [isVideoOpen, setIsVideoOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const [showScrollDown, setShowScrollDown] = useState(true);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 300);
+      setShowScrollDown(window.scrollY < document.body.scrollHeight - window.innerHeight - 300);
+    };
+    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  
+  const scrollToBottom = () => {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  };
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -546,8 +566,51 @@ export default function Landing() {
         </div>
         <div className="footer-bottom">
           <p>AdVisor - Academic prototype</p>
+          <p style={{ marginTop: '0.5rem', opacity: 0.8 }}>Made by FIRaci</p>
         </div>
       </footer>
+
+      {/* Landing Scroll Buttons */}
+      <AnimatePresence>
+        {(showBackToTop || showScrollDown) && (
+          <div className="landing-scroll-btns">
+            <AnimatePresence>
+              {showBackToTop && (
+                <motion.button
+                  key="back-to-top"
+                  className="landing-scroll-btn"
+                  onClick={scrollToTop}
+                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  aria-label="Back to top"
+                >
+                  <ArrowUp size={20} />
+                </motion.button>
+              )}
+            </AnimatePresence>
+            <AnimatePresence>
+              {showScrollDown && (
+                <motion.button
+                  key="scroll-down"
+                  className="landing-scroll-btn"
+                  onClick={scrollToBottom}
+                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  aria-label="Scroll to bottom"
+                >
+                  <ArrowDown size={20} />
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Video Modal */}
       {isVideoOpen && (
