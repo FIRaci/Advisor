@@ -2897,7 +2897,7 @@ export default function Chat() {
                 ))}
               </div>
 
-              <div className="guide-modal-body">
+              <div className="guide-modal-body" data-lenis-prevent="true">
                 {guideActiveTab === 'overview' && (
                   <div className="guide-section">
                     <p>
@@ -3079,7 +3079,7 @@ export default function Chat() {
                 </button>
               </div>
 
-              <div className="insights-modal-body">
+              <div className="insights-modal-body" data-lenis-prevent="true">
                 <div className="insights-grid">
                   {/* Left Column - Quiz Progress */}
                   <div className="insights-card">
@@ -3502,6 +3502,7 @@ export default function Chat() {
                 <motion.div
                   key={phase2Step}
                   className="quiz-popup-body"
+                  data-lenis-prevent="true"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
