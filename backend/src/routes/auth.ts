@@ -44,7 +44,7 @@ router.post('/register', async (req, res) => {
     res.cookie('advisor_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
@@ -86,7 +86,7 @@ router.post('/login', async (req, res) => {
     res.cookie('advisor_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
@@ -116,7 +116,11 @@ router.post('/logout', authMiddleware, async (req: AuthRequest, res) => {
         data: { tokenVersion: { increment: 1 } }
       });
     }
-    res.clearCookie('advisor_token');
+    res.clearCookie('advisor_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    });
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Logout failed' });
