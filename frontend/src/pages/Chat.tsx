@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Send, Sparkles, Trash2, Plus, Minus, MessageSquare, ChevronLeft, ChevronRight,
   Settings, LogOut, MoreHorizontal, Pencil, Star, Copy, Check, ListChecks,
-  BarChart3, BookOpen, Package, Building, Users, RefreshCw, Zap, ArrowRight, Award,
+  BarChart3, BookOpen, Package, Building, Users, RefreshCw, Zap, ArrowRight, ArrowDown, Award,
   Target, Megaphone, DollarSign, Globe, Clock, Briefcase, X, HelpCircle,
   Mail, FileText, Palette, Upload, TrendingUp, TrendingDown, Heart, Smartphone, ShoppingBag
 } from 'lucide-react';
@@ -235,6 +235,9 @@ export default function Chat() {
     onConfirm: () => void;
   } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const contentMessagesEndRef = useRef<HTMLDivElement>(null);
+  const analystScrollContainerRef = useRef<HTMLDivElement>(null);
+  const contentScrollContainerRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const autostartTriggeredRef = useRef(false);
@@ -248,6 +251,8 @@ export default function Chat() {
   const [phase2CustomOpen, setPhase2CustomOpen] = useState(false);
   const [phase2CustomInput, setPhase2CustomInput] = useState('');
   const [phase2TextInput, setPhase2TextInput] = useState('');
+  const [showAnalystScrollDown, setShowAnalystScrollDown] = useState(false);
+  const [showContentScrollDown, setShowContentScrollDown] = useState(false);
 
   useEffect(() => {
     if (!phase2PopupOpen) return;
@@ -414,9 +419,28 @@ export default function Chat() {
     }
   }, [campaignId, navigate]);
 
+  // Auto-scroll analyst chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, assistLoading, initialLoading]);
+
+  // Auto-scroll content writer chat
+  useEffect(() => {
+    contentMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, assistLoading]);
+
+  const handlePaneScroll = (
+    e: React.UIEvent<HTMLDivElement>,
+    setShowScrollDown: React.Dispatch<React.SetStateAction<boolean>>
+  ) => {
+    const target = e.target as HTMLDivElement;
+    const isNearBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 150;
+    setShowScrollDown(!isNearBottom);
+  };
+
+  const scrollToBottom = (ref: React.RefObject<HTMLDivElement | null>) => {
+    ref.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   useEffect(() => {
     if (searchParams.get('autostart') === 'true' && !autostartTriggeredRef.current && messages.length === 0 && !loading && !initialLoading) {
@@ -2498,7 +2522,12 @@ export default function Chat() {
               </div>
             </div>
             {/* Messages */}
-            <div className="chat-messages" data-lenis-prevent="true">
+            <div 
+              className="chat-messages" 
+              data-lenis-prevent="true"
+              ref={analystScrollContainerRef}
+              onScroll={(e) => handlePaneScroll(e, setShowAnalystScrollDown)}
+            >
               {initialLoading ? (
                 <div className="chat-loading">
                   <div className="spinner" />
@@ -2813,7 +2842,24 @@ export default function Chat() {
                 <div ref={messagesEndRef} />
               </>
             )}
-          </div>
+            </div>
+
+            <AnimatePresence>
+              {showAnalystScrollDown && (
+                <motion.button
+                  className="btn-scroll-down"
+                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => scrollToBottom(messagesEndRef)}
+                  aria-label="Scroll to bottom"
+                >
+                  <ArrowDown size={20} />
+                </motion.button>
+              )}
+            </AnimatePresence>
 
             <ChatInput 
               onSend={handleSend} 
@@ -2865,7 +2911,12 @@ export default function Chat() {
                   <X size={14} />
                 </button>
               </div>
-              <div className="chat-messages" data-lenis-prevent="true">
+              <div 
+                className="chat-messages" 
+                data-lenis-prevent="true"
+                ref={contentScrollContainerRef}
+                onScroll={(e) => handlePaneScroll(e, setShowContentScrollDown)}
+              >
                 {contentMessages.length === 0 ? (
                   <div className="chat-welcome" style={{ marginTop: '2rem' }}>
                     <div className="welcome-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#34d399' }}>
@@ -2928,7 +2979,26 @@ export default function Chat() {
                     </div>
                   </div>
                 )}
+                <div ref={contentMessagesEndRef} />
               </div>
+
+              <AnimatePresence>
+                {showContentScrollDown && (
+                  <motion.button
+                    className="btn-scroll-down"
+                    initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => scrollToBottom(contentMessagesEndRef)}
+                    aria-label="Scroll to bottom"
+                  >
+                    <ArrowDown size={20} />
+                  </motion.button>
+                )}
+              </AnimatePresence>
+
               <div className="chat-input-wrapper">
                 <div className="chat-input">
                   <textarea
