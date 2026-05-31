@@ -2091,7 +2091,7 @@ export default function Chat() {
             {'New Chat'}
           </button>
 
-          <div className="sidebar-section">
+          <div className="sidebar-section" data-lenis-prevent="true">
             <span className="section-label">{'Saved Campaigns'}</span>
             <div className="campaigns-list">
               {sortedCampaigns.map((campaign) => (
@@ -2320,7 +2320,7 @@ export default function Chat() {
               </div>
             </div>
             {/* Messages */}
-            <div className="chat-messages">
+            <div className="chat-messages" data-lenis-prevent="true">
               {initialLoading ? (
                 <div className="chat-loading">
                   <div className="spinner" />
@@ -2677,7 +2677,7 @@ export default function Chat() {
                   <X size={14} />
                 </button>
               </div>
-              <div className="chat-messages">
+              <div className="chat-messages" data-lenis-prevent="true">
                 {contentMessages.length === 0 ? (
                   <div className="chat-welcome" style={{ marginTop: '2rem' }}>
                     <div className="welcome-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#34d399' }}>
@@ -3635,7 +3635,7 @@ export default function Chat() {
                 <X size={20} />
               </button>
             </div>
-            <div className="summary-list" style={{ flex: 1, overflowY: 'auto', padding: '1.25rem' }}>
+            <div className="summary-list" style={{ flex: 1, overflowY: 'auto', padding: '1.25rem' }} data-lenis-prevent="true">
               {glossaryMatches.length > 0 && (
                 <div className="glossary-section" style={{ marginBottom: '1.5rem' }}>
                   <span className="glossary-section-title" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>{'Suggested for you'}</span>
