@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import { api, Campaign as ApiCampaign, ChatMessage, MetricsSnapshot, QuizProgress } from '../hooks/useApi';
 import ChatInput from '../components/ChatInput';
@@ -1217,9 +1218,16 @@ export default function Chat() {
         setExpandedKey(null);
         return null;
       }
+      const targetStr = currentCampaign?.quizData?.[`target_${field.key}`];
+      const targetVal = targetStr ? parseFloat(targetStr) : null;
+      
       const values = sortedSnapshots.map(s => parseFloat(String((s.metrics as any)?.[field.key] || '0')) || 0);
-      const maxVal = Math.max(...values, 1e-6);
-      const minVal = Math.min(...values);
+      
+      let allValues = [...values];
+      if (targetVal !== null) allValues.push(targetVal);
+      
+      const maxVal = Math.max(...allValues, 1e-6);
+      const minVal = Math.min(...allValues);
       const range = maxVal - minVal || 1;
       
       const VB_W = 800;
@@ -1238,9 +1246,18 @@ export default function Chat() {
       const isCostOrRate = ['cpc', 'cpm', 'cpa', 'cpl', 'cac', 'churnRate', 'bounceRate'].includes(field.key);
       const startVal = values[0];
       const endVal = values[values.length - 1];
-      const improved = isCostOrRate ? endVal <= startVal : endVal >= startVal;
-      const color = improved ? '#34d399' : '#f43f5e';
+      
+      let color = '#34d399';
+      if (targetVal !== null) {
+        const metTarget = isCostOrRate ? endVal <= targetVal : endVal >= targetVal;
+        color = metTarget ? '#34d399' : '#f43f5e';
+      } else {
+        const improved = isCostOrRate ? endVal <= startVal : endVal >= startVal;
+        color = improved ? '#34d399' : '#f43f5e';
+      }
+      
       const formatVal = (v: number) => v >= 10 ? v.toFixed(0) : v.toFixed(2);
+      const targetY = targetVal !== null ? (padYTop + innerH - ((targetVal - minVal) / range) * innerH) : null;
 
       return (
         <div style={{ padding: '0.5rem' }}>
@@ -1286,6 +1303,13 @@ export default function Chat() {
                   </g>
                 );
               })}
+
+              {targetY !== null && (
+                <g>
+                  <line x1={padX} x2={VB_W - padX} y1={targetY} y2={targetY} stroke="#60a5fa" strokeDasharray="6 4" strokeWidth="2" />
+                  <text x={VB_W - padX - 8} y={targetY - 8} fill="#60a5fa" fontSize="12" fontWeight="600" textAnchor="end">Target: {formatVal(targetVal as number)}</text>
+                </g>
+              )}
 
               {values.length > 1 && (
                 <>
@@ -1579,6 +1603,70 @@ export default function Chat() {
       fetchMetricsSnapshots();
     }
   };
+
+  const handleApplyTargets = async (targets: Record<string, string | number>) => {
+    if (!campaignId || !currentCampaign) return;
+    
+    const newQuizData = { ...currentCampaign.quizData };
+    let hasChanges = false;
+    for (const [key, val] of Object.entries(targets)) {
+      if (metricsFields.some(f => f.key === key.toLowerCase())) {
+        newQuizData[`target_${key.toLowerCase()}`] = String(val);
+        hasChanges = true;
+      }
+    }
+    
+    if (hasChanges) {
+      try {
+        const res = await api.updateCampaign(campaignId, { quizData: newQuizData });
+        if (res.success && res.data) {
+          setCurrentCampaign(res.data);
+          toast.success("Targets applied to Campaign Insights!");
+        }
+      } catch (err) {
+        toast.error("Failed to apply targets.");
+      }
+    }
+  };
+
+  const reactMarkdownComponents = useMemo(() => ({
+    code({ node, inline, className, children, ...props }: any) {
+      const match = /language-(\w+)/.exec(className || '');
+      if (!inline && match && match[1] === 'json') {
+        const content = String(children).replace(/\n$/, '');
+        try {
+          const parsed = JSON.parse(content);
+          if (parsed.type === 'metrics_targets' && parsed.targets) {
+            return (
+              <div className="ai-targets-card" style={{ background: 'rgba(59,130,246,0.1)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(59,130,246,0.2)', margin: '1rem 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#60a5fa' }}>Suggested Metric Targets</h4>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      {Object.entries(parsed.targets).map(([k, v]) => (
+                        <span key={k} style={{ fontSize: '0.8rem', background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '4px' }}>
+                          <strong style={{ color: '#93c5fd' }}>{k.toUpperCase()}</strong>: {String(v)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <button 
+                    className="btn btn-primary btn-sm"
+                    onClick={() => handleApplyTargets(parsed.targets as Record<string, string | number>)}
+                  >
+                    Apply Targets
+                  </button>
+                </div>
+              </div>
+            );
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+      return <code className={className} {...props}>{children}</code>;
+    }
+  }), [currentCampaign, campaignId]);
 
   const formatMetricValue = (value?: unknown) => {
     if (value === null || value === undefined) return '-';
@@ -2444,7 +2532,7 @@ export default function Chat() {
                                 return (
                                   <>
                                     {introMd.trim() ? (
-                                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{introMd}</ReactMarkdown>
+                                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={reactMarkdownComponents}>{introMd}</ReactMarkdown>
                                     ) : null}
                                     {parsedPlans.length > 0 ? (
                                       <div className="plan-cards">
@@ -2468,7 +2556,7 @@ export default function Chat() {
                                                 <Sparkles size={16} />
                                               )}
                                             </div>
-                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{plan.content}</ReactMarkdown>
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={reactMarkdownComponents}>{plan.content}</ReactMarkdown>
                                             {(selectedPlanInChat === plan.id ||
                                               currentCampaign?.quizData?.selectedPlan === plan.id) && (
                                               <div className="plan-card-check">
@@ -2709,7 +2797,7 @@ export default function Chat() {
                           ) : null}
                         </div>
                         <div className="message-content">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={reactMarkdownComponents}>
                             {msg.content.replace(/^\[Content Prompt\] |^\[Content Assistant - [^\]]+\]\n\n/, '')}
                           </ReactMarkdown>
                         </div>
@@ -3319,18 +3407,22 @@ export default function Chat() {
                               </label>
                             </div>
                             <div className="metrics-grid">
-                              {metricsFields.map((field) => (
-                                <label key={field.key}>
-                                  <span className="metrics-label-with-hint" title={field.hint}>
-                                    {metricLabelWithHint(field)}
-                                  </span>
-                                  <input
-                                    type="text"
-                                    value={metricsInputs[field.key] || ''}
-                                    onChange={(e) => handleMetricsInputChange(field.key, e.target.value)}
-                                  />
-                                </label>
-                              ))}
+                              {metricsFields.map((field) => {
+                                const targetVal = currentCampaign?.quizData?.[`target_${field.key}`];
+                                return (
+                                  <label key={field.key}>
+                                    <span className="metrics-label-with-hint" title={field.hint}>
+                                      {metricLabelWithHint(field)}
+                                      {targetVal && <span style={{ color: '#60a5fa', marginLeft: '6px', fontSize: '0.75rem' }}>(Target: {targetVal})</span>}
+                                    </span>
+                                    <input
+                                      type="text"
+                                      value={metricsInputs[field.key] || ''}
+                                      onChange={(e) => handleMetricsInputChange(field.key, e.target.value)}
+                                    />
+                                  </label>
+                                );
+                              })}
                             </div>
                             <button type="button" className="metrics-save" onClick={handleSaveMetrics}>
                               <Check size={14} />
