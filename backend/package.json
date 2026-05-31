@@ -5,8 +5,9 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "dotenv -e ../.env -- tsx watch src/index.ts",
-    "build": "prisma generate && prisma db push --accept-data-loss && tsc",
+    "build": "prisma generate && tsc",
     "lint": "tsc --noEmit",
+    "prestart": "npx prisma db push --accept-data-loss",
     "start": "node dist/index.js",
     "db:push": "dotenv -e ../.env -- prisma db push",
     "db:generate": "dotenv -e ../.env -- prisma generate",
