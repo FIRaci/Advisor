@@ -2604,7 +2604,7 @@ export default function Chat() {
                           </div>
                         )
                       )}
-                    </motion.div>
+                    </div>
                   );
                 })}
                 {loading && (
@@ -2687,7 +2687,7 @@ export default function Chat() {
                     <p style={{ fontSize: '0.85rem' }}>{contentPaneMode.emptyHint}</p>
                   </div>
                 ) : (
-                  contentMessages.map((msg, i) => (
+                  contentMessages.map((msg) => (
                     <div
                       key={msg.id}
                       className={`message ${msg.role === 'USER' ? 'user' : 'assistant'}`}
