@@ -2735,6 +2735,8 @@ body.chat-page-active {
   width: 98vw;
   max-width: 1600px;
   max-height: 85vh;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
@@ -2947,6 +2949,7 @@ body.chat-page-active {
   padding: 1.5rem;
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
 }
 
 .insights-grid {

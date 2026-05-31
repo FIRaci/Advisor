@@ -2312,7 +2312,7 @@ export default function Chat() {
         {/* Dual Pane Container */}
         <div className="chat-dual-pane-container">
           {/* Strategy Pane */}
-          <div className="chat-pane strategy-pane" style={{ width: showContentPane ? `${strategyWidth}%` : '100%', flex: showContentPane ? 'none' : 1 }}>
+          <div className="chat-pane strategy-pane" style={{ width: showContentPane ? `${strategyWidth}%` : '100%', flex: showContentPane ? '0 1 auto' : 1 }}>
             <div className="chat-pane-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Sparkles size={16} style={{ color: 'var(--accent)' }} />
