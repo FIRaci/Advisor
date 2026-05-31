@@ -38,11 +38,21 @@ export default function Landing() {
   }, []);
 
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const appLenis = (window as any).appLenis;
+    if (appLenis) {
+      appLenis.scrollTo(0, { duration: 1.2 });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
   
   const scrollToBottom = () => {
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    const appLenis = (window as any).appLenis;
+    if (appLenis) {
+      appLenis.scrollTo(document.body.scrollHeight, { duration: 1.2 });
+    } else {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
   };
 
   // Close menu when clicking outside

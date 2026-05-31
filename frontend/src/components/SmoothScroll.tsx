@@ -8,6 +8,8 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
       wheelMultiplier: 1,
     });
 
+    (window as any).appLenis = lenis;
+
     let rafId: number;
 
     function raf(time: number) {
@@ -20,6 +22,7 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     return () => {
       cancelAnimationFrame(rafId);
       lenis.destroy();
+      delete (window as any).appLenis;
     };
   }, []);
 
