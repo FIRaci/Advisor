@@ -2,7 +2,8 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
-import { prisma } from '../index';
+import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { prisma } from '../db';
 
 const router = Router();
 
@@ -13,7 +14,7 @@ if (!JWT_SECRET) {
 
 const registerSchema = z.object({
   email: z.string().trim().email(),
-  password: z.string().min(8),
+  password: z.string().min(8).max(64),
   name: z.string().trim().min(2).max(120)
 });
 
@@ -38,7 +39,7 @@ router.post('/register', async (req, res) => {
       data: { email: normalizedEmail, password: hashedPassword, name }
     });
 
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id, version: user.tokenVersion }, JWT_SECRET, { expiresIn: '7d' });
 
     res.cookie('advisor_token', token, {
       httpOnly: true,
@@ -80,7 +81,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id, version: user.tokenVersion }, JWT_SECRET, { expiresIn: '7d' });
 
     res.cookie('advisor_token', token, {
       httpOnly: true,
@@ -107,9 +108,19 @@ router.post('/login', async (req, res) => {
 });
 
 // Logout
-router.post('/logout', (req, res) => {
-  res.clearCookie('advisor_token');
-  res.json({ success: true });
+router.post('/logout', authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    if (req.userId) {
+      await prisma.user.update({
+        where: { id: req.userId },
+        data: { tokenVersion: { increment: 1 } }
+      });
+    }
+    res.clearCookie('advisor_token');
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Logout failed' });
+  }
 });
 
 // Verify token

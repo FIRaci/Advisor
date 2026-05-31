@@ -7,6 +7,7 @@ export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
+  metadata?: any;
 }
 
 export interface Campaign {
@@ -192,7 +193,7 @@ export const api = {
     }),
 
   // Campaigns
-  getCampaigns: () => request<Campaign[]>('/api/campaigns'),
+  getCampaigns: (limit = 50, offset = 0) => request<Campaign[]>(`/api/campaigns?limit=${limit}&offset=${offset}`),
 
   getCampaign: (id: string) => request<Campaign>(`/api/campaigns/${id}`),
 

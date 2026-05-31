@@ -12,6 +12,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAuthStore } from '../store/authStore';
 import { api, Campaign as ApiCampaign, ChatMessage, MetricsSnapshot, QuizProgress } from '../hooks/useApi';
+import ChatInput from '../components/ChatInput';
 import { findGlossaryMatches, summarizeGlossary, glossaryGroups, getGlossaryByGroup } from '../utils/marketingGlossary';
 import {
   type Stage,
@@ -175,7 +176,6 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [currentCampaign, setCurrentCampaign] = useState<Campaign | null>(null);
-  const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -263,9 +263,7 @@ export default function Chat() {
     return findGlossaryMatches(`${quizContext} ${recentMessages}`);
   }, [currentCampaign, messages]);
 
-  const isLoggedIn = Boolean(user);
-
-  // Compute current stage from quizData using the shared state-machine helper.
+  // Re-derive stage (0 = Needs Quiz, 1 = Plan Selection, 2 = Execution)Data using the shared state-machine helper.
   // The helper validates internal consistency (e.g. phase=2 with no selectedPlan
   // is treated as Stage 0) so the UI never silently renders an invalid state.
   const currentStage = useMemo<Stage>(
@@ -404,10 +402,6 @@ export default function Chat() {
   }, []);
 
   useEffect(() => {
-    if (!isLoggedIn) {
-      navigate('/login');
-      return;
-    }
     fetchCampaigns();
     fetchHistory();
     if (campaignId) {
@@ -417,21 +411,11 @@ export default function Chat() {
       setCurrentCampaign(null);
       setMetricsSnapshots([]);
     }
-  }, [campaignId, isLoggedIn, navigate]);
+  }, [campaignId, navigate]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      return;
-    }
-
-    textarea.style.height = '0px';
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 140)}px`;
-  }, [input]);
 
   useEffect(() => {
     if (searchParams.get('autostart') === 'true' && !autostartTriggeredRef.current && messages.length === 0 && !loading && !initialLoading) {
@@ -659,8 +643,8 @@ export default function Chat() {
     }
   };
 
-  const handleSend = async () => {
-    const nextInput = input.trim();
+  const handleSend = async (messageText: string) => {
+    const nextInput = messageText.trim();
     if (!nextInput || loading) return;
     const isStartingFromBlank = !campaignId && !currentCampaign?.id;
 
@@ -675,7 +659,6 @@ export default function Chat() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    setInput('');
     setLoading(true);
 
     const targetCampaignId = await ensureCampaignForMessage(nextInput);
@@ -894,7 +877,6 @@ export default function Chat() {
 
     // Send message to AI about selection and request immediate Stage 2 guidance.
     const messageContent = `I selected Plan ${planId}. We are now in Stage 2. Please provide my next-step refinement guidance, including priorities, timeline, and KPIs in clear markdown tables where useful.`;
-    setInput('');
     setLoading(true);
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -1493,13 +1475,6 @@ export default function Chat() {
         })}
       </div>
     );
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
   };
 
   const handleReanalyze = async () => {
@@ -2655,35 +2630,12 @@ export default function Chat() {
             )}
           </div>
 
-            {/* Input */}
-            <div className="chat-input-wrapper">
-              {(!currentCampaign || Object.keys(currentCampaign.quizData || {}).length === 0) && (
-                <div className="chat-toolbar">
-                  <button className="chat-quiz-cta" onClick={handleOpenFullQuiz}>
-                    <ListChecks size={14} />
-                    <span>{'Discovery Quiz'}</span>
-                  </button>
-                </div>
-              )}
-              <div className="chat-input">
-                <textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={'Ask me anything about marketing...'}
-                  rows={1}
-                  disabled={loading}
-                />
-                <button
-                  className="send-btn"
-                  onClick={handleSend}
-                  disabled={!input.trim() || loading}
-                >
-                  <Send size={18} />
-                </button>
-              </div>
-            </div>
+            <ChatInput 
+              onSend={handleSend} 
+              loading={loading} 
+              currentCampaign={currentCampaign} 
+              onOpenFullQuiz={handleOpenFullQuiz} 
+            />
           </div>
 
           {/* Content Pane Restore Button */}

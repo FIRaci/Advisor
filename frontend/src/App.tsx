@@ -142,8 +142,8 @@ function AppRoutes() {
     </AnimatePresence>
   );
 }
-
 import SmoothScroll from './components/SmoothScroll';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   const { setAuth, setInitializing } = useAuthStore();
@@ -178,6 +178,7 @@ function App() {
             </main>
           </Suspense>
         </SmoothScroll>
+        <Toaster position="bottom-right" />
       </BrowserRouter>
     </ErrorBoundary>
   );

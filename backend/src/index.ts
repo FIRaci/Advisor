@@ -1,4 +1,5 @@
 import express from 'express';
+import 'express-async-errors';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
@@ -14,7 +15,6 @@ dotenv.config();
 const app = express();
 app.set('trust proxy', 1);
 
-const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -23,10 +23,17 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 app.use(cors({
   origin: function (origin, callback) {
     const allowedOrigins = [FRONTEND_URL, 'http://localhost:3000', 'https://advisorai-eight.vercel.app'];
-    if (!origin || allowedOrigins.includes(origin)) {
+    
+    // In test environment or same-origin requests, origin may be undefined
+    if (!origin && process.env.NODE_ENV === 'test') {
+      return callback(null, true);
+    }
+    
+    // Allow strict origins or any Vercel preview deployment
+    if (origin && (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app'))) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error(`Not allowed by CORS: ${origin}`));
     }
   },
   credentials: true

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
-import { prisma } from '../index';
+import { prisma } from '../db';
 import { z } from 'zod';
 import {
   normalizePlanContent,

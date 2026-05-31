@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
-import { prisma } from '../index';
+import { prisma } from '../db';
 import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 
@@ -11,8 +11,8 @@ router.use(authMiddleware);
 const createCampaignSchema = z.object({
   name: z.string().trim().min(1).max(120),
   description: z.string().trim().max(600).optional(),
-  quizData: z.any().optional(),
-  quizProgress: z.any().optional()
+  quizData: z.record(z.any()).optional().refine(val => !val || JSON.stringify(val).length <= 50000, "quizData too large"),
+  quizProgress: z.record(z.any()).optional().refine(val => !val || JSON.stringify(val).length <= 50000, "quizProgress too large")
 });
 
 const updateCampaignSchema = z
@@ -20,9 +20,9 @@ const updateCampaignSchema = z
     name: z.string().trim().min(1).max(120).optional(),
     description: z.string().trim().max(600).nullable().optional(),
     status: z.enum(['DRAFT', 'ACTIVE', 'COMPLETED', 'ARCHIVED']).optional(),
-    quizData: z.any().optional(),
-    quizProgress: z.any().optional(),
-    strategy: z.any().optional(),
+    quizData: z.record(z.any()).optional().refine(val => !val || JSON.stringify(val).length <= 50000, "quizData too large"),
+    quizProgress: z.record(z.any()).optional().refine(val => !val || JSON.stringify(val).length <= 50000, "quizProgress too large"),
+    strategy: z.record(z.any()).optional().refine(val => !val || JSON.stringify(val).length <= 200000, "strategy too large"),
     isFavorite: z.boolean().optional()
   })
   .strict()
@@ -55,18 +55,34 @@ const metricsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(24).default(12)
 });
 
+const getCampaignsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0)
+});
+
 // Get all campaigns for user
 router.get('/', async (req: AuthRequest, res) => {
   try {
-    const campaigns = await prisma.campaign.findMany({
-      where: { userId: req.userId },
-      orderBy: [{ isFavorite: 'desc' }, { createdAt: 'desc' }],
-      include: {
-        _count: { select: { chats: true } }
-      }
-    });
+    const parseRes = getCampaignsQuerySchema.safeParse(req.query);
+    if (!parseRes.success) {
+      return res.status(400).json({ error: 'Invalid query parameters', details: parseRes.error.errors });
+    }
+    const { limit, offset } = parseRes.data;
 
-    res.json({ success: true, data: campaigns });
+    const [campaigns, total] = await Promise.all([
+      prisma.campaign.findMany({
+        where: { userId: req.userId },
+        orderBy: [{ isFavorite: 'desc' }, { createdAt: 'desc' }],
+        include: {
+          _count: { select: { chats: true } }
+        },
+        take: limit,
+        skip: offset
+      }),
+      prisma.campaign.count({ where: { userId: req.userId } })
+    ]);
+
+    res.json({ success: true, data: campaigns, metadata: { total, limit, offset } });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch campaigns' });
   }

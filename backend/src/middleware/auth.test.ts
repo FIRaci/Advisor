@@ -2,8 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { authMiddleware, AuthRequest } from './auth';
 import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { prisma } from '../db';
 
 vi.mock('jsonwebtoken');
+vi.mock('../db', () => ({
+  prisma: {
+    user: {
+      findUnique: vi.fn()
+    }
+  }
+}));
 
 describe('authMiddleware', () => {
   let mockRequest: Partial<AuthRequest>;
@@ -55,7 +63,8 @@ describe('authMiddleware', () => {
 
   it('should call next() and set req.userId if token is valid', async () => {
     mockRequest.headers = { authorization: 'Bearer valid_token' };
-    vi.mocked(jwt.verify).mockReturnValueOnce({ userId: '12345' } as any);
+    vi.mocked(jwt.verify).mockReturnValueOnce({ userId: '12345', version: 0 } as any);
+    vi.mocked(prisma.user.findUnique).mockResolvedValueOnce({ id: '12345', tokenVersion: 0 } as any);
 
     await authMiddleware(mockRequest as AuthRequest, mockResponse as Response, nextFunction);
     

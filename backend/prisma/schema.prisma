@@ -15,6 +15,7 @@ model User {
   name      String
   avatar    String?  @db.Text
   role      Role     @default(USER)
+  tokenVersion Int   @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

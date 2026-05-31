@@ -14,6 +14,7 @@ import {
   findGlossaryMatches,
   getGlossaryByGroup
 } from '../utils/marketingGlossary';
+import toast from 'react-hot-toast';
 import './Quiz.css';
 
 // Question type: 'select' for multiple choice, 'text' for free text input
@@ -555,7 +556,7 @@ export default function Quiz() {
       return res.data.id;
     }
 
-    alert(
+    toast.error(
       res.error ||
       'Failed to create campaign. Please try again.'
     );
@@ -762,7 +763,7 @@ export default function Quiz() {
       return;
     }
 
-    alert(
+    toast.error(
       res.error ||
       'Failed to finalize campaign. Please try again.'
     );

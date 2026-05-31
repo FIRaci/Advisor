@@ -239,13 +239,13 @@ export default function Landing() {
           </motion.span>
 
           <h1 className="hero-title">
-            <SplitText text={t('hero.title')} delay={0.2} />
+            <SplitText text={t('hero.title')} delay={0.1} />
             <br />
             <span className="gradient-text">
-              <SplitText text={t('hero.titleHighlight')} delay={0.4} />
+              <SplitText text={t('hero.titleHighlight')} delay={0.2} />
             </span>
             <br />
-            <SplitText text={t('hero.titleEnd')} delay={0.6} />
+            <SplitText text={t('hero.titleEnd')} delay={0.3} />
           </h1>
 
           <motion.p 

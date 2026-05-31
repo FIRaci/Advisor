@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 from typing import Optional
+import json
 
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -78,7 +79,7 @@ class GeminiService:
             return response.text
         except Exception as e:
             logger.error(f"Generation error: {e}")
-            return self._get_mock_response(prompt)
+            raise Exception(f"Gemini API error: {str(e)}")
     
     @staticmethod
     def _get_mock_response(message: str) -> str:
@@ -313,12 +314,18 @@ async def chat_endpoint(request: ChatRequest):
 
         stage_instructions = get_stage_instructions(phase)
 
-        # Build context string if provided
+        # Sanitize message to prevent XML tag injection
+        safe_message = request.message.replace("<", "&lt;").replace(">", "&gt;")
+
+        # Build context string if provided, safely serialized
         context_str = ""
         if request.context:
-            context_str = f"\n\nContext about the campaign:\n{request.context}\n\n"
+            context_json = json.dumps(request.context, ensure_ascii=False)
+            if len(context_json) > 20000:
+                context_json = context_json[:20000] + "... (truncated)"
+            context_str = f"\n\nContext about the campaign:\n{context_json}\n\n"
         
-        prompt = f"{SYSTEM_PROMPT}\n\n{stage_instructions}\n\n{few_shot_context}{context_str}User Request: <user_input>{request.message}</user_input>"
+        prompt = f"{SYSTEM_PROMPT}\n\n{stage_instructions}\n\n{few_shot_context}{context_str}User Request: <user_input>{safe_message}</user_input>"
         
         response_text = await gemini_service.generate(prompt)
         response_text = append_fallback_tags_if_missing(response_text, phase)
@@ -347,13 +354,19 @@ async def assist_endpoint(request: AssistRequest):
         
         label = content_type_labels.get(request.type, "Custom Content")
         
+        # Sanitize message
+        safe_message = request.message.replace("<", "&lt;").replace(">", "&gt;") if request.message else ""
+
         context_str = ""
         if request.context:
-            context_str = f"\n\nCampaign context:\n{request.context}\n\n"
+            context_json = json.dumps(request.context, ensure_ascii=False)
+            if len(context_json) > 20000:
+                context_json = context_json[:20000] + "... (truncated)"
+            context_str = f"\n\nCampaign context:\n{context_json}\n\n"
             
         custom_prompt = ""
-        if request.message:
-            custom_prompt = f"User's content request: <user_input>{request.message}</user_input>\n\n"
+        if safe_message:
+            custom_prompt = f"User's content request: <user_input>{safe_message}</user_input>\n\n"
 
         prompt = f"""You are AdVisor Content Assistant, an expert marketing copywriter. Generate high-quality {label} content.
 
