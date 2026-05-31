@@ -2417,12 +2417,9 @@ export default function Chat() {
                   }
 
                   return (
-                    <motion.div
+                    <div
                       key={msg.id}
                       className={`message ${msg.role === 'USER' ? 'user' : 'assistant'}`}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.02 }}
                     >
                       {msg.role === 'ASSISTANT' && (
                         <div className="message-avatar assistant-avatar">
@@ -2691,12 +2688,9 @@ export default function Chat() {
                   </div>
                 ) : (
                   contentMessages.map((msg, i) => (
-                    <motion.div
+                    <div
                       key={msg.id}
                       className={`message ${msg.role === 'USER' ? 'user' : 'assistant'}`}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.02 }}
                     >
                       {msg.role === 'ASSISTANT' && (
                         <div className="message-avatar assistant-avatar" style={{ background: 'linear-gradient(135deg, #10b981, #3b82f6)' }}>
@@ -2733,7 +2727,7 @@ export default function Chat() {
                           </div>
                         )}
                       </div>
-                    </motion.div>
+                    </div>
                   ))
                 )}
                 {assistLoading && (
