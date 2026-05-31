@@ -241,9 +241,11 @@ export default function Landing() {
           <h1 className="hero-title">
             <SplitText text={t('hero.title')} delay={0.1} />
             <br />
-            <span className="gradient-text">
-              <SplitText text={t('hero.titleHighlight')} delay={0.2} />
-            </span>
+            <SplitText 
+              text={t('hero.titleHighlight')} 
+              delay={0.2} 
+              wordClassName="gradient-text" 
+            />
             <br />
             <SplitText text={t('hero.titleEnd')} delay={0.3} />
           </h1>

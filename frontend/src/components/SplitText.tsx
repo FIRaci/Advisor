@@ -4,16 +4,17 @@ interface SplitTextProps {
   text: string;
   delay?: number;
   className?: string;
+  wordClassName?: string;
 }
 
-export default function SplitText({ text, delay = 0, className = "" }: SplitTextProps) {
+export default function SplitText({ text, delay = 0, className = "", wordClassName = "" }: SplitTextProps) {
   const words = text.split(" ");
 
   const container = {
     hidden: { opacity: 0 },
     visible: (i = 1) => ({
       opacity: 1,
-      transition: { staggerChildren: 0.05, delayChildren: delay * i },
+      transition: { staggerChildren: 0.1, delayChildren: delay * i },
     }),
   };
 
@@ -51,6 +52,7 @@ export default function SplitText({ text, delay = 0, className = "" }: SplitText
           variants={child}
           style={{ display: "inline-block", marginRight: "0.25em" }}
           key={index}
+          className={wordClassName}
         >
           {word}
         </motion.span>
