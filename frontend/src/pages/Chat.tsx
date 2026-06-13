@@ -168,6 +168,29 @@ const phase2Questions: Phase2Question[] = [
   }
 ];
 
+const generateSmoothPath = (points: {x: number, y: number}[]) => {
+  if (points.length === 0) return '';
+  if (points.length === 1) return `M ${points[0].x},${points[0].y}`;
+  if (points.length === 2) return `M ${points[0].x},${points[0].y} L ${points[1].x},${points[1].y}`;
+  
+  const d = [`M ${points[0].x},${points[0].y}`];
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[Math.max(i - 1, 0)];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[Math.min(i + 2, points.length - 1)];
+    
+    // tension
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    
+    d.push(`C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`);
+  }
+  return d.join(' ');
+};
+
 export default function Chat() {
   const { campaignId } = useParams();
   const [searchParams] = useSearchParams();
@@ -1311,23 +1334,29 @@ const TACTIC_SUGGESTIONS = [
       const padYBot = 60;
       const innerH = VB_H - padYTop - padYBot;
       
-      const points = values.map((v, i) => {
+      const pointsData = values.map((v, i) => {
         const x = values.length === 1 ? VB_W / 2 : padX + (i / (values.length - 1)) * (VB_W - padX * 2);
         const y = padYTop + innerH - ((v - minVal) / range) * innerH;
-        return `${x},${y}`;
-      }).join(' ');
+        return { x, y };
+      });
+      const pathD = generateSmoothPath(pointsData);
 
       const isCostOrRate = ['cpc', 'cpm', 'cpa', 'cpl', 'cac', 'churnRate', 'bounceRate'].includes(field.key);
       const startVal = values[0];
       const endVal = values[values.length - 1];
+      const isUp = endVal > startVal;
+      const isDown = endVal < startVal;
       
       let color = '#34d399';
+      let statusStr = 'Good';
       if (targetVal !== null) {
         const metTarget = isCostOrRate ? endVal <= targetVal : endVal >= targetVal;
         color = metTarget ? '#34d399' : '#f43f5e';
+        statusStr = metTarget ? 'On Target' : 'Missed Target';
       } else {
         const improved = isCostOrRate ? endVal <= startVal : endVal >= startVal;
         color = improved ? '#34d399' : '#f43f5e';
+        statusStr = improved ? 'Good' : 'Needs Attention';
       }
       
       const formatVal = (v: number) => v >= 10 ? v.toFixed(0) : v.toFixed(2);
@@ -1342,8 +1371,16 @@ const TACTIC_SUGGESTIONS = [
               </button>
               <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>{field.label} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 400 }}>{field.hint}</span></h3>
             </div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 700, color: color }}>
-              {formatVal(endVal)}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ fontSize: '1.6rem', fontWeight: 700, color: color, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <span style={{ opacity: 0.8, fontSize: '1.2rem' }}>
+                  {isUp ? <TrendingUp size={20} /> : isDown ? <TrendingDown size={20} /> : <Minus size={20} />}
+                </span>
+                {formatVal(endVal)}
+              </div>
+              <span style={{ fontSize: '0.85rem', padding: '0.3rem 0.6rem', borderRadius: '999px', background: `${color}15`, color: color, fontWeight: 600, border: `1px solid ${color}30` }}>
+                {statusStr}
+              </span>
             </div>
           </div>
 
@@ -1387,11 +1424,11 @@ const TACTIC_SUGGESTIONS = [
 
               {values.length > 1 && (
                 <>
-                  <polygon 
-                    points={`${padX},${padYTop + innerH} ${points} ${VB_W - padX},${padYTop + innerH}`} 
+                  <path 
+                    d={`${pathD} L ${VB_W - padX},${padYTop + innerH} L ${padX},${padYTop + innerH} Z`} 
                     fill={`url(#gradient-exp-${field.key})`} 
                   />
-                  <motion.polyline
+                  <motion.path
                     initial={{ pathLength: 0 }}
                     animate={{ pathLength: 1 }}
                     transition={{ duration: 1, ease: 'easeOut' }}
@@ -1400,7 +1437,7 @@ const TACTIC_SUGGESTIONS = [
                     strokeWidth="3.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    points={points}
+                    d={pathD}
                     filter={`url(#glow-exp-${field.key})`}
                   />
                 </>
@@ -1469,18 +1506,23 @@ const TACTIC_SUGGESTIONS = [
           const padYBot = 20;
           const innerH = VB_H - padYTop - padYBot;
           
-          const points = values.map((v, i) => {
+          const pointsData = values.map((v, i) => {
             const x = values.length === 1 ? VB_W / 2 : padX + (i / (values.length - 1)) * (VB_W - padX * 2);
             const y = padYTop + innerH - ((v - minVal) / range) * innerH;
-            return `${x},${y}`;
-          }).join(' ');
+            return { x, y };
+          });
+          const pathD = generateSmoothPath(pointsData);
 
           const isCostOrRate = ['cpc', 'cpm', 'cpa', 'cpl', 'cac', 'churnRate', 'bounceRate'].includes(field.key);
           const startVal = values[0];
           const endVal = values[values.length - 1];
+          const isUp = endVal > startVal;
+          const isDown = endVal < startVal;
+          
           // Determine if the trend is improving
           const improved = isCostOrRate ? endVal <= startVal : endVal >= startVal;
           const color = improved ? '#34d399' : '#f43f5e';
+          const statusStr = improved ? 'Good' : 'Needs Attention';
           
           const formatVal = (v: number) => v >= 10 ? v.toFixed(0) : v.toFixed(2);
 
@@ -1500,8 +1542,16 @@ const TACTIC_SUGGESTIONS = [
               onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }} title={field.hint}>{field.label}</span>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }} title={field.hint}>{field.label}</span>
+                  <span style={{ fontSize: '0.55rem', padding: '0.1rem 0.3rem', borderRadius: '4px', background: `${color}20`, color: color, fontWeight: 600, border: `1px solid ${color}40` }}>
+                    {statusStr}
+                  </span>
+                </div>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.15rem' }}>
+                  <span style={{ color, display: 'flex', alignItems: 'center' }}>
+                    {isUp ? <TrendingUp size={12} /> : isDown ? <TrendingDown size={12} /> : <Minus size={12} />}
+                  </span>
                   {formatVal(endVal)}
                 </span>
               </div>
@@ -1524,11 +1574,11 @@ const TACTIC_SUGGESTIONS = [
                 </defs>
                 {values.length > 1 && (
                   <>
-                    <polygon 
-                      points={`${padX},${padYTop + innerH} ${points} ${VB_W - padX},${padYTop + innerH}`} 
+                    <path 
+                      d={`${pathD} L ${VB_W - padX},${padYTop + innerH} L ${padX},${padYTop + innerH} Z`} 
                       fill={`url(#gradient-${field.key})`} 
                     />
-                    <motion.polyline
+                    <motion.path
                       initial={{ pathLength: 0 }}
                       animate={{ pathLength: 1 }}
                       transition={{ duration: 0.8, ease: 'easeOut', delay: idx * 0.05 }}
@@ -1537,7 +1587,7 @@ const TACTIC_SUGGESTIONS = [
                       strokeWidth="2.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      points={points}
+                      d={pathD}
                       filter={`url(#glow-${field.key})`}
                     />
                     <text x={padX} y={VB_H - 4} fontSize="7" fill="rgba(255,255,255,0.4)" textAnchor="start" fontWeight="500">
