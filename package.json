@@ -4,6 +4,7 @@
   "private": true,
   "description": "AdVisor AI Marketing Agency - Monorepo root",
   "scripts": {
-    "build:frontend": "npm --prefix frontend run build"
+    "build:frontend": "npm --prefix frontend run build",
+    "build": "npm --prefix frontend install && npm run build:frontend"
   }
 }
