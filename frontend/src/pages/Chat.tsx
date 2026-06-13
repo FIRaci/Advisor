@@ -220,6 +220,8 @@ export default function Chat() {
   const [selectedPlanInChat, setSelectedPlanInChat] = useState<string | null>(null);
   const [assistLoading, setAssistLoading] = useState(false);
   const [contentInput, setContentInput] = useState('');
+  const [activeTactics, setActiveTactics] = useState<string[]>([]);
+  const [newTactic, setNewTactic] = useState('');
   const [strategyWidth, setStrategyWidth] = useState(60);
   const [isDraggingPane, setIsDraggingPane] = useState(false);
   const [contentPaneCollapsed, setContentPaneCollapsed] = useState(false);
@@ -1112,6 +1114,13 @@ export default function Chat() {
     if (!contentInput.trim() || !campaignId || assistLoading) return;
     if (!contentPaneMode.enabled) return;
     const prompt = contentInput;
+    
+    // Inject active tactics into the system context silently
+    const tacticsContext = activeTactics.length > 0 
+      ? `\n\n[System Context - Active Tactics: ${activeTactics.join(', ')}. Base your content on these tactics.]`
+      : '';
+    const payloadPrompt = prompt + tacticsContext;
+    
     setContentInput('');
     setAssistLoading(true);
 
@@ -1130,7 +1139,7 @@ export default function Chat() {
     setMessages(prev => [...prev, tempUserMsg]);
 
     try {
-      const res = await api.assistContent('custom', campaignId, prompt);
+      const res = await api.assistContent('custom', campaignId, payloadPrompt);
       if (res.success && res.data) {
         const persistedUser = res.data.userMessage;
         setMessages(prev => {
@@ -2819,6 +2828,12 @@ export default function Chat() {
                               className="message-copy-btn"
                               onClick={() => {
                                 setContentInput(`Please write marketing content based on the strategy from the left pane...`);
+                                
+                                // Auto-extract plan name as a tactic if available
+                                if (selectedPlanInChat && !activeTactics.includes(selectedPlanInChat)) {
+                                  setActiveTactics(prev => [...prev, selectedPlanInChat]);
+                                }
+
                                 setTimeout(() => {
                                   const inputField = document.querySelector('.content-pane textarea') as HTMLTextAreaElement;
                                   if (inputField) inputField.focus();
@@ -2934,20 +2949,56 @@ export default function Chat() {
           {/* Content Assistant Pane */}
           {showContentPane && (
             <div className="chat-pane content-pane">
-              <div className="chat-pane-header" style={{ background: 'rgba(16, 185, 129, 0.05)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <FileText size={16} style={{ color: '#34d399' }} />
-                  <h3 style={{ color: '#34d399' }}>{'Content Writer'}</h3>
+              <div className="chat-pane-header" style={{ background: 'rgba(16, 185, 129, 0.05)', flexDirection: 'column', alignItems: 'stretch', padding: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <FileText size={16} style={{ color: '#34d399' }} />
+                    <h3 style={{ color: '#34d399', margin: 0 }}>{'Content Writer'}</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setContentPaneCollapsed(true)}
+                    className="btn-ghost"
+                    title="Hide Content Writer"
+                    style={{ width: '28px', height: '28px' }}
+                  >
+                    <X size={14} />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setContentPaneCollapsed(true)}
-                  className="btn-ghost"
-                  title="Hide Content Writer"
-                  style={{ width: '28px', height: '28px' }}
-                >
-                  <X size={14} />
-                </button>
+                
+                {/* Tactics Bar */}
+                <div style={{ padding: '0.5rem 1.5rem', borderTop: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center', background: 'rgba(16, 185, 129, 0.02)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Tactics:</span>
+                  {activeTactics.map((tactic, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', background: 'rgba(52, 211, 153, 0.1)', border: '1px solid rgba(52, 211, 153, 0.2)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', color: '#34d399' }}>
+                      <span>{tactic}</span>
+                      <button 
+                        type="button"
+                        onClick={() => setActiveTactics(prev => prev.filter((_, i) => i !== idx))} 
+                        style={{ background: 'transparent', border: 'none', color: 'inherit', marginLeft: '0.4rem', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', opacity: 0.7 }}
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <input 
+                      type="text" 
+                      value={newTactic}
+                      onChange={(e) => setNewTactic(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newTactic.trim()) {
+                          if (!activeTactics.includes(newTactic.trim())) {
+                            setActiveTactics(prev => [...prev, newTactic.trim()]);
+                          }
+                          setNewTactic('');
+                        }
+                      }}
+                      placeholder="Add tactic..."
+                      style={{ background: 'transparent', border: '1px dashed rgba(255,255,255,0.2)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', color: 'white', width: '120px', outline: 'none' }}
+                    />
+                  </div>
+                </div>
               </div>
               <div 
                 className="chat-messages" 
