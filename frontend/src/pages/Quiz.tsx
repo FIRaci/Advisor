@@ -923,7 +923,7 @@ export default function Quiz() {
                 <ChevronRight size={20} />
               </button>
             </div>
-            <div className="summary-list">
+            <div className="summary-list" data-lenis-prevent="true">
               {allQuestions.map((q, index) => {
                 const answer = answers[q.id];
                 const hasAnswer = answer && answer !== 'not_sure';

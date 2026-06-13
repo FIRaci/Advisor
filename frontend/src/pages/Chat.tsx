@@ -2984,6 +2984,7 @@ export default function Chat() {
                   <div style={{ display: 'flex', alignItems: 'center' }}>
                     <input 
                       type="text" 
+                      list="tactic-suggestions"
                       value={newTactic}
                       onChange={(e) => setNewTactic(e.target.value)}
                       onKeyDown={(e) => {
@@ -2995,8 +2996,18 @@ export default function Chat() {
                         }
                       }}
                       placeholder="Add tactic..."
-                      style={{ background: 'transparent', border: '1px dashed rgba(255,255,255,0.2)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', color: 'white', width: '120px', outline: 'none' }}
+                      style={{ background: 'transparent', border: '1px dashed rgba(255,255,255,0.2)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', color: 'white', width: '130px', outline: 'none' }}
                     />
+                    <datalist id="tactic-suggestions">
+                      <option value="Social Media Post (Facebook/Insta)" />
+                      <option value="Short Video Script (TikTok/Reels)" />
+                      <option value="Long Form Video (YouTube)" />
+                      <option value="Email Newsletter" />
+                      <option value="Blog Post (SEO)" />
+                      <option value="Advertising Copy (Google/Meta)" />
+                      <option value="Landing Page Copy" />
+                      <option value="Product Description" />
+                    </datalist>
                   </div>
                 </div>
               </div>
