@@ -67,7 +67,7 @@ export default function ChatInput({ onSend, loading, currentCampaign, onOpenFull
       )}
       
       {showSuggestions && !input.trim() && !loading && (
-        <div style={{ padding: '0.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div style={{ padding: '0.5rem 0', display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '860px', margin: '0 auto', width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
               <Sparkles size={12} /> Gợi ý từ AI
