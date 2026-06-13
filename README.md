@@ -86,3 +86,5 @@ Available AI endpoints:
 ## License
 
 MIT
+
+*Last updated: 2026-06-13*
