@@ -6,7 +6,7 @@ import {
   Settings, LogOut, MoreHorizontal, Pencil, Star, Copy, Check, ListChecks,
   BarChart3, BookOpen, Package, Building, Users, RefreshCw, Zap, ArrowRight, ArrowDown, ArrowUp, Award,
   Target, Megaphone, DollarSign, Globe, Clock, Briefcase, X, HelpCircle,
-  Mail, FileText, Palette, Upload, TrendingUp, TrendingDown, Heart, Smartphone, ShoppingBag
+  Mail, FileText, Palette, Upload, TrendingUp, TrendingDown, Heart, Smartphone, ShoppingBag, CheckCircle2
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -246,7 +246,18 @@ export default function Chat() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const autostartTriggeredRef = useRef(false);
 
+  const [showTacticsDropdown, setShowTacticsDropdown] = useState(false);
 
+const TACTIC_SUGGESTIONS = [
+  "Social Media Post (Facebook/Insta)",
+  "Short Video Script (TikTok/Reels)",
+  "Long Form Video (YouTube)",
+  "Email Newsletter",
+  "Blog Post (SEO)",
+  "Advertising Copy (Google/Meta)",
+  "Landing Page Copy",
+  "Product Description"
+];
 
   const [glossaryOpen, setGlossaryOpen] = useState(false);
   const [phase2PopupOpen, setPhase2PopupOpen] = useState(false);
@@ -1110,10 +1121,11 @@ export default function Chat() {
     setContentPaneCollapsed(false);
   };
 
-  const handleSendContent = async () => {
-    if (!contentInput.trim() || !campaignId || assistLoading) return;
+  const handleSendContent = async (overridePrompt?: string) => {
+    const promptText = overridePrompt || contentInput;
+    if (!promptText.trim() || !campaignId || assistLoading) return;
     if (!contentPaneMode.enabled) return;
-    const prompt = contentInput;
+    const prompt = promptText;
     
     // Inject active tactics into the system context silently
     const tacticsContext = activeTactics.length > 0 
@@ -1121,7 +1133,7 @@ export default function Chat() {
       : '';
     const payloadPrompt = prompt + tacticsContext;
     
-    setContentInput('');
+    if (!overridePrompt) setContentInput('');
     setAssistLoading(true);
 
     // Optimistically add user message to the Content pane. We mark it pane:CONTENT
@@ -1168,6 +1180,19 @@ export default function Chat() {
     }
     setAssistLoading(false);
     setContentPaneCollapsed(false);
+  };
+
+  const handleAutoGenerateContent = async () => {
+    if (assistLoading || !contentPaneMode.enabled) return;
+    const qd = currentCampaign?.quizData || {};
+    const contextLines = Object.entries(qd)
+      .filter(([k,v]) => v && v !== 'not_sure' && k !== 'selectedPlan' && k !== 'phase')
+      .map(([k,v]) => `${k.replace(/_/g, ' ')}: ${v}`);
+    const contextStr = contextLines.join(', ');
+    
+    const autoPrompt = `Based on our campaign context [${contextStr}], please auto-generate a comprehensive marketing content strategy and draft. Focus on our active tactics if any.`;
+    
+    await handleSendContent(autoPrompt);
   };
 
   const handleLogout = () => {
@@ -2981,12 +3006,13 @@ export default function Chat() {
                       </button>
                     </div>
                   ))}
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                     <input 
                       type="text" 
-                      list="tactic-suggestions"
                       value={newTactic}
                       onChange={(e) => setNewTactic(e.target.value)}
+                      onFocus={() => setShowTacticsDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowTacticsDropdown(false), 200)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && newTactic.trim()) {
                           if (!activeTactics.includes(newTactic.trim())) {
@@ -2998,16 +3024,59 @@ export default function Chat() {
                       placeholder="Add tactic..."
                       style={{ background: 'transparent', border: '1px dashed rgba(255,255,255,0.2)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', color: 'white', width: '130px', outline: 'none' }}
                     />
-                    <datalist id="tactic-suggestions">
-                      <option value="Social Media Post (Facebook/Insta)" />
-                      <option value="Short Video Script (TikTok/Reels)" />
-                      <option value="Long Form Video (YouTube)" />
-                      <option value="Email Newsletter" />
-                      <option value="Blog Post (SEO)" />
-                      <option value="Advertising Copy (Google/Meta)" />
-                      <option value="Landing Page Copy" />
-                      <option value="Product Description" />
-                    </datalist>
+                    {showTacticsDropdown && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        marginTop: '0.25rem',
+                        width: '220px',
+                        background: 'rgba(14, 14, 16, 0.95)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '8px',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+                        backdropFilter: 'blur(10px)',
+                        zIndex: 50,
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column'
+                      }}>
+                        {TACTIC_SUGGESTIONS.filter(t => t.toLowerCase().includes(newTactic.toLowerCase())).map((tactic, i) => (
+                          <button
+                            key={i}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              if (!activeTactics.includes(tactic)) {
+                                setActiveTactics(prev => [...prev, tactic]);
+                              }
+                              setNewTactic('');
+                              setShowTacticsDropdown(false);
+                            }}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: 'rgba(255,255,255,0.8)',
+                              padding: '0.5rem 0.75rem',
+                              textAlign: 'left',
+                              fontSize: '0.75rem',
+                              cursor: 'pointer',
+                              borderBottom: i < TACTIC_SUGGESTIONS.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                              transition: 'background 0.2s, color 0.2s'
+                            }}
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.background = 'rgba(52, 211, 153, 0.15)';
+                              e.currentTarget.style.color = '#34d399';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.background = 'transparent';
+                              e.currentTarget.style.color = 'rgba(255,255,255,0.8)';
+                            }}
+                          >
+                            {tactic}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -3018,12 +3087,66 @@ export default function Chat() {
                 onScroll={(e) => handlePaneScroll(e, setShowContentScrollDown)}
               >
                 {contentMessages.length === 0 ? (
-                  <div className="chat-welcome" style={{ marginTop: '2rem' }}>
-                    <div className="welcome-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#34d399' }}>
+                  <div className="chat-welcome" style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', padding: '0 1rem' }}>
+                    <div className="welcome-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#34d399', marginBottom: 0 }}>
                       <FileText size={40} />
                     </div>
-                    <h2 style={{ fontSize: '1.25rem' }}>{contentPaneMode.emptyTitle}</h2>
-                    <p style={{ fontSize: '0.85rem' }}>{contentPaneMode.emptyHint}</p>
+                    <div style={{ textAlign: 'center' }}>
+                      <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{contentPaneMode.emptyTitle}</h2>
+                      <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)' }}>{contentPaneMode.emptyHint}</p>
+                    </div>
+
+                    {currentCampaign?.quizData && Object.keys(currentCampaign.quizData).length > 0 && (
+                      <div style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.1)', borderRadius: '12px', padding: '1rem', width: '100%', maxWidth: '500px', textAlign: 'left' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: '#34d399' }}>
+                          <CheckCircle2 size={16} />
+                          <h4 style={{ margin: 0, fontSize: '0.85rem' }}>Quiz Context Imported</h4>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                          {Object.entries(currentCampaign.quizData)
+                            .filter(([k,v]) => v && v !== 'not_sure' && k !== 'selectedPlan' && k !== 'phase')
+                            .slice(0, 4)
+                            .map(([k,v]) => (
+                              <div key={k} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <span style={{ opacity: 0.5, textTransform: 'capitalize' }}>{k.replace(/_/g, ' ')}:</span> <span style={{ color: 'white' }}>{String(v)}</span>
+                              </div>
+                            ))
+                          }
+                        </div>
+                      </div>
+                    )}
+
+                    <button 
+                      onClick={handleAutoGenerateContent}
+                      disabled={assistLoading || !contentPaneMode.enabled}
+                      style={{
+                        background: 'linear-gradient(135deg, #10b981, #3b82f6)',
+                        border: 'none',
+                        color: 'white',
+                        padding: '0.75rem 1.5rem',
+                        borderRadius: '999px',
+                        fontSize: '0.9rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+                        transition: 'transform 0.2s, box-shadow 0.2s',
+                        marginTop: '0.5rem'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.4)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 4px 15px rgba(16, 185, 129, 0.3)';
+                      }}
+                    >
+                      <Sparkles size={16} />
+                      Auto-Generate Content
+                    </button>
                   </div>
                 ) : (
                   contentMessages.map((msg) => (
@@ -3117,7 +3240,7 @@ export default function Chat() {
                   />
                   <button
                     className="send-btn"
-                    onClick={handleSendContent}
+                    onClick={() => handleSendContent()}
                     disabled={!contentInput.trim() || assistLoading || !contentPaneMode.enabled}
                     aria-label={'Send'}
                   >
