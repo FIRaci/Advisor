@@ -3,6 +3,31 @@
  * Keeps multi-select deduping / audience pruning aligned everywhere.
  */
 
+export const INSIGHT_QUIZ_HINTS: Partial<Record<string, string>> = {
+  productName: 'Offer name',
+  business: 'Industry / model',
+  stage: 'Company maturity',
+  audience: 'Who you sell to',
+  region: 'Geography',
+  platform: 'Touchpoints',
+  priceRange: 'Pricing tier',
+  goal: 'Primary objective',
+  usp: 'Unique Selling Proposition',
+  channels: 'Marketing mix',
+  currentMarketing: 'Where you are today',
+  experience: 'Team skill level',
+  competitors: 'Market context',
+  timeline: 'Results horizon',
+  budget: 'Spend level',
+  seasonality: 'Demand peaks',
+  contentFormat: 'Creative formats',
+  offerType: 'Deal style',
+  deadline: 'Stage 2 target date',
+  target_ctr: 'Click-through target',
+  target_cvr: 'Conversion target',
+  target_roas: 'Efficiency target'
+};
+
 const businessLabels: Record<string, string> = {
   ecommerce: 'E-commerce',
   saas: 'SaaS / Software',
