@@ -18,7 +18,7 @@ import toast from 'react-hot-toast';
 import './Quiz.css';
 
 // Question type: 'select' for multiple choice, 'text' for free text input
-interface Question {
+export interface Question {
   id: string;
   icon: any;
   question: string;
@@ -36,7 +36,7 @@ interface QuizStage {
   questions: Question[];
 }
 
-const questions: Question[] = [
+export const questions: Question[] = [
   // 1. Product/Service Name (text input)
   {
     id: 'productName',
