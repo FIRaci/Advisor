@@ -3378,7 +3378,6 @@ const TACTIC_SUGGESTIONS = [
             onClose={() => setEditQuizModalOpen(false)}
             onSave={handleSaveAllQuizFields}
             initialData={currentCampaign?.quizData || {}}
-            fullQuizProfile={fullQuizProfile}
           />
         )}
       </AnimatePresence>
