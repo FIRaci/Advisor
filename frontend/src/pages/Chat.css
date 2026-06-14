@@ -3279,10 +3279,11 @@ body.chat-page-active {
   padding: var(--space-xl);
   width: 900px;
   max-width: 95vw;
-  height: 85vh;
+  height: 85vh; /* Fixed height */
   display: flex;
   flex-direction: column;
   text-align: left;
+  overflow: hidden;
 }
 
 .edit-quiz-modal-header {
@@ -3316,9 +3317,10 @@ body.chat-page-active {
 }
 
 .edit-quiz-modal-body {
-  flex: 1 1 0;
+  flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding-right: var(--space-sm);
   display: flex;
   flex-direction: column;

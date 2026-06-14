@@ -2567,9 +2567,44 @@ const TACTIC_SUGGESTIONS = [
             )}
 
             <div className="chat-title-wrap">
-              <h1 className="chat-title">
-                {currentCampaign?.name || ('General Marketing Chat')}
-              </h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <h1 className="chat-title" style={{ margin: 0 }}>
+                  {currentCampaign?.name || ('General Marketing Chat')}
+                </h1>
+                {currentCampaign && (
+                  <button 
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditQuizModalOpen(true);
+                    }}
+                    title="Edit Quiz Responses"
+                    style={{ 
+                      width: 28, 
+                      height: 28, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      background: 'var(--bg-secondary)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-sm)',
+                      color: 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.color = 'var(--accent)';
+                      e.currentTarget.style.borderColor = 'var(--border-hover)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.color = 'var(--text-secondary)';
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                    }}
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                )}
+              </div>
               <p className="chat-subtitle">
                 {`${messages.length} message${messages.length === 1 ? '' : 's'}`}
               </p>
