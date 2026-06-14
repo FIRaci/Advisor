@@ -2219,6 +2219,28 @@ body.chat-page-active {
   padding: 0.75rem 1.25rem;
   border-bottom: 1px solid var(--border);
   background: linear-gradient(180deg, rgba(124, 58, 237, 0.06), transparent);
+  position: relative;
+}
+
+.stage-banner-hide-btn {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  padding: 4px;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.stage-banner-hide-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: var(--text-primary);
 }
 
 .stage-banner-text {

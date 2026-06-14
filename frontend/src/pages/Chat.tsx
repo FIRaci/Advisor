@@ -6,7 +6,8 @@ import {
   Settings, LogOut, MoreHorizontal, Pencil, Star, Copy, Check, ListChecks,
   BarChart3, BookOpen, Package, Building, Users, RefreshCw, Zap, ArrowRight, ArrowDown, ArrowUp, Award,
   Target, Megaphone, DollarSign, Globe, Clock, Briefcase, Plug, X, HelpCircle,
-  Mail, FileText, Palette, Upload, TrendingUp, TrendingDown, Heart, Smartphone, ShoppingBag, CheckCircle2
+  Mail, FileText, Palette, Upload, TrendingUp, TrendingDown, Heart, Smartphone, ShoppingBag, CheckCircle2,
+  Edit2
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -249,6 +250,35 @@ export default function Chat() {
   const [newTactic, setNewTactic] = useState('');
   const [editingQuizField, setEditingQuizField] = useState<string | null>(null);
   const [editingQuizValue, setEditingQuizValue] = useState('');
+  const [editQuizModalOpen, setEditQuizModalOpen] = useState(false);
+  const [tempQuizData, setTempQuizData] = useState<Record<string, string>>({});
+
+  // Auto-fill active tactics when campaign changes or quizData updates, 
+  // only if activeTactics is currently empty to avoid overwriting user edits.
+  useEffect(() => {
+    if (!currentCampaign?.quizData || activeTactics.length > 0) return;
+    
+    const qd = currentCampaign.quizData as Record<string, string>;
+    const extractedTactics = new Set<string>();
+    
+    if (qd.channels) {
+      const channels = qd.channels.split(',').map(s => s.trim()).filter(Boolean);
+      channels.forEach(ch => extractedTactics.add(ch));
+    }
+    if (qd.contentFormat) {
+      const formats = qd.contentFormat.split(',').map(s => s.trim()).filter(Boolean);
+      formats.forEach(f => extractedTactics.add(f));
+    }
+    if (qd.platform) {
+      const platforms = qd.platform.split(',').map(s => s.trim()).filter(Boolean);
+      platforms.forEach(p => extractedTactics.add(p));
+    }
+    
+    if (extractedTactics.size > 0) {
+      setActiveTactics(Array.from(extractedTactics));
+    }
+  }, [currentCampaign?.id, currentCampaign?.quizData]);
+
   const [strategyWidth, setStrategyWidth] = useState(60);
   const [isDraggingPane, setIsDraggingPane] = useState(false);
   const [contentPaneCollapsed, setContentPaneCollapsed] = useState(false);
@@ -297,6 +327,7 @@ const TACTIC_SUGGESTIONS = [
   const [showContentScrollDown, setShowContentScrollDown] = useState(false);
   const [showSidebarBackToTop, setShowSidebarBackToTop] = useState(false);
   const [showInsightsBackToTop, setShowInsightsBackToTop] = useState(false);
+  const [isStageBannerHidden, setIsStageBannerHidden] = useState(false);
 
   useEffect(() => {
     if (!phase2PopupOpen) return;
@@ -951,6 +982,24 @@ const TACTIC_SUGGESTIONS = [
       toast.error('Failed to update details.');
     }
     setEditingQuizField(null);
+  };
+
+  const handleSaveAllQuizFields = async () => {
+    if (!campaignId || !currentCampaign) return;
+    try {
+      const newQuizData = { ...currentCampaign.quizData, ...tempQuizData };
+      const res = await api.updateCampaign(campaignId, { quizData: newQuizData });
+      if (res.success) {
+        fetchCurrentCampaign();
+        toast.success('Campaign details updated!');
+      } else {
+        toast.error('Failed to update details.');
+      }
+      setEditQuizModalOpen(false);
+    } catch (err) {
+      console.error('Failed to save quiz fields:', err);
+      toast.error('Failed to update details.');
+    }
   };
 
   const focusComposer = () => {
@@ -2608,7 +2657,7 @@ const TACTIC_SUGGESTIONS = [
 
         {/* Stage banner: always visible when a campaign is open. Tells the user
             where they are and what the next action should be. */}
-        {currentCampaign && (
+        {currentCampaign && !isStageBannerHidden && (
           <div className={`stage-banner stage-banner--stage-${currentStage}`}>
             <div className="stage-banner-text">
               <strong className="stage-banner-title">
@@ -2617,6 +2666,14 @@ const TACTIC_SUGGESTIONS = [
               <p className="stage-banner-subtitle">{stageDescriptor.subtitle}</p>
               <p className="stage-banner-next">{stageDescriptor.nextAction}</p>
             </div>
+            <button
+              type="button"
+              className="stage-banner-hide-btn"
+              onClick={() => setIsStageBannerHidden(true)}
+              aria-label={'Hide banner'}
+            >
+              <X size={16} />
+            </button>
             {stageTransitionError && (
               <div className="stage-banner-error" role="alert">
                 {stageTransitionError}
@@ -3334,6 +3391,67 @@ const TACTIC_SUGGESTIONS = [
         </div>
       </div>
 
+      {/* Edit Quiz Modal */}
+      <AnimatePresence>
+        {editQuizModalOpen && (
+          <motion.div
+            className="modal-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="modal-content"
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              style={{ width: '500px', maxWidth: '90%', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
+            >
+              <h2>Edit Quiz Responses</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+                Update your answers below. Changes will be saved to the campaign.
+              </p>
+              <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {fullQuizProfile.map((item, idx) => {
+                  const qh = INSIGHT_QUIZ_HINTS[item.key];
+                  return (
+                    <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                      <label style={{ fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        {item.icon} {item.label}
+                        {qh && <span style={{ fontWeight: 'normal', color: 'var(--text-muted)' }}>({qh})</span>}
+                      </label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        style={{ padding: '0.5rem', fontSize: '0.85rem' }}
+                        value={tempQuizData[item.key] || ''}
+                        onChange={(e) => setTempQuizData(prev => ({ ...prev, [item.key]: e.target.value }))}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="modal-actions" style={{ marginTop: '1.5rem' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setEditQuizModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleSaveAllQuizFields}
+                >
+                  Save Changes
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Clear Chat Modal */}
       <AnimatePresence>
         {clearModalOpen && (
@@ -3688,7 +3806,7 @@ const TACTIC_SUGGESTIONS = [
                         )}
 
                         <div className="insights-stage-compare insights-stage-compare--tight">
-                          <div className="insights-section-head">
+                          <div className="insights-section-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <button
                               type="button"
                               className="insights-section-toggle"
@@ -3698,6 +3816,18 @@ const TACTIC_SUGGESTIONS = [
                               {insightSections.quizAnswers ? <Minus size={14} /> : <Plus size={14} />}
                               <BookOpen size={14} style={{ color: 'var(--accent)' }} />
                               <span>{'Quiz Answers'}</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                              onClick={() => {
+                                setTempQuizData(currentCampaign.quizData || {});
+                                setEditQuizModalOpen(true);
+                              }}
+                            >
+                              <Edit2 size={12} />
+                              Edit Quiz
                             </button>
                           </div>
                           {insightSections.quizAnswers && (
