@@ -245,6 +245,8 @@ export default function Chat() {
   const [contentInput, setContentInput] = useState('');
   const [activeTactics, setActiveTactics] = useState<string[]>([]);
   const [newTactic, setNewTactic] = useState('');
+  const [editingQuizField, setEditingQuizField] = useState<string | null>(null);
+  const [editingQuizValue, setEditingQuizValue] = useState('');
   const [strategyWidth, setStrategyWidth] = useState(60);
   const [isDraggingPane, setIsDraggingPane] = useState(false);
   const [contentPaneCollapsed, setContentPaneCollapsed] = useState(false);
@@ -929,6 +931,24 @@ const TACTIC_SUGGESTIONS = [
       appendAssistantMessage('Stage 3 is ready. Send any message to begin optimization guidance.');
     }
     setLoading(false);
+  };
+
+  const handleSaveQuizField = async (key: string) => {
+    if (!campaignId) return;
+    const val = editingQuizValue.trim();
+    if (!val) {
+      setEditingQuizField(null);
+      return;
+    }
+    const updatedQuizData = { ...currentCampaign?.quizData, [key]: val };
+    const updateRes = await api.updateCampaign(campaignId, { quizData: updatedQuizData });
+    if (updateRes.success) {
+      fetchCurrentCampaign();
+      toast.success('Campaign details updated!');
+    } else {
+      toast.error('Failed to update details.');
+    }
+    setEditingQuizField(null);
   };
 
   const focusComposer = () => {
@@ -1954,16 +1974,17 @@ const TACTIC_SUGGESTIONS = [
       target_roas: 'Target ROAS'
     };
 
-    const items: { icon: ReactNode; label: string; value: string; key: string }[] = [];
+    const items: { icon: ReactNode; label: string; value: string; key: string; isMissing: boolean }[] = [];
     for (const field of QUIZ_ACTIVITY_FIELDS) {
       const raw = field.read(qd);
-      const value = formatQuizAnswerForDisplay(field.key, raw);
-      if (!value) continue;
+      const isMissing = !raw || raw === 'not_sure';
+      const value = isMissing ? 'Missing / Skipped' : (formatQuizAnswerForDisplay(field.key, raw) || raw);
       items.push({
         key: field.key,
         icon: icons[field.key] ?? <Sparkles size={16} />,
         label: labelOverride[field.key] ?? field.label,
-        value
+        value: value,
+        isMissing
       });
     }
 
@@ -3676,7 +3697,7 @@ const TACTIC_SUGGESTIONS = [
                                   {'No data yet.'}
                                 </p>
                               ) : (
-                                fullQuizProfile.slice(0, 14).map((item, idx) => {
+                                fullQuizProfile.map((item, idx) => {
                                   const qh = INSIGHT_QUIZ_HINTS[item.key];
                                   return (
                                     <div key={idx} className="insights-stage-item">
@@ -3687,7 +3708,55 @@ const TACTIC_SUGGESTIONS = [
                                           {qh && <span className="insights-field-hint">{` (${qh})`}</span>}
                                         </span>
                                       </span>
-                                      <span className="insights-stage-value">{item.value}</span>
+                                      <span className="insights-stage-value" style={{ flex: 1, textAlign: 'right' }}>
+                                        {editingQuizField === item.key ? (
+                                          <div style={{ display: 'flex', gap: '0.3rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                            <input
+                                              type="text"
+                                              className="form-input"
+                                              style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem', height: '24px', width: '120px' }}
+                                              autoFocus
+                                              value={editingQuizValue}
+                                              onChange={(e) => setEditingQuizValue(e.target.value)}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter') handleSaveQuizField(item.key);
+                                                if (e.key === 'Escape') setEditingQuizField(null);
+                                              }}
+                                            />
+                                            <button
+                                              type="button"
+                                              style={{ background: 'var(--accent)', border: 'none', color: '#fff', padding: '0 0.4rem', borderRadius: '4px', fontSize: '0.7rem', height: '24px', cursor: 'pointer' }}
+                                              onClick={() => handleSaveQuizField(item.key)}
+                                            >
+                                              Save
+                                            </button>
+                                            <button
+                                              type="button"
+                                              style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#ccc', padding: '0 0.4rem', borderRadius: '4px', fontSize: '0.7rem', height: '24px', cursor: 'pointer' }}
+                                              onClick={() => setEditingQuizField(null)}
+                                            >
+                                              Cancel
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <span style={{ color: item.isMissing ? '#ef4444' : 'inherit', display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                            {item.value}
+                                            {item.isMissing && (
+                                              <button
+                                                type="button"
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', padding: 0, display: 'flex' }}
+                                                onClick={() => {
+                                                  setEditingQuizField(item.key);
+                                                  setEditingQuizValue('');
+                                                }}
+                                                title="Update missing data"
+                                              >
+                                                <Pencil size={12} />
+                                              </button>
+                                            )}
+                                          </span>
+                                        )}
+                                      </span>
                                     </div>
                                   );
                                 })
