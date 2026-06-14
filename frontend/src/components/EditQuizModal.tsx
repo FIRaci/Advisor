@@ -1,23 +1,24 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { motion } from 'motion/react';
+import React, { useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { questions } from '../pages/Quiz';
-import { INSIGHT_QUIZ_HINTS } from '../lib/quizDisplay';
-import { X } from 'lucide-react';
+import { INSIGHT_QUIZ_HINTS, QUIZ_ACTIVITY_FIELDS } from '../lib/quizDisplay';
+import { X, Package, Building, Zap, Users, Globe, Smartphone, ShoppingBag, Target, Heart, Megaphone, BarChart3, TrendingUp, Briefcase, Clock, DollarSign, BookOpen, Star, Sparkles } from 'lucide-react';
 
 interface QuizFieldRowProps {
-  item: any;
+  fieldKey: string;
+  label: string;
+  icon: ReactNode;
   value: string;
   onChange: (key: string, newValue: string) => void;
 }
 
-const QuizFieldRow = React.memo(({ item, value, onChange }: QuizFieldRowProps) => {
-  const qh = INSIGHT_QUIZ_HINTS[item.key];
-  const qDef = questions.find(q => q.id === item.key);
+const QuizFieldRow = React.memo(({ fieldKey, label, icon, value, onChange }: QuizFieldRowProps) => {
+  const qh = INSIGHT_QUIZ_HINTS[fieldKey];
+  const qDef = questions.find(q => q.id === fieldKey);
   const isSelect = qDef?.type === 'select';
   const isMulti = qDef?.allowMultiple;
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    onChange(item.key, e.target.value);
+    onChange(fieldKey, e.target.value);
   };
 
   const handlePillClick = (e: React.MouseEvent, optValue: string, selected: boolean, currentArray: string[]) => {
@@ -28,13 +29,13 @@ const QuizFieldRow = React.memo(({ item, value, onChange }: QuizFieldRowProps) =
     } else {
       newArr = [...currentArray, optValue];
     }
-    onChange(item.key, newArr.join(' || '));
+    onChange(fieldKey, newArr.join(' || '));
   };
 
   return (
     <div className="edit-quiz-field">
       <label className="edit-quiz-label">
-        {item.icon} {item.label}
+        {icon} {label}
         {qh && <span className="edit-quiz-hint">({qh})</span>}
       </label>
       {isSelect && qDef.options ? (
@@ -62,7 +63,7 @@ const QuizFieldRow = React.memo(({ item, value, onChange }: QuizFieldRowProps) =
             value={value || ''}
             onChange={handleChange}
           >
-            <option value="">Select {item.label}...</option>
+            <option value="">Select {label}...</option>
             {qDef.options.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
@@ -74,7 +75,7 @@ const QuizFieldRow = React.memo(({ item, value, onChange }: QuizFieldRowProps) =
           className="input"
           value={value || ''}
           onChange={handleChange}
-          placeholder={`Enter ${item.label.toLowerCase()}...`}
+          placeholder={`Enter ${label.toLowerCase()}...`}
         />
       )}
     </div>
@@ -86,10 +87,9 @@ interface EditQuizModalProps {
   onClose: () => void;
   onSave: (data: Record<string, string>) => void;
   initialData: Record<string, string>;
-  fullQuizProfile: any[];
 }
 
-export default function EditQuizModal({ isOpen, onClose, onSave, initialData, fullQuizProfile }: EditQuizModalProps) {
+export default function EditQuizModal({ isOpen, onClose, onSave, initialData }: EditQuizModalProps) {
   const [tempQuizData, setTempQuizData] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -102,22 +102,60 @@ export default function EditQuizModal({ isOpen, onClose, onSave, initialData, fu
     setTempQuizData(prev => ({ ...prev, [key]: newValue }));
   }, []);
 
+  const quizFields = useMemo(() => {
+    const icons: Record<string, ReactNode> = {
+      productName: <Package size={16} />,
+      business: <Building size={16} />,
+      stage: <Zap size={16} />,
+      audience: <Users size={16} />,
+      region: <Globe size={16} />,
+      platform: <Smartphone size={16} />,
+      priceRange: <ShoppingBag size={16} />,
+      goal: <Target size={16} />,
+      usp: <Heart size={16} />,
+      channels: <Megaphone size={16} />,
+      currentMarketing: <BarChart3 size={16} />,
+      experience: <TrendingUp size={16} />,
+      competitors: <Briefcase size={16} />,
+      timeline: <Clock size={16} />,
+      budget: <DollarSign size={16} />,
+      seasonality: <Clock size={16} />,
+      contentFormat: <BookOpen size={16} />,
+      offerType: <Star size={16} />,
+      deadline: <Clock size={16} />,
+      target_ctr: <TrendingUp size={16} />,
+      target_cvr: <Target size={16} />,
+      target_roas: <BarChart3 size={16} />
+    };
+
+    const labelOverride: Partial<Record<string, string>> = {
+      productName: 'Product',
+      goal: 'Goal',
+      audience: 'Audience',
+      channels: 'Channels',
+      usp: 'USP',
+      target_ctr: 'Target CTR',
+      target_cvr: 'Target CVR',
+      target_roas: 'Target ROAS'
+    };
+
+    return QUIZ_ACTIVITY_FIELDS.map(field => ({
+      key: field.key,
+      label: labelOverride[field.key] ?? field.label,
+      icon: icons[field.key] ?? <Sparkles size={16} />
+    }));
+  }, []);
+
   if (!isOpen) return null;
 
   return (
-    <motion.div
+    <div
       className="modal-overlay"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
       style={{ zIndex: 1200 }}
       onClick={onClose}
     >
-      <motion.div
+      <div
         className="modal-content edit-quiz-modal"
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="edit-quiz-modal-header">
@@ -130,11 +168,13 @@ export default function EditQuizModal({ isOpen, onClose, onSave, initialData, fu
           Update your answers below. Changes will be saved to the campaign.
         </p>
         <div className="edit-quiz-modal-body custom-scrollbar">
-          {fullQuizProfile.map((item) => (
+          {quizFields.map((field) => (
             <QuizFieldRow
-              key={item.key}
-              item={item}
-              value={tempQuizData[item.key] || ''}
+              key={field.key}
+              fieldKey={field.key}
+              label={field.label}
+              icon={field.icon}
+              value={tempQuizData[field.key] || ''}
               onChange={handleFieldChange}
             />
           ))}
@@ -155,7 +195,7 @@ export default function EditQuizModal({ isOpen, onClose, onSave, initialData, fu
             Save Changes
           </button>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }

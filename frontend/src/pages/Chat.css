@@ -3273,8 +3273,9 @@ body.chat-page-active {
 
 /* Edit Quiz Modal */
 .edit-quiz-modal {
-  width: 600px;
+  width: 900px;
   max-width: 95vw;
+  height: 85vh;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
@@ -3314,6 +3315,7 @@ body.chat-page-active {
 
 .edit-quiz-modal-body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding-right: var(--space-sm);
   display: flex;
