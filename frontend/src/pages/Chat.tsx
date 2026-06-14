@@ -3399,16 +3399,19 @@ const TACTIC_SUGGESTIONS = [
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            style={{ zIndex: 1200 }}
+            onClick={() => setEditQuizModalOpen(false)}
           >
             <motion.div
               className="modal-content"
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              style={{ width: '500px', maxWidth: '90%', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ width: '550px', maxWidth: '90%', maxHeight: '85vh', display: 'flex', flexDirection: 'column', textAlign: 'left', padding: '1.5rem' }}
             >
-              <h2>Edit Quiz Responses</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+              <h2 style={{ marginBottom: '0.5rem', fontSize: '1.25rem' }}>Edit Quiz Responses</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
                 Update your answers below. Changes will be saved to the campaign.
               </p>
               <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -3819,15 +3822,29 @@ const TACTIC_SUGGESTIONS = [
                             </button>
                             <button
                               type="button"
-                              className="btn-secondary"
-                              style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-                              onClick={() => {
+                              style={{ 
+                                background: 'transparent', 
+                                border: 'none', 
+                                color: 'var(--text-muted)', 
+                                padding: '0.2rem 0.5rem', 
+                                fontSize: '0.75rem', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '0.3rem',
+                                cursor: 'pointer',
+                                transition: 'color 0.2s'
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent)'}
+                              onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setTempQuizData(currentCampaign.quizData || {});
                                 setEditQuizModalOpen(true);
                               }}
+                              title="Edit Quiz Responses"
                             >
-                              <Edit2 size={12} />
-                              Edit Quiz
+                              <Edit2 size={13} />
+                              <span>Edit Quiz</span>
                             </button>
                           </div>
                           {insightSections.quizAnswers && (
