@@ -226,6 +226,9 @@ export default function Chat() {
   const [editingName, setEditingName] = useState('');
   const [activeCampaignMenu, setActiveCampaignMenu] = useState<string | null>(null);
   const [clearModalOpen, setClearModalOpen] = useState(false);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [brandProfileModalOpen, setBrandProfileModalOpen] = useState(false);
+  const [integrationsModalOpen, setIntegrationsModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -2500,6 +2503,14 @@ const TACTIC_SUGGESTIONS = [
                       <Settings size={16} />
                       {'Settings'}
                     </button>
+                    <button type="button" className="user-dropdown-item" onClick={() => { setUserDropdownOpen(false); setBrandProfileModalOpen(true); }}>
+                      <Briefcase size={16} />
+                      {'Brand Profile'}
+                    </button>
+                    <button type="button" className="user-dropdown-item" onClick={() => { setUserDropdownOpen(false); setIntegrationsModalOpen(true); }}>
+                      <Link size={16} />
+                      {'Integrations'}
+                    </button>
                     <div className="user-dropdown-divider" />
                     <button type="button" className="user-dropdown-item logout" onClick={handleLogout}>
                       <LogOut size={16} />
@@ -4052,6 +4063,92 @@ const TACTIC_SUGGESTIONS = [
         data={confirmModalData} 
         onClose={() => setShowConfirmModal(false)} 
         />
+      <SettingsModal 
+        isOpen={settingsModalOpen} 
+        onClose={() => setSettingsModalOpen(false)} 
+      />
+
+      <AnimatePresence>
+        {brandProfileModalOpen && (
+          <div className="modal-overlay">
+            <motion.div 
+              className="modal-content"
+              style={{ width: '450px', maxWidth: '90%' }}
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+            >
+              <div className="modal-header">
+                <h2>Brand Profile</h2>
+                <button className="modal-close" onClick={() => setBrandProfileModalOpen(false)}>
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                  Define your brand's core tone and guidelines. AI will use this context for all campaigns.
+                </p>
+                <div>
+                  <label className="form-label">Brand Tone</label>
+                  <input type="text" className="form-input" placeholder="e.g. Professional, Friendly, Witty" />
+                </div>
+                <div>
+                  <label className="form-label">Target Audience Baseline</label>
+                  <input type="text" className="form-input" placeholder="e.g. Millennials, B2B Founders" />
+                </div>
+                <div>
+                  <label className="form-label">Restricted Words (Comma separated)</label>
+                  <textarea className="form-input" rows={2} placeholder="e.g. cheap, guarantee, best"></textarea>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn-secondary" onClick={() => setBrandProfileModalOpen(false)}>Cancel</button>
+                <button className="btn-primary" onClick={() => setBrandProfileModalOpen(false)}>Save Profile</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {integrationsModalOpen && (
+          <div className="modal-overlay">
+            <motion.div 
+              className="modal-content"
+              style={{ width: '450px', maxWidth: '90%' }}
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+            >
+              <div className="modal-header">
+                <h2>Data Integrations</h2>
+                <button className="modal-close" onClick={() => setIntegrationsModalOpen(false)}>
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                  Connect your ad accounts to sync real-time metrics.
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{ width: 32, height: 32, background: '#1877F2', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold' }}>f</div>
+                    <span style={{ fontWeight: 600 }}>Meta Ads</span>
+                  </div>
+                  <button className="btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem' }}>Connect</button>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{ width: 32, height: 32, background: '#EA4335', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold' }}>G</div>
+                    <span style={{ fontWeight: 600 }}>Google Ads</span>
+                  </div>
+                  <button className="btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem' }}>Connect</button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Phase 2 Quiz Popup */}
       <AnimatePresence>

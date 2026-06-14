@@ -109,6 +109,7 @@ export interface UserProfile {
   name: string;
   role: string;
   avatar?: string;
+  brandProfile?: Record<string, unknown>;
 }
 
 function clearAuthSession(): void {
@@ -182,6 +183,14 @@ export const api = {
   // User settings
   updateMe: (data: { name?: string; email?: string; avatar?: string }) =>
     request<UserProfile>('/api/users/me', {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    }),
+
+  getBrandProfile: () => request<Record<string, unknown>>('/api/users/me/brand-profile'),
+
+  updateBrandProfile: (data: Record<string, unknown>) =>
+    request<Record<string, unknown>>('/api/users/me/brand-profile', {
       method: 'PATCH',
       body: JSON.stringify(data)
     }),

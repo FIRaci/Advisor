@@ -18,6 +18,7 @@ model User {
   tokenVersion Int   @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  brandProfile Json?
 
   campaigns Campaign[]
   chats     Chat[]

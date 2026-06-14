@@ -36,7 +36,7 @@ router.get('/me', async (req: AuthRequest, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: { id: true, email: true, name: true, role: true, avatar: true, createdAt: true }
+      select: { id: true, email: true, name: true, role: true, avatar: true, createdAt: true, brandProfile: true }
     });
     
     if (!user) {
@@ -106,6 +106,39 @@ router.patch('/me/password', async (req: AuthRequest, res) => {
     }
 
     res.status(500).json({ error: 'Failed to update password' });
+  }
+});
+
+const brandProfileSchema = z.record(z.unknown());
+
+// Get brand profile
+router.get('/me/brand-profile', async (req: AuthRequest, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { brandProfile: true }
+    });
+    res.json({ success: true, data: user?.brandProfile || {} });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch brand profile' });
+  }
+});
+
+// Update brand profile
+router.patch('/me/brand-profile', async (req: AuthRequest, res) => {
+  try {
+    const brandProfile = brandProfileSchema.parse(req.body);
+    const user = await prisma.user.update({
+      where: { id: req.userId },
+      data: { brandProfile },
+      select: { brandProfile: true }
+    });
+    res.json({ success: true, data: user.brandProfile });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors[0].message });
+    }
+    res.status(500).json({ error: 'Failed to update brand profile' });
   }
 });
 

@@ -62,7 +62,14 @@ router.post('/message', async (req: AuthRequest, res) => {
     if (campaignId) {
       campaign = await prisma.campaign.findFirst({
         where: { id: campaignId, userId: req.userId },
-        select: { id: true, name: true, quizData: true, quizProgress: true, strategy: true }
+        select: { 
+          id: true, 
+          name: true, 
+          quizData: true, 
+          quizProgress: true, 
+          strategy: true,
+          user: { select: { brandProfile: true } }
+        }
       });
 
       if (!campaign) {
@@ -89,7 +96,8 @@ router.post('/message', async (req: AuthRequest, res) => {
         quizData: campaign.quizData,
         quizProgress: campaign.quizProgress,
         strategy: campaign.strategy,
-        campaignName: campaign.name
+        campaignName: campaign.name,
+        brandProfile: (campaign as any).user?.brandProfile || {}
       };
     }
 
@@ -363,7 +371,13 @@ router.post('/assist', async (req: AuthRequest, res) => {
 
     const campaign = await prisma.campaign.findFirst({
       where: { id: campaignId, userId: req.userId },
-      select: { id: true, name: true, quizData: true, strategy: true }
+      select: { 
+        id: true, 
+        name: true, 
+        quizData: true, 
+        strategy: true,
+        user: { select: { brandProfile: true } }
+      }
     });
 
     if (!campaign) {
@@ -400,6 +414,7 @@ router.post('/assist', async (req: AuthRequest, res) => {
     try {
       const aiContext = {
         quizData,
+        brandProfile: campaign.user?.brandProfile || {},
         historyText
       };
       
@@ -412,7 +427,11 @@ router.post('/assist', async (req: AuthRequest, res) => {
           },
           body: JSON.stringify({
             type,
-            message: customPrompt || "",
+            message: customPrompt || `Generate 3 distinct variants (A, B, C) for this ${contentTypeLabels[type] || 'content'}. 
+Variant A should focus on Pain Points. 
+Variant B should focus on Logical Benefits. 
+Variant C should focus on FOMO / Urgency. 
+Format the response clearly using Markdown headings (e.g. ### Variant A: Pain Point Focus).`,
             context: aiContext
           })
         },
@@ -429,76 +448,49 @@ router.post('/assist', async (req: AuthRequest, res) => {
       usedFallback = true;
 
       if (type === 'email') {
-        assistText = `## Marketing Email Draft
-
-**Subject Line:** Discover ${productName} — The Smarter Way to Achieve Your Goals
-
----
+        assistText = `### Variant A: Pain Point Focus
+**Subject Line:** Stop losing time with manual tasks
 
 Hi [First Name],
-
-Are you tired of struggling with [pain point]? **${productName}** is here to change the game.
-
-### Here's what makes us different:
-- **Feature 1:** Save 50% of your time with our smart automation
-- **Feature 2:** Join 10,000+ satisfied ${audience} who already trust us
-- **Feature 3:** Get results in as little as 7 days
-
-> *"${productName} completely transformed how we work."* — Happy Customer
-
-### Limited Time Offer
-Start your free trial today and get **20% off** your first month.
-
-[**Get Started Now →**]
-
-Best regards,  
-The ${productName} Team
+Are you tired of struggling with [pain point]? **${productName}** automates the heavy lifting so you can focus on what matters.
 
 ---
-**A/B Variant:** Try "Your ${goal} journey starts here" as subject line.`;
+
+### Variant B: Logical Benefits Focus
+**Subject Line:** Discover the smarter way to grow
+
+Hi [First Name],
+**${productName}** helps you save 50% of your time while increasing ROI by 2x. Join 10,000+ satisfied ${audience} who trust us.
+
+---
+
+### Variant C: FOMO / Urgency Focus
+**Subject Line:** Last chance: Get 20% off ${productName}
+
+Hi [First Name],
+Don't get left behind! Offer ends tonight. Start your free trial today and secure your 20% lifetime discount.`;
       } else if (type === 'ad_copy') {
-        assistText = `## Ad Copy Variants
+        assistText = `### Variant A: Pain Point Focus
+**Headline:** Struggling with [pain point]?
+**Body:** Say goodbye to wasted hours. ${productName} automates your workflow effortlessly.
+**CTA:** Learn More
 
-### Variant A — Problem-Agitation-Solution
-**Headline:** Stop Wasting Time on ${goal}  
-**Body:** Struggling to reach your ${audience}? ${productName} makes it effortless. 3x faster results.  
-**CTA:** Try Free for 14 Days →
+---
 
-### Variant B — Social Proof
-**Headline:** 10,000+ Businesses Trust ${productName}  
-**Body:** Join successful brands using ${productName} to ${goal}.  
-**CTA:** See Why They Switched →
+### Variant B: Logical Benefits Focus
+**Headline:** Save 50% Time & Double ROI
+**Body:** Join top ${audience} using ${productName} to scale up fast. 
+**CTA:** Get Started Free
 
-### Variant C — Urgency
-**Headline:** Don't Miss Out — ${productName} Launch Offer  
-**Body:** For a limited time, get 30% off. The smart way for ${audience} to ${goal}.  
-**CTA:** Claim Your Discount →
+---
 
-**Recommended:** Variant A for cold audiences, Variant B for retargeting.`;
+### Variant C: FOMO Focus
+**Headline:** Don't miss out - 20% Off Ends Soon!
+**Body:** 10,000+ users already upgraded. Secure your spot before the deal is gone.
+**CTA:** Claim Offer`;
       } else if (type === 'social_post') {
         assistText = `## Social Media Content Pack
 
-### Instagram / TikTok
-Still doing [old way]? There's a better way.
-
-Meet **${productName}** — built for ${audience} who want real results.
-
-- [Benefit 1]
-- [Benefit 2]
-- [Benefit 3]
-
-**Hashtags:** #${productName.replace(/\\s/g, '')} #Marketing #Growth
-
-### LinkedIn
-We launched ${productName} to help ${audience} ${goal} — without the complexity.
-
-After 6 months: Our users see 2.5x faster results.
-
-### Twitter/X Thread
-Tweet 1: We just helped our 10,000th customer ${goal}. Here's the playbook...  
-Tweet 2: Step 1: Identify your ${audience}  
-Tweet 3: Step 2: Use ${productName} to automate outreach  
-Tweet 4: Step 3: Track, optimize, repeat`;
       } else {
         assistText = `## Generated Content for ${productName}
 
