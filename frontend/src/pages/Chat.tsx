@@ -5,7 +5,7 @@ import {
   Send, Sparkles, Trash2, Plus, Minus, MessageSquare, ChevronLeft, ChevronRight,
   Settings, LogOut, MoreHorizontal, Pencil, Star, Copy, Check, ListChecks,
   BarChart3, BookOpen, Package, Building, Users, RefreshCw, Zap, ArrowRight, ArrowDown, ArrowUp, Award,
-  Target, Megaphone, DollarSign, Globe, Clock, Briefcase, X, HelpCircle,
+  Target, Megaphone, DollarSign, Globe, Clock, Briefcase, Plug, X, HelpCircle,
   Mail, FileText, Palette, Upload, TrendingUp, TrendingDown, Heart, Smartphone, ShoppingBag, CheckCircle2
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -226,7 +226,6 @@ export default function Chat() {
   const [editingName, setEditingName] = useState('');
   const [activeCampaignMenu, setActiveCampaignMenu] = useState<string | null>(null);
   const [clearModalOpen, setClearModalOpen] = useState(false);
-  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [brandProfileModalOpen, setBrandProfileModalOpen] = useState(false);
   const [integrationsModalOpen, setIntegrationsModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -2503,12 +2502,12 @@ const TACTIC_SUGGESTIONS = [
                       <Settings size={16} />
                       {'Settings'}
                     </button>
-                    <button type="button" className="user-dropdown-item" onClick={() => { setUserDropdownOpen(false); setBrandProfileModalOpen(true); }}>
+                    <button type="button" className="user-dropdown-item" onClick={() => { setUserMenuOpen(false); setBrandProfileModalOpen(true); }}>
                       <Briefcase size={16} />
                       {'Brand Profile'}
                     </button>
-                    <button type="button" className="user-dropdown-item" onClick={() => { setUserDropdownOpen(false); setIntegrationsModalOpen(true); }}>
-                      <Link size={16} />
+                    <button type="button" className="user-dropdown-item" onClick={() => { setUserMenuOpen(false); setIntegrationsModalOpen(true); }}>
+                      <Plug size={16} />
                       {'Integrations'}
                     </button>
                     <div className="user-dropdown-divider" />
@@ -4063,10 +4062,7 @@ const TACTIC_SUGGESTIONS = [
         data={confirmModalData} 
         onClose={() => setShowConfirmModal(false)} 
         />
-      <SettingsModal 
-        isOpen={settingsModalOpen} 
-        onClose={() => setSettingsModalOpen(false)} 
-      />
+
 
       <AnimatePresence>
         {brandProfileModalOpen && (
