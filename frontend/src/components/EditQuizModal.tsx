@@ -167,7 +167,7 @@ export default function EditQuizModal({ isOpen, onClose, onSave, initialData }: 
         <p className="edit-quiz-modal-desc">
           Update your answers below. Changes will be saved to the campaign.
         </p>
-        <div className="edit-quiz-modal-body custom-scrollbar">
+        <div className="edit-quiz-modal-body custom-scrollbar" data-lenis-prevent="true">
           {quizFields.map((field) => (
             <QuizFieldRow
               key={field.key}
