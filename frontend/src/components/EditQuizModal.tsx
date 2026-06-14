@@ -155,7 +155,7 @@ export default function EditQuizModal({ isOpen, onClose, onSave, initialData }: 
       onClick={onClose}
     >
       <div
-        className="modal-content edit-quiz-modal"
+        className="edit-quiz-modal"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="edit-quiz-modal-header">
