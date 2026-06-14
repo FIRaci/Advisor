@@ -130,7 +130,7 @@ router.patch('/me/brand-profile', async (req: AuthRequest, res) => {
     const brandProfile = brandProfileSchema.parse(req.body);
     const user = await prisma.user.update({
       where: { id: req.userId },
-      data: { brandProfile },
+      data: { brandProfile: brandProfile as any },
       select: { brandProfile: true }
     });
     res.json({ success: true, data: user.brandProfile });

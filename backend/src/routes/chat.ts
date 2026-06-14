@@ -489,8 +489,24 @@ Don't get left behind! Offer ends tonight. Start your free trial today and secur
 **Body:** 10,000+ users already upgraded. Secure your spot before the deal is gone.
 **CTA:** Claim Offer`;
       } else if (type === 'social_post') {
-        assistText = `## Social Media Content Pack
+        assistText = `### Variant A: Pain Point Focus
+**Hook:** Struggling with [pain point]?
+**Post:** Here is how ${productName} can solve it for you today!
+**Call to Action:** Link in bio.
 
+---
+
+### Variant B: Logical Benefits Focus
+**Hook:** Why 10k+ users chose ${productName}.
+**Post:** Fast, reliable, and affordable for ${audience}. 
+**Call to Action:** Try it for free today!
+
+---
+
+### Variant C: FOMO Focus
+**Hook:** Last chance to save 20%!
+**Post:** The biggest deal for ${productName} ends tonight. Don't let your competitors get ahead.
+**Call to Action:** Grab the offer now!`;
       } else {
         assistText = `## Generated Content for ${productName}
 
