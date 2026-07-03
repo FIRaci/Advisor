@@ -8,7 +8,7 @@ services:
   - type: web
     name: ai-service
     env: python
-    plan: starter
+    plan: free
     rootDir: ai_service
     buildCommand: "pip install -r requirements.txt"
     startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
@@ -19,7 +19,7 @@ services:
   - type: web
     name: advisor-backend
     env: node
-    plan: starter
+    plan: free
     rootDir: backend
     buildCommand: "npm install && npm run build"
     startCommand: "npm start"
