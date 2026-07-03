@@ -13,9 +13,11 @@ export const formatMessageTime = (time: string) => {
 
 
 export const classifyPane = (msg: ChatMessage): 'STRATEGY' | 'CONTENT' | 'SYSTEM' => {
-  const isSystemTransition = msg.role === 'ASSISTANT' && msg.content.includes('[STAGE_TRANSITION]');
-  if (isSystemTransition) return 'SYSTEM';
-  
+  if (msg.pane === 'SYSTEM') return 'SYSTEM';
+  if (msg.pane === 'CONTENT') return 'CONTENT';
+  if (msg.pane === 'STRATEGY') return 'STRATEGY';
+
+  // Fallbacks if pane is not set
   if (msg.role === 'SYSTEM' && msg.content.startsWith('__CONTENT_PANE__')) {
     return 'CONTENT';
   }

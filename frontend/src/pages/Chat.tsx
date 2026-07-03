@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react';
+import React, { useState, useEffect, useRef, useMemo, type ReactNode, Fragment } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -450,12 +450,12 @@ const TACTIC_SUGGESTIONS = [
   // Auto-scroll analyst chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, assistLoading, initialLoading]);
+  }, [messages, loading, assistLoading, initialLoading]);
 
   // Auto-scroll content writer chat
   useEffect(() => {
     contentMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, assistLoading]);
+  }, [messages, loading, assistLoading]);
 
   const handlePaneScroll = (
     e: React.UIEvent<HTMLDivElement>,
@@ -2524,13 +2524,10 @@ const TACTIC_SUGGESTIONS = [
                 <>
                   <CampaignProfileCard />
                   {analystMessages.map((msg, i) => {
-                  // SYSTEM-pane messages are rendered as inline stage transition
-                  // markers (small label + horizontal rule) instead of chat
-                  // bubbles. Their content is computed from `metadata.toStage`.
                   if (classifyPane(msg) === 'SYSTEM') {
                     const meta = (msg.metadata ?? {}) as Record<string, unknown>;
-                    const toStage = (typeof meta.toStage === 'number' ? meta.toStage : 0) as Stage;
-                    const desc = STAGE_DESCRIPTORS[toStage] ?? STAGE_DESCRIPTORS[0];
+                    const toStage = (typeof meta.toStage === 'number' ? meta.toStage : 2) as Stage;
+                    const desc = STAGE_DESCRIPTORS[toStage] ?? STAGE_DESCRIPTORS[2];
                     return (
                       <div key={msg.id} className="stage-transition-divider" role="note">
                         <span className="stage-transition-line" aria-hidden="true" />
@@ -2542,16 +2539,33 @@ const TACTIC_SUGGESTIONS = [
                     );
                   }
 
+                  const isBackendTransition = msg.role === 'ASSISTANT' && msg.kind === 'stage_transition';
+                  const prevMsg = i > 0 ? analystMessages[i - 1] : null;
+                  const isDuplicateDivider = prevMsg && classifyPane(prevMsg) === 'SYSTEM';
+                  const shouldRenderBackendDivider = isBackendTransition && !isDuplicateDivider;
+
+                  const toStageBackend = (msg.metadata as any)?.toStage ?? 2;
+                  const descBackend = STAGE_DESCRIPTORS[toStageBackend as Stage] ?? STAGE_DESCRIPTORS[2];
+
                   return (
-                    <div
-                      key={msg.id}
-                      className={`message ${msg.role === 'USER' ? 'user' : 'assistant'}`}
-                    >
-                      {msg.role === 'ASSISTANT' && (
-                        <div className="message-avatar assistant-avatar">
-                          <Sparkles size={16} />
+                    <Fragment key={msg.id}>
+                      {shouldRenderBackendDivider && (
+                        <div className="stage-transition-divider" role="note">
+                          <span className="stage-transition-line" aria-hidden="true" />
+                          <span className="stage-transition-label">
+                            {`${'Stage'} ${toStageBackend} \u2022 ${descBackend.title}`}
+                          </span>
+                          <span className="stage-transition-line" aria-hidden="true" />
                         </div>
                       )}
+                      <div
+                        className={`message ${msg.role === 'USER' ? 'user' : 'assistant'}`}
+                      >
+                        {msg.role === 'ASSISTANT' && (
+                          <div className="message-avatar assistant-avatar">
+                            <Sparkles size={16} />
+                          </div>
+                        )}
 
                       <div className="message-main">
                         <div className="message-meta">
@@ -2567,12 +2581,23 @@ const TACTIC_SUGGESTIONS = [
                               {(() => {
                                 const introMd = cleanContent(msg.content);
                                 const parsedPlans = parsePlanOptions(msg.content);
+                                const hasText = introMd.trim().length > 0;
+                                const hasPlans = parsedPlans.length > 0;
+                                
+                                if (!hasText && !hasPlans) {
+                                  return (
+                                    <p className="text-gray-400 italic">
+                                      {msg.content.trim() ? msg.content : "The AI did not return a response. Please try again."}
+                                    </p>
+                                  );
+                                }
+
                                 return (
                                   <>
-                                    {introMd.trim() ? (
+                                    {hasText ? (
                                       <ReactMarkdown remarkPlugins={[remarkGfm]} components={reactMarkdownComponents}>{introMd}</ReactMarkdown>
                                     ) : null}
-                                    {parsedPlans.length > 0 ? (
+                                    {hasPlans ? (
                                       <div className="plan-cards">
                                         {parsedPlans.map((plan) => (
                                           <motion.button
@@ -2747,6 +2772,7 @@ const TACTIC_SUGGESTIONS = [
                         )
                       )}
                     </div>
+                    </Fragment>
                   );
                 })}
                 {loading && (
