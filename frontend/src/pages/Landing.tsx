@@ -386,28 +386,6 @@ export default function Landing() {
             <h2>Four stages, no surprises</h2>
             <p>AdVisor walks every campaign through the same four stages so you always know what to do next.</p>
           </motion.div>
-
-          <motion.div
-            className="demo-video-container"
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true, margin: "-50px" }}
-            transition={{ duration: 0.6 }}
-            style={{ width: '100%', maxWidth: '800px', margin: '0 auto 4rem auto', borderRadius: '1rem', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)' }}
-          >
-            <video 
-              src="/AdvisorDemo.mp4" 
-              controls 
-              autoPlay 
-              muted 
-              loop 
-              playsInline
-              style={{ width: '100%', display: 'block' }}
-            >
-              Your browser does not support the video tag.
-            </video>
-          </motion.div>
-
           <div className="how-grid">
             {howItWorks.map((step, i) => {
               const Icon = step.icon;
@@ -657,9 +635,16 @@ export default function Landing() {
             animate={{ scale: 1 }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="video-placeholder">
-              <Play size={64} />
-              <p>Demo Video Coming Soon</p>
+            <div className="video-player-container" style={{ width: '100%', borderRadius: '0.5rem', overflow: 'hidden', background: '#000' }}>
+              <video 
+                src="/AdvisorDemo.mp4" 
+                controls 
+                autoPlay 
+                playsInline
+                style={{ width: '100%', display: 'block', maxHeight: '80vh' }}
+              >
+                Your browser does not support the video tag.
+              </video>
             </div>
             <button className="video-close" onClick={() => setIsVideoOpen(false)}>×</button>
           </motion.div>
