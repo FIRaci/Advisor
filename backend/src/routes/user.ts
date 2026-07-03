@@ -96,7 +96,10 @@ router.patch('/me/password', async (req: AuthRequest, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await prisma.user.update({
       where: { id: req.userId },
-      data: { password: hashedPassword }
+      data: { 
+        password: hashedPassword,
+        tokenVersion: { increment: 1 }
+      }
     });
 
     res.json({ success: true, data: { message: 'Password updated successfully' } });

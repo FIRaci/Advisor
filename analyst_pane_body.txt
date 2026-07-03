@@ -1,0 +1,361 @@
+          <div className="chat-pane strategy-pane" style={{ width: showContentPane ? `${strategyWidth}%` : '100%', flex: showContentPane ? '0 1 auto' : 1 }}>
+            <div className="chat-pane-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Sparkles size={16} style={{ color: 'var(--accent)' }} />
+                <h3>{'Strategy Analyst'}</h3>
+              </div>
+            </div>
+            {/* Messages */}
+            <div 
+              className="chat-messages" 
+              data-lenis-prevent="true"
+              ref={analystScrollContainerRef}
+              onScroll={(e) => handlePaneScroll(e, setShowAnalystScrollDown)}
+            >
+              {initialLoading ? (
+                <div className="chat-loading">
+                  <div className="spinner" />
+                </div>
+              ) : analystMessages.length === 0 ? (
+                <div className="chat-welcome">
+                  <div className="welcome-icon">
+                    <Sparkles size={40} />
+                  </div>
+                  <h2>{'Welcome to AdVisor'}</h2>
+                  <p>{'Ask me anything about marketing strategy, ad copy, or campaign optimization.'}</p>
+
+                  {/* Full Quiz Profile Card */}
+                  {currentCampaign && fullQuizProfile.length > 0 && (
+                    <div className="welcome-quiz-profile">
+                      <div className="quiz-profile-header">
+                        <h4>{'Your Campaign Profile'}</h4>
+                      </div>
+                      <div className="quiz-profile-grid">
+                        {fullQuizProfile.map((item, i) => (
+                          <div key={i} className="quiz-profile-item">
+                            <span className="profile-icon">{item.icon}</span>
+                            <div className="profile-content">
+                              <span className="profile-label">{item.label}</span>
+                              <span className="profile-value">{item.value}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {currentStage === 0 && (
+                    <div className="welcome-actions">
+                      <button className="welcome-action primary" onClick={handleOpenFullQuiz}>
+                        <div className="welcome-action-title">
+                          <ListChecks size={16} />
+                          <span>{'Discovery Quiz'}</span>
+                        </div>
+                        <p>
+                          {'Opens the full questionnaire. When you finish, your answers appear above the chat and the strategy starts automatically.'}
+                        </p>
+                      </button>
+
+                      <button className="welcome-action secondary" onClick={focusComposer}>
+                        <div className="welcome-action-title">
+                          <MessageSquare size={16} />
+                          <span>{'Skip Quiz, Chat Directly'}</span>
+                        </div>
+                        <p>
+                          {'Type your first request below. A new campaign will be created automatically.'}
+                        </p>
+                      </button>
+
+                      <button
+                        className="welcome-action secondary"
+                        type="button"
+                        onClick={() => {
+                          setGuideActiveTab('overview');
+                          setGuidePopupOpen(true);
+                        }}
+                      >
+                        <div className="welcome-action-title">
+                          <HelpCircle size={16} />
+                          <span>{'Show me how AdVisor works'}</span>
+                        </div>
+                        <p>
+                          {'Walkthrough of the four stages, the two panes, and how metrics tie everything together.'}
+                        </p>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <CampaignProfileCard />
+                  {analystMessages.map((msg, i) => {
+                  // SYSTEM-pane messages are rendered as inline stage transition
+                  // markers (small label + horizontal rule) instead of chat
+                  // bubbles. Their content is computed from `metadata.toStage`.
+                  if (classifyPane(msg) === 'SYSTEM') {
+                    const meta = (msg.metadata ?? {}) as Record<string, unknown>;
+                    const toStage = (typeof meta.toStage === 'number' ? meta.toStage : 0) as Stage;
+                    const desc = STAGE_DESCRIPTORS[toStage] ?? STAGE_DESCRIPTORS[0];
+                    return (
+                      <div key={msg.id} className="stage-transition-divider" role="note">
+                        <span className="stage-transition-line" aria-hidden="true" />
+                        <span className="stage-transition-label">
+                          {`${'Stage'} ${toStage} \u2022 ${desc.title}`}
+                        </span>
+                        <span className="stage-transition-line" aria-hidden="true" />
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`message ${msg.role === 'USER' ? 'user' : 'assistant'}`}
+                    >
+                      {msg.role === 'ASSISTANT' && (
+                        <div className="message-avatar assistant-avatar">
+                          <Sparkles size={16} />
+                        </div>
+                      )}
+
+                      <div className="message-main">
+                        <div className="message-meta">
+                          <span className="message-author">
+                            {msg.role === 'USER' ? (user?.name || ('You')) : 'AdVisor AI'}
+                          </span>
+                          <span className="message-time">{formatMessageTime(msg.createdAt)}</span>
+                        </div>
+
+                        <div className="message-content">
+                          {msg.role === 'ASSISTANT' ? (
+                            <>
+                              {(() => {
+                                const introMd = cleanContent(msg.content);
+                                const parsedPlans = parsePlanOptions(msg.content);
+                                return (
+                                  <>
+                                    {introMd.trim() ? (
+                                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={reactMarkdownComponents}>{introMd}</ReactMarkdown>
+                                    ) : null}
+                                    {parsedPlans.length > 0 ? (
+                                      <div className="plan-cards">
+                                        {parsedPlans.map((plan) => (
+                                          <motion.button
+                                            key={plan.id}
+                                            className={`plan-card ${selectedPlanInChat === plan.id || currentCampaign?.quizData?.selectedPlan === plan.id ? 'selected' : ''}`}
+                                            onClick={() => handleSelectPlan(plan.id, plan.content)}
+                                            disabled={loading || !!currentCampaign?.quizData?.selectedPlan}
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
+                                          >
+                                            <div className="plan-card-badge">
+                                              {plan.id === 'A' || plan.id === '1' ? (
+                                                <Zap size={16} />
+                                              ) : plan.id === 'B' || plan.id === '2' ? (
+                                                <Target size={16} />
+                                              ) : plan.id === 'C' || plan.id === '3' ? (
+                                                <Award size={16} />
+                                              ) : (
+                                                <Sparkles size={16} />
+                                              )}
+                                            </div>
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={reactMarkdownComponents}>{plan.content}</ReactMarkdown>
+                                            {(selectedPlanInChat === plan.id ||
+                                              currentCampaign?.quizData?.selectedPlan === plan.id) && (
+                                              <div className="plan-card-check">
+                                                <Check size={16} />
+                                              </div>
+                                            )}
+                                          </motion.button>
+                                        ))}
+                                      </div>
+                                    ) : null}
+                                  </>
+                                );
+                              })()}
+
+                              {/* Content Assistant offer - after plan selected, before Stage 2 */}
+                              {i === analystMessages.length - 1 && currentCampaign?.quizData?.selectedPlan && currentStage === 1 && !hasStageTransition(msg.content) && (
+                                <div className="content-assist-offer">
+                                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                                    {'Want AI to draft some content for your campaign before moving on?'}
+                                  </p>
+                                  <div className="content-assist-buttons">
+                                    <button
+                                      className="content-assist-btn"
+                                      onClick={() => handleAssistContent('email')}
+                                      disabled={assistLoading}
+                                    >
+                                      <Mail size={14} />
+                                      <span>{'Draft Email'}</span>
+                                    </button>
+                                    <button
+                                      className="content-assist-btn"
+                                      onClick={() => handleAssistContent('ad_copy')}
+                                      disabled={assistLoading}
+                                    >
+                                      <FileText size={14} />
+                                      <span>{'Ad Copy'}</span>
+                                    </button>
+                                    <button
+                                      className="content-assist-btn"
+                                      onClick={() => handleAssistContent('social_post')}
+                                      disabled={assistLoading}
+                                    >
+                                      <Palette size={14} />
+                                      <span>{'Social Post'}</span>
+                                    </button>
+                                  </div>
+                                  <button
+                                    className="btn btn-primary btn-sm"
+                                    onClick={() => handleAdvanceStage(2)}
+                                    disabled={loading}
+                                    style={{ marginTop: '0.75rem' }}
+                                  >
+                                    <ArrowRight size={16} />
+                                    {'Skip to Stage 2'}
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* Stage transition prompt */}
+                              {hasStageTransition(msg.content) && i === analystMessages.length - 1 && (
+                                <div className="stage-transition-prompt">
+                                  <p>{'Ready to move to the next stage?'}</p>
+                                  <button
+                                    className="btn btn-primary btn-sm"
+                                    onClick={() => handleAdvanceStage(currentStage + 1)}
+                                    disabled={loading}
+                                  >
+                                    <ArrowRight size={16} />
+                                    {currentStage < 3
+                                      ? `Go to Stage ${currentStage + 1}`
+                                      : ('Continue Optimizing')}
+                                  </button>
+                                </div>
+                              )}
+                            </>
+                          ) : msg.content.startsWith('# 📊 Campaign Performance Report') ? (
+                            <div style={{ background: 'rgba(255,255,255,0.04)', padding: '0.75rem 1rem', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.08)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                                <BarChart3 size={16} style={{ color: '#34d399' }} />
+                                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Campaign Data Provided to AI</span>
+                              </div>
+                              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
+                                Includes current stage, quiz answers, KPI targets, and latest metrics snapshots.
+                              </p>
+                            </div>
+                          ) : (
+                            <p>{msg.content}</p>
+                          )}
+                        </div>
+
+                        <div className="message-tools">
+                          {msg.role === 'ASSISTANT' && i === analystMessages.length - 1 && (
+                            <button
+                              className="message-copy-btn"
+                              onClick={handleReanalyze}
+                              title={'Reanalyze Strategy'}
+                            >
+                              <RefreshCw size={14} />
+                            </button>
+                          )}
+                          {msg.role === 'ASSISTANT' && showContentPane && (
+                            <button
+                              className="message-copy-btn"
+                              onClick={() => {
+                                setContentInput(`Please write marketing content based on the strategy from the left pane...`);
+                                
+                                // Auto-extract plan name as a tactic if available
+                                if (selectedPlanInChat && !activeTactics.includes(selectedPlanInChat)) {
+                                  setActiveTactics(prev => [...prev, selectedPlanInChat]);
+                                }
+
+                                setTimeout(() => {
+                                  const inputField = document.querySelector('.content-pane textarea') as HTMLTextAreaElement;
+                                  if (inputField) inputField.focus();
+                                }, 100);
+                              }}
+                              title={'Send to Content Writer'}
+                              style={{ color: '#34d399' }}
+                            >
+                              <ArrowRight size={14} />
+                            </button>
+                          )}
+                          {msg.role === 'ASSISTANT' && hasTargetKeywords(msg.content) && (
+                            <button
+                              className="message-copy-btn"
+                              onClick={() => handleExtractTargets(msg.content)}
+                              title={'Extract & Apply Targets'}
+                              style={{ color: '#3b82f6' }}
+                            >
+                              <Target size={14} />
+                            </button>
+                          )}
+                          <button
+                            className="message-copy-btn"
+                            onClick={() => handleCopyMessage(msg.content, msg.id)}
+                            title={'Copy'}
+                          >
+                            {copiedId === msg.id ? <Check size={14} /> : <Copy size={14} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {msg.role === 'USER' && (
+                        user?.avatar ? (
+                          <img src={user.avatar} alt={user.name || 'User'} className="message-avatar user-avatar" style={{ objectFit: 'cover' }} />
+                        ) : (
+                          <div className="message-avatar user-avatar">
+                            {user?.name?.charAt(0) || 'U'}
+                          </div>
+                        )
+                      )}
+                    </div>
+                  );
+                })}
+                {loading && (
+                  <div className="message assistant loading-message">
+                    <div className="message-avatar assistant-avatar"><Sparkles size={16} /></div>
+                    <div className="message-main">
+                      <div className="message-meta">
+                        <span className="message-author">AdVisor AI</span>
+                      </div>
+                      <div className="message-content typing-bubble">
+                        <div className="typing-indicator">
+                          <span /><span /><span /><span />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </>
+            )}
+            </div>
+
+            <AnimatePresence>
+              {showAnalystScrollDown && (
+                <motion.button
+                  className="btn-scroll-down"
+                  initial={{ opacity: 0, y: 10, scale: 0.9, x: "-50%" }}
+                  animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
+                  exit={{ opacity: 0, y: 10, scale: 0.9, x: "-50%" }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => scrollToBottom(messagesEndRef)}
+                  aria-label="Scroll to bottom"
+                >
+                  <ArrowDown size={20} />
+                </motion.button>
+              )}
+            </AnimatePresence>
+
+            <ChatInput 
+              onSend={handleSend} 
+              loading={loading} 
+              currentCampaign={currentCampaign} 
+              onOpenFullQuiz={handleOpenFullQuiz} 
+            />
+          </div>
+

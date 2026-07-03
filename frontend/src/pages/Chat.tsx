@@ -13,6 +13,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
+import { useChatStore } from '../store/chatStore';
 import { api, Campaign as ApiCampaign, ChatMessage, MetricsSnapshot, QuizProgress } from '../hooks/useApi';
 import ChatInput from '../components/ChatInput';
 import { findGlossaryMatches, summarizeGlossary, glossaryGroups, getGlossaryByGroup } from '../utils/marketingGlossary';
@@ -34,8 +35,20 @@ import {
   quizFieldActivityTitle,
   INSIGHT_QUIZ_HINTS
 } from '../lib/quizDisplay';
+import ClearChatModal from '../components/chat/modals/ClearChatModal';
+import DeleteCampaignModal from '../components/chat/modals/DeleteCampaignModal';
+import GuidePopupModal from '../components/chat/modals/GuidePopupModal';
+import ConfirmationModal from '../components/chat/modals/ConfirmationModal';
+import { formatMessageTime, classifyPane, getKpiStatus, formatMetricValue, computeMetricDelta, hasTargetKeywords, metricLabelWithHint, generateSmoothPath } from '../utils/chatHelpers';
 import './Chat.css';
 import EditQuizModal from '../components/EditQuizModal';
+
+import BrandProfileModal from '../components/chat/modals/BrandProfileModal';
+import IntegrationsModal from '../components/chat/modals/IntegrationsModal';
+import Phase2QuizPopup from '../components/chat/modals/Phase2QuizPopup';
+import GlossaryPanel from '../components/chat/modals/GlossaryPanel';
+import ChatSidebar from '../components/chat/ChatSidebar';
+import ChatHeader from '../components/chat/ChatHeader';
 
 type Message = ChatMessage;
 
@@ -60,7 +73,6 @@ const metricsFields: MetricFieldDef[] = [
   { key: 'roas', label: 'ROAS', hint: 'Return on Ad Spend' }
 ];
 
-const metricLabelWithHint = (f: MetricFieldDef) => `${f.label} (${f.hint})`;
 
 
 
@@ -148,125 +160,102 @@ const phase2Questions: Phase2Question[] = [
   }
 ];
 
-const generateSmoothPath = (points: {x: number, y: number}[]) => {
-  if (points.length === 0) return '';
-  if (points.length === 1) return `M ${points[0].x},${points[0].y}`;
-  if (points.length === 2) return `M ${points[0].x},${points[0].y} L ${points[1].x},${points[1].y}`;
-  
-  const d = [`M ${points[0].x},${points[0].y}`];
-  for (let i = 0; i < points.length - 1; i++) {
-    const p0 = points[Math.max(i - 1, 0)];
-    const p1 = points[i];
-    const p2 = points[i + 1];
-    const p3 = points[Math.min(i + 2, points.length - 1)];
-    
-    // tension
-    const cp1x = p1.x + (p2.x - p0.x) / 6;
-    const cp1y = p1.y + (p2.y - p0.y) / 6;
-    const cp2x = p2.x - (p3.x - p1.x) / 6;
-    const cp2y = p2.y - (p3.y - p1.y) / 6;
-    
-    d.push(`C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`);
-  }
-  return d.join(' ');
-};
 
+import { useLocalChatState } from '../hooks/useLocalChatState';
 export default function Chat() {
+  const {
+    sidebarOpen,
+    setSidebarOpen,
+    sidebarPanelWidth,
+    setSidebarPanelWidth,
+    userMenuOpen,
+    setUserMenuOpen,
+    editingCampaignId,
+    setEditingCampaignId,
+    editingName,
+    setEditingName,
+    activeCampaignMenu,
+    setActiveCampaignMenu,
+    clearModalOpen,
+    setClearModalOpen,
+    brandProfileModalOpen,
+    setBrandProfileModalOpen,
+    integrationsModalOpen,
+    setIntegrationsModalOpen,
+    deleteModalOpen,
+    setDeleteModalOpen,
+    deletingCampaignId,
+    setDeletingCampaignId,
+    copiedId,
+    setCopiedId,
+    insightsOpen,
+    setInsightsOpen,
+    insightSections,
+    setInsightSections,
+    guidePopupOpen,
+    setGuidePopupOpen,
+    guideActiveTab,
+    setGuideActiveTab,
+    selectedPlanInChat,
+    setSelectedPlanInChat,
+    newTactic,
+    setNewTactic,
+    editQuizModalOpen,
+    setEditQuizModalOpen,
+    isStageBannerHidden,
+    setIsStageBannerHidden,
+    showAnalystScrollDown,
+    setShowAnalystScrollDown,
+    showContentScrollDown,
+    setShowContentScrollDown,
+    showSidebarBackToTop,
+    setShowSidebarBackToTop,
+    showInsightsBackToTop,
+    setShowInsightsBackToTop,
+    showConfirmModal,
+    setShowConfirmModal,
+    showTacticsDropdown,
+    setShowTacticsDropdown,
+    glossaryOpen,
+    setGlossaryOpen,
+    phase2PopupOpen,
+    setPhase2PopupOpen,
+    phase2Step,
+    setPhase2Step,
+    phase2CustomOpen,
+    setPhase2CustomOpen,
+    phase2CustomInput,
+    setPhase2CustomInput,
+    phase2TextInput,
+    setPhase2TextInput
+  } = useLocalChatState();
+
   const { campaignId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
 
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [currentCampaign, setCurrentCampaign] = useState<Campaign | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  /** Match mobile drawer width to CSS breakpoints so the clip animation stays smooth */
-  const [sidebarPanelWidth, setSidebarPanelWidth] = useState(280);
-
-  useEffect(() => {
-    const pick = () => {
-      const compact =
-        typeof window.matchMedia === 'function' &&
-        window.matchMedia('(max-width: 768px)').matches;
-      const w =
-        compact
-          ? Math.min(320, Math.max(260, Math.round(window.innerWidth * 0.86)))
-          : 280;
-      setSidebarPanelWidth(w);
-    };
-    pick();
-    window.addEventListener('resize', pick);
-    return () => window.removeEventListener('resize', pick);
-  }, []);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState('');
-  const [activeCampaignMenu, setActiveCampaignMenu] = useState<string | null>(null);
-  const [clearModalOpen, setClearModalOpen] = useState(false);
-  const [brandProfileModalOpen, setBrandProfileModalOpen] = useState(false);
-  const [integrationsModalOpen, setIntegrationsModalOpen] = useState(false);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [insightsOpen, setInsightsOpen] = useState(false);
-  const [insightSections, setInsightSections] = useState({
-    quizProgress: true,
-    quizAnswers: true,
-    stage2Targets: true,
-    metricsSnapshot: true,
-    trends: true,
-    activity: true
-  });
-  const [guidePopupOpen, setGuidePopupOpen] = useState(false);
-  const [guideActiveTab, setGuideActiveTab] = useState<'overview' | 'stages' | 'panes' | 'metrics' | 'faq'>('overview');
-  const [selectedPlanInChat, setSelectedPlanInChat] = useState<string | null>(null);
-  const [assistLoading, setAssistLoading] = useState(false);
-  const [contentInput, setContentInput] = useState('');
-  const [activeTactics, setActiveTactics] = useState<string[]>([]);
-  const [newTactic, setNewTactic] = useState('');
-  const [editingQuizField, setEditingQuizField] = useState<string | null>(null);
-  const [editingQuizValue, setEditingQuizValue] = useState('');
-  const [editQuizModalOpen, setEditQuizModalOpen] = useState(false);
-
-
-  // Auto-fill active tactics when campaign changes or quizData updates, 
-  // only if activeTactics is currently empty to avoid overwriting user edits.
-  useEffect(() => {
-    if (!currentCampaign?.quizData || activeTactics.length > 0) return;
-    
-    const qd = currentCampaign.quizData as Record<string, string>;
-    const extractedTactics = new Set<string>();
-    
-    if (qd.channels) {
-      const channels = qd.channels.split(',').map(s => s.trim()).filter(Boolean);
-      channels.forEach(ch => extractedTactics.add(ch));
-    }
-    if (qd.contentFormat) {
-      const formats = qd.contentFormat.split(',').map(s => s.trim()).filter(Boolean);
-      formats.forEach(f => extractedTactics.add(f));
-    }
-    if (qd.platform) {
-      const platforms = qd.platform.split(',').map(s => s.trim()).filter(Boolean);
-      platforms.forEach(p => extractedTactics.add(p));
-    }
-    
-    if (extractedTactics.size > 0) {
-      setActiveTactics(Array.from(extractedTactics));
-    }
-  }, [currentCampaign?.id, currentCampaign?.quizData]);
-
-  const [strategyWidth, setStrategyWidth] = useState(60);
-  const [isDraggingPane, setIsDraggingPane] = useState(false);
-  const [contentPaneCollapsed, setContentPaneCollapsed] = useState(false);
-  const [metricsSnapshots, setMetricsSnapshots] = useState<MetricsSnapshot[]>([]);
-  const [metricsLabel, setMetricsLabel] = useState('');
-  const [metricsPeriodStart, setMetricsPeriodStart] = useState('');
-  const [metricsPeriodEnd, setMetricsPeriodEnd] = useState('');
-  const [metricsInputs, setMetricsInputs] = useState<Record<string, string>>({});
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const {
+    messages, setMessages,
+    campaigns, setCampaigns,
+    currentCampaign, setCurrentCampaign,
+    loading, setLoading,
+    initialLoading, setInitialLoading,
+    metricsSnapshots, setMetricsSnapshots,
+    contentPaneCollapsed, setContentPaneCollapsed,
+    strategyWidth, setStrategyWidth,
+    isDraggingPane, setIsDraggingPane,
+    assistLoading, setAssistLoading,
+    contentInput, setContentInput,
+    activeTactics, setActiveTactics,
+    metricsInputs, setMetricsInputs,
+    metricsPeriodStart, setMetricsPeriodStart,
+    metricsPeriodEnd, setMetricsPeriodEnd,
+    metricsLabel, setMetricsLabel,
+    editingQuizField, setEditingQuizField,
+    editingQuizValue, setEditingQuizValue
+  } = useChatStore();
+  // ���� Local-only UI state (not shared, stays in Chat component) ����
   const [confirmModalData, setConfirmModalData] = useState<{
     title: string;
     message: string;
@@ -280,9 +269,7 @@ export default function Chat() {
   const insightsScrollRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const autostartTriggeredRef = useRef(false);
-
-  const [showTacticsDropdown, setShowTacticsDropdown] = useState(false);
+  const autostartTriggeredRef = useRef(false);
 
 const TACTIC_SUGGESTIONS = [
   "Social Media Post (Facebook/Insta)",
@@ -293,21 +280,8 @@ const TACTIC_SUGGESTIONS = [
   "Advertising Copy (Google/Meta)",
   "Landing Page Copy",
   "Product Description"
-];
-
-  const [glossaryOpen, setGlossaryOpen] = useState(false);
-  const [phase2PopupOpen, setPhase2PopupOpen] = useState(false);
-  const [phase2Step, setPhase2Step] = useState(0);
-  const [phase2Answers, setPhase2Answers] = useState<Record<string, string>>({});
-  const [phase2CustomOpen, setPhase2CustomOpen] = useState(false);
-  const [phase2CustomInput, setPhase2CustomInput] = useState('');
-  const [phase2TextInput, setPhase2TextInput] = useState('');
-  const [showAnalystScrollDown, setShowAnalystScrollDown] = useState(false);
-  const [showContentScrollDown, setShowContentScrollDown] = useState(false);
-  const [showSidebarBackToTop, setShowSidebarBackToTop] = useState(false);
-  const [showInsightsBackToTop, setShowInsightsBackToTop] = useState(false);
-  const [isStageBannerHidden, setIsStageBannerHidden] = useState(false);
-
+];
+  const [phase2Answers, setPhase2Answers] = useState<Record<string, string>>({});
   useEffect(() => {
     if (!phase2PopupOpen) return;
     setPhase2TextInput('');
@@ -811,11 +785,6 @@ const TACTIC_SUGGESTIONS = [
     }
   };
 
-  const formatMessageTime = (time: string) =>
-    new Date(time).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
 
   const handleNewChat = () => {
     navigate('/chat');
@@ -1391,7 +1360,7 @@ const TACTIC_SUGGESTIONS = [
       });
       const pathD = generateSmoothPath(pointsData);
 
-      const isCostOrRate = ['cpc', 'cpm', 'cpa', 'cpl', 'cac', 'churnRate', 'bounceRate'].includes(field.key);
+      const isLowerBetterMetric = ['cpc', 'cpm', 'cpa', 'cpl', 'cac', 'churnRate', 'bounceRate'].includes(field.key);
       const startVal = values[0];
       const endVal = values[values.length - 1];
       const isUp = endVal > startVal;
@@ -1400,30 +1369,34 @@ const TACTIC_SUGGESTIONS = [
       let color = '#34d399';
       let statusStr = 'Good';
       if (targetVal !== null) {
-        const metTarget = isCostOrRate ? endVal <= targetVal : endVal >= targetVal;
+        const metTarget = isLowerBetterMetric ? endVal <= targetVal : endVal >= targetVal;
         color = metTarget ? '#34d399' : '#f43f5e';
         statusStr = metTarget ? 'On Target' : 'Missed Target';
       } else {
-        const improved = isCostOrRate ? endVal <= startVal : endVal >= startVal;
+        const improved = isLowerBetterMetric ? endVal <= startVal : endVal >= startVal;
         color = improved ? '#34d399' : '#f43f5e';
-        statusStr = improved ? 'Good' : 'Needs Attention';
+        if (isLowerBetterMetric) {
+          statusStr = improved ? 'Cost Improved ✅' : 'Cost Increased ⚠️';
+        } else {
+          statusStr = improved ? 'Good' : 'Needs Attention';
+        }
       }
       
       const formatVal = (v: number) => v >= 10 ? v.toFixed(0) : v.toFixed(2);
       const targetY = targetVal !== null ? (padYTop + innerH - ((targetVal - minVal) / range) * innerH) : null;
 
       return (
-        <div style={{ padding: '0.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <button onClick={() => setExpandedKey(null)} className="btn-ghost" style={{ padding: '0.4rem', borderRadius: '50%' }}>
-                <ArrowRight size={18} style={{ transform: 'rotate(180deg)' }} />
+        <div className="chat-ext-1">
+          <div className="chat-ext-2">
+            <div className="chat-ext-3">
+              <button onClick={() => setExpandedKey(null)} className="btn-ghost chat-ext-4">
+                <ArrowRight size={18} className="chat-ext-5" />
               </button>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>{field.label} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 400 }}>{field.hint}</span></h3>
+              <h3 className="chat-ext-6">{field.label} <span className="chat-ext-7">{field.hint}</span></h3>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div className="chat-ext-8">
               <div style={{ fontSize: '1.6rem', fontWeight: 700, color: color, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                <span style={{ opacity: 0.8, fontSize: '1.2rem' }}>
+                <span className="chat-ext-9">
                   {isUp ? <TrendingUp size={20} /> : isDown ? <TrendingDown size={20} /> : <Minus size={20} />}
                 </span>
                 {formatVal(endVal)}
@@ -1435,7 +1408,7 @@ const TACTIC_SUGGESTIONS = [
           </div>
 
           <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(255,255,255,0.08)', padding: '1.5rem' }}>
-            <svg viewBox={`0 0 ${VB_W} ${VB_H}`} style={{ width: '100%', height: 'auto', maxHeight: '400px', overflow: 'visible' }}>
+            <svg viewBox={`0 0 ${VB_W} ${VB_H}`} className="chat-ext-10">
               <defs>
                 <filter id={`glow-exp-${field.key}`} x="-20%" y="-20%" width="140%" height="140%">
                   <feGaussianBlur stdDeviation="3" result="blur" />
@@ -1563,16 +1536,22 @@ const TACTIC_SUGGESTIONS = [
           });
           const pathD = generateSmoothPath(pointsData);
 
-          const isCostOrRate = ['cpc', 'cpm', 'cpa', 'cpl', 'cac', 'churnRate', 'bounceRate'].includes(field.key);
+          const isLowerBetterMetric = ['cpc', 'cpm', 'cpa', 'cpl', 'cac', 'churnRate', 'bounceRate'].includes(field.key);
           const startVal = values[0];
           const endVal = values[values.length - 1];
           const isUp = endVal > startVal;
           const isDown = endVal < startVal;
           
           // Determine if the trend is improving
-          const improved = isCostOrRate ? endVal <= startVal : endVal >= startVal;
+          const improved = isLowerBetterMetric ? endVal <= startVal : endVal >= startVal;
           const color = improved ? '#34d399' : '#f43f5e';
-          const statusStr = improved ? 'Good' : 'Needs Attention';
+          
+          let statusStr = '';
+          if (isLowerBetterMetric) {
+            statusStr = improved ? 'Cost Improved ✅' : 'Cost Increased ⚠️';
+          } else {
+            statusStr = improved ? 'Good' : 'Needs Attention';
+          }
           
           const formatVal = (v: number) => v >= 10 ? v.toFixed(0) : v.toFixed(2);
 
@@ -1591,21 +1570,21 @@ const TACTIC_SUGGESTIONS = [
               onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }} title={field.hint}>{field.label}</span>
+              <div className="chat-ext-11">
+                <div className="chat-ext-12">
+                  <span className="chat-ext-13" title={field.hint}>{field.label}</span>
                   <span style={{ fontSize: '0.55rem', padding: '0.1rem 0.3rem', borderRadius: '4px', background: `${color}20`, color: color, fontWeight: 600, border: `1px solid ${color}40` }}>
                     {statusStr}
                   </span>
                 </div>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.15rem' }}>
+                <span className="chat-ext-14">
                   <span style={{ color, display: 'flex', alignItems: 'center' }}>
                     {isUp ? <TrendingUp size={12} /> : isDown ? <TrendingDown size={12} /> : <Minus size={12} />}
                   </span>
                   {formatVal(endVal)}
                 </span>
               </div>
-              <svg viewBox={`0 0 ${VB_W} ${VB_H}`} style={{ width: '100%', height: '56px', overflow: 'visible' }}>
+              <svg viewBox={`0 0 ${VB_W} ${VB_H}`} className="chat-ext-15">
                 <defs>
                   <filter id={`glow-${field.key}`} x="-20%" y="-20%" width="140%" height="140%">
                     <feGaussianBlur stdDeviation="2" result="blur" />
@@ -1831,10 +1810,6 @@ const TACTIC_SUGGESTIONS = [
     }
   };
 
-  const hasTargetKeywords = (text: string) => {
-    const t = text.toLowerCase();
-    return t.includes('target') || t.includes('milestone') || t.includes('kpi') || t.includes('benchmark');
-  };
 
   const reactMarkdownComponents = useMemo(() => ({
     code({ node, inline, className, children, ...props }: any) {
@@ -1846,13 +1821,13 @@ const TACTIC_SUGGESTIONS = [
           if (parsed.type === 'metrics_targets' && parsed.targets) {
             return (
               <div className="ai-targets-card" style={{ background: 'rgba(59,130,246,0.1)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(59,130,246,0.2)', margin: '1rem 0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="chat-ext-16">
                   <div>
-                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#60a5fa' }}>Suggested Metric Targets</h4>
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <h4 className="chat-ext-17">Suggested Metric Targets</h4>
+                    <div className="chat-ext-18">
                       {Object.entries(parsed.targets).map(([k, v]) => (
                         <span key={k} style={{ fontSize: '0.8rem', background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '4px' }}>
-                          <strong style={{ color: '#93c5fd' }}>{k.toUpperCase()}</strong>: {String(v)}
+                          <strong className="chat-ext-19">{k.toUpperCase()}</strong>: {String(v)}
                         </span>
                       ))}
                     </div>
@@ -1875,18 +1850,7 @@ const TACTIC_SUGGESTIONS = [
     }
   }), [currentCampaign, campaignId]);
 
-  const formatMetricValue = (value?: unknown) => {
-    if (value === null || value === undefined) return '-';
-    if (typeof value === 'number') return value.toLocaleString('en-US');
-    return String(value);
-  };
 
-  const computeMetricDelta = (current?: unknown, previous?: unknown) => {
-    if (typeof current !== 'number' || typeof previous !== 'number') return null;
-    const diff = current - previous;
-    const percent = previous === 0 ? null : (diff / previous) * 100;
-    return { diff, percent };
-  };
 
   // Campaign actions
   const handleRenameCampaign = async (id: string) => {
@@ -1901,7 +1865,7 @@ const TACTIC_SUGGESTIONS = [
         campaign.id === id ? { ...campaign, name: updatedCampaign.name } : campaign
       ));
       if (currentCampaign?.id === id) {
-        setCurrentCampaign((prev) => (prev ? { ...prev, name: updatedCampaign.name } : prev));
+        setCurrentCampaign(currentCampaign ? { ...currentCampaign, name: updatedCampaign.name } : null);
       }
     }
 
@@ -1947,7 +1911,7 @@ const TACTIC_SUGGESTIONS = [
     ));
 
     if (currentCampaign?.id === id) {
-      setCurrentCampaign((prev) => (prev ? { ...prev, isFavorite: nextFavoriteState } : prev));
+      setCurrentCampaign(currentCampaign ? { ...currentCampaign, isFavorite: nextFavoriteState } : null);
     }
 
     const res = await api.updateCampaign(id, { isFavorite: nextFavoriteState });
@@ -1956,7 +1920,7 @@ const TACTIC_SUGGESTIONS = [
         campaign.id === id ? { ...campaign, isFavorite: targetCampaign.isFavorite } : campaign
       ));
       if (currentCampaign?.id === id) {
-        setCurrentCampaign((prev) => (prev ? { ...prev, isFavorite: targetCampaign.isFavorite } : prev));
+        setCurrentCampaign(currentCampaign ? { ...currentCampaign, isFavorite: targetCampaign.isFavorite } : null);
       }
     }
 
@@ -2025,25 +1989,6 @@ const TACTIC_SUGGESTIONS = [
   const latestSnapshot = metricsSnapshots[0];
   const previousSnapshot = metricsSnapshots[1];
 
-  const getKpiStatus = (actual: number, target: number, isCost: boolean) => {
-    if (!target || target <= 0) return { label: 'No target', tone: 'neutral' as const, pct: 0 };
-    let pct: number;
-    let label: string;
-    let tone: 'good' | 'warn' | 'bad' | 'neutral';
-
-    if (isCost) {
-      pct = Math.max(0, Math.min(140, (target / (actual || 0.001)) * 100));
-      if (actual <= target) { label = 'On track'; tone = 'good' as const; }
-      else if (actual <= target * 1.2) { label = 'Close'; tone = 'warn' as const; }
-      else { label = 'Behind'; tone = 'bad' as const; }
-    } else {
-      pct = Math.max(0, Math.min(140, (actual / target) * 100));
-      if (actual >= target) { label = 'On track'; tone = 'good' as const; }
-      else if (actual >= target * 0.8) { label = 'Close'; tone = 'warn' as const; }
-      else { label = 'Behind'; tone = 'bad' as const; }
-    }
-    return { label, tone, pct };
-  };
 
   const activeTargets = useMemo(() => {
     const targets: Array<{
@@ -2106,10 +2051,10 @@ const TACTIC_SUGGESTIONS = [
 
   const buildInsightsAiPrompt = (): string => {
     const lines: string[] = [
-      '# 📊 Campaign Performance Report',
+      '# ?? Campaign Performance Report',
       '',
       `**Campaign:** ${currentCampaign?.name ?? 'Untitled'}`,
-      `**Current Stage:** ${currentStage} • ${stageDescriptor.title}`,
+      `**Current Stage:** ${currentStage} ? ${stageDescriptor.title}`,
       `**Report Date:** ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`,
       ''
     ];
@@ -2137,7 +2082,7 @@ const TACTIC_SUGGESTIONS = [
       lines.push('| KPI | Target | Actual | Status |');
       lines.push('|:----|:-------|:-------|:-------|');
       if (qd?.deadline && qd.deadline !== 'not_sure') {
-        lines.push(`| Deadline | ${qd.deadline} | — | — |`);
+        lines.push(`| Deadline | ${qd.deadline} | ? | ? |`);
       }
       activeTargets.forEach(t => {
         lines.push(`| ${t.label} | ${t.target.toFixed(2)} | ${t.actual.toFixed(2)} | ${t.status.label} |`);
@@ -2148,9 +2093,9 @@ const TACTIC_SUGGESTIONS = [
     // Metrics comparison table
     if (latestSnapshot) {
       lines.push('## 3. Metrics Comparison');
-      lines.push(`> Latest: **${latestSnapshot.label || 'Untitled'}** (${latestSnapshot.periodStart?.slice(0, 10) ?? '—'} → ${latestSnapshot.periodEnd?.slice(0, 10) ?? '—'})`);
+      lines.push(`> Latest: **${latestSnapshot.label || 'Untitled'}** (${latestSnapshot.periodStart?.slice(0, 10) ?? '?'} �� ${latestSnapshot.periodEnd?.slice(0, 10) ?? '?'})`);
       if (previousSnapshot) {
-        lines.push(`> Previous: **${previousSnapshot.label || 'Untitled'}** (${previousSnapshot.periodStart?.slice(0, 10) ?? '—'} → ${previousSnapshot.periodEnd?.slice(0, 10) ?? '—'})`);
+        lines.push(`> Previous: **${previousSnapshot.label || 'Untitled'}** (${previousSnapshot.periodStart?.slice(0, 10) ?? '?'} �� ${previousSnapshot.periodEnd?.slice(0, 10) ?? '?'})`);
       }
       lines.push('');
       lines.push('| Metric | Latest | Previous | Change |');
@@ -2162,11 +2107,11 @@ const TACTIC_SUGGESTIONS = [
         const prev = pm[f.key];
         if (cur === undefined && prev === undefined) return;
         const curStr = formatMetricValue(cur);
-        const prevStr = previousSnapshot ? formatMetricValue(prev) : '—';
+        const prevStr = previousSnapshot ? formatMetricValue(prev) : '?';
         const delta = computeMetricDelta(cur, prev);
         const changeStr = delta
           ? `${delta.diff >= 0 ? '+' : ''}${delta.percent !== null ? delta.percent.toFixed(1) + '%' : delta.diff.toFixed(2)}`
-          : '—';
+          : '?';
         lines.push(`| ${f.label} (${f.hint}) | ${curStr} | ${prevStr} | ${changeStr} |`);
       });
     } else {
@@ -2178,11 +2123,11 @@ const TACTIC_SUGGESTIONS = [
     // AI instructions
     lines.push('## Instructions');
     lines.push('Based on the data above, please provide:');
-    lines.push('1. **Performance Summary** — Key highlights and concerns in 2–3 sentences');
-    lines.push('2. **Risk Analysis** — Any metrics trending in the wrong direction or missing targets');
-    lines.push('3. **Opportunities** — Where can we scale or improve efficiency');
-    lines.push('4. **Action Plan** — 3–5 specific, prioritised next steps with expected impact');
-    lines.push('5. **Data Gaps** — What additional data would improve this analysis');
+    lines.push('1. **Performance Summary** ? Key highlights and concerns in 2?3 sentences');
+    lines.push('2. **Risk Analysis** ? Any metrics trending in the wrong direction or missing targets');
+    lines.push('3. **Opportunities** ? Where can we scale or improve efficiency');
+    lines.push('4. **Action Plan** ? 3?5 specific, prioritised next steps with expected impact');
+    lines.push('5. **Data Gaps** ? What additional data would improve this analysis');
     lines.push('');
     lines.push('Format your response with clear headings and use comparison tables where useful.');
     return lines.join('\n');
@@ -2249,13 +2194,6 @@ const TACTIC_SUGGESTIONS = [
   // Split messages by their `pane` field. Legacy data without a pane (returned
   // by older backend versions) is classified by content prefix as a fallback,
   // matching the one-time backfill executed on the backend.
-  const classifyPane = (msg: Message): 'STRATEGY' | 'CONTENT' | 'SYSTEM' => {
-    if (msg.pane) return msg.pane;
-    if (msg.content.startsWith('[Content Assistant') || msg.content.startsWith('[Content Prompt]')) {
-      return 'CONTENT';
-    }
-    return 'STRATEGY';
-  };
 
   // Activity log derived from messages + metrics snapshots. The log gives
   // the user a chronological audit of every meaningful campaign event:
@@ -2274,7 +2212,7 @@ const TACTIC_SUGGESTIONS = [
     if (!currentCampaign) return [];
     const events: ActivityEvent[] = [];
 
-    // Quiz answers — same formatter as Insights cards (multi-select, audience pruning, readable labels).
+    // Quiz answers ? same formatter as Insights cards (multi-select, audience pruning, readable labels).
     const qd = (currentCampaign.quizData ?? {}) as Record<string, string>;
 
     QUIZ_ACTIVITY_FIELDS.forEach(({ key, label, read }) => {
@@ -2369,305 +2307,62 @@ const TACTIC_SUGGESTIONS = [
   const contentMessages = messages.filter(m => classifyPane(m) === 'CONTENT');
   const showContentPane = !contentPaneCollapsed && (currentStage > 0 || analystMessages.length > 0);
 
-  const ConfirmationModal = ({
-    isOpen,
-    data,
-    onClose
-  }: {
-    isOpen: boolean;
-    data: { title: string; message: string; onConfirm: () => void } | null;
-    onClose: () => void;
-  }) => {
-    if (!isOpen || !data) return null;
-    return (
-      <div className="modal-overlay" onClick={onClose} style={{ zIndex: 2000 }}>
-        <motion.div 
-          className="modal-container" 
-          onClick={e => e.stopPropagation()}
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          style={{ maxWidth: '450px', background: 'rgba(18, 18, 22, 0.98)', border: '1px solid rgba(255,255,255,0.1)' }}
-        >
-          <div className="modal-header" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '1.25rem' }}>
-            <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff' }}>{data.title}</h3>
-            <button className="modal-close" onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>
-              <X size={20} />
-            </button>
-          </div>
-          <div className="modal-body" style={{ padding: '1.5rem', color: '#ccc', lineHeight: 1.6 }}>
-            <p>{data.message}</p>
-          </div>
-          <div className="modal-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '1.25rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-            <button className="btn btn-secondary" onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '0.6rem 1.2rem', borderRadius: '0.5rem', cursor: 'pointer' }}>
-              {'Cancel'}
-            </button>
-            <button 
-              className="btn btn-primary" 
-              onClick={data.onConfirm} 
-              style={{ background: '#ef4444', border: 'none', color: '#fff', padding: '0.6rem 1.2rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 600 }}
-            >
-              {'Reset Stage'}
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  };
 
   return (
     <div className="chat-layout">
-      {/* Sidebar: outer animates clipped width; inner stays fixed‑width — no squished/reflow typography */}
-      <motion.aside
-        className={`chat-sidebar ${sidebarOpen ? '' : 'collapsed'}`}
-        aria-hidden={!sidebarOpen}
-        initial={false}
-        animate={{ width: sidebarOpen ? sidebarPanelWidth : 0 }}
-        transition={{ duration: sidebarOpen ? 0.34 : 0.28, ease: [0.4, 0, 0.2, 1] }}
-        style={{ pointerEvents: sidebarOpen ? 'auto' : 'none' }}
-      >
-        <div className="chat-sidebar-inner" style={{ width: sidebarPanelWidth }}>
-          <div className="sidebar-header">
-            <Link to="/" className="sidebar-logo">
-              <Sparkles size={24} />
-            </Link>
-            <button
-              className="sidebar-toggle"
-              onClick={() => setSidebarOpen(false)}
-              aria-label={'Hide sidebar'}
-            >
-              <ChevronLeft size={18} />
-            </button>
-          </div>
-
-          <button type="button" className="new-chat-btn" onClick={handleNewChat}>
-            <Plus size={18} />
-            {'New Chat'}
-          </button>
-
-          <div 
-            className="sidebar-section" 
-            data-lenis-prevent="true"
-            ref={sidebarScrollRef}
-            onScroll={(e) => handleScrollToTopVisible(e, setShowSidebarBackToTop)}
-          >
-            <span className="section-label">{'Saved Campaigns'}</span>
-            <div className="campaigns-list">
-              {sortedCampaigns.map((campaign) => (
-                <CampaignItem
-                  key={campaign.id}
-                  campaign={campaign}
-                  isActive={campaign.id === campaignId}
-                  isEditing={editingCampaignId === campaign.id}
-                  editingName={editingName}
-                  menuOpen={activeCampaignMenu === campaign.id}
-                  onNavigate={() => navigate(`/chat/${campaign.id}`)}
-                  onMenuToggle={() => setActiveCampaignMenu(activeCampaignMenu === campaign.id ? null : campaign.id)}
-                  onStartEdit={() => {
-                    setEditingCampaignId(campaign.id);
-                    setEditingName(campaign.name);
-                  }}
-                  onEditChange={setEditingName}
-                  onEditSubmit={() => handleRenameCampaign(campaign.id)}
-                  onEditCancel={() => setEditingCampaignId(null)}
-                  onDelete={() => openDeleteModal(campaign.id)}
-                  onToggleFavorite={() => handleToggleFavorite(campaign.id)}
-                />
-              ))}
-              {sortedCampaigns.length === 0 && <p className="no-campaigns">{'No campaigns yet'}</p>}
-            </div>
-          </div>
-
-          <AnimatePresence>
-            {showSidebarBackToTop && (
-              <motion.button
-                className="btn-back-to-top"
-                initial={{ opacity: 0, y: 10, scale: 0.9, x: "-50%" }}
-                animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
-                exit={{ opacity: 0, y: 10, scale: 0.9, x: "-50%" }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => scrollToTop(sidebarScrollRef)}
-                aria-label="Back to top"
-              >
-                <ArrowUp size={20} />
-              </motion.button>
-            )}
-          </AnimatePresence>
-
-          <div className="sidebar-footer">
-            <div className="user-menu-wrapper" ref={userMenuRef}>
-              <button type="button" className="user-profile-btn" onClick={() => setUserMenuOpen(!userMenuOpen)}>
-                {user?.avatar ? (
-                  <img src={user.avatar} alt={user.name || 'User'} className="user-avatar-small" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
-                ) : (
-                  <div className="user-avatar-small">{user?.name?.charAt(0) || 'U'}</div>
-                )}
-                <span className="user-name-text">{user?.name || 'User'}</span>
-              </button>
-
-              <AnimatePresence>
-                {userMenuOpen && (
-                  <motion.div
-                    className="user-dropdown"
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    transition={{ duration: 0.15 }}
-                  >
-                    <div className="user-dropdown-header">
-                      {user?.avatar ? (
-                        <img src={user.avatar} alt={user.name || 'User'} className="user-avatar-large" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                      ) : (
-                        <div className="user-avatar-large">{user?.name?.charAt(0) || 'U'}</div>
-                      )}
-                      <div className="user-dropdown-info">
-                        <span className="user-dropdown-name">{user?.name || 'User'}</span>
-                        <span className="user-dropdown-email">{user?.email}</span>
-                      </div>
-                    </div>
-                    <div className="user-dropdown-divider" />
-                    <button type="button" className="user-dropdown-item" onClick={() => navigate('/settings')}>
-                      <Settings size={16} />
-                      {'Settings'}
-                    </button>
-                    <button type="button" className="user-dropdown-item" onClick={() => { setUserMenuOpen(false); setBrandProfileModalOpen(true); }}>
-                      <Briefcase size={16} />
-                      {'Brand Profile'}
-                    </button>
-                    <button type="button" className="user-dropdown-item" onClick={() => { setUserMenuOpen(false); setIntegrationsModalOpen(true); }}>
-                      <Plug size={16} />
-                      {'Integrations'}
-                    </button>
-                    <div className="user-dropdown-divider" />
-                    <button type="button" className="user-dropdown-item logout" onClick={handleLogout}>
-                      <LogOut size={16} />
-                      {'Logout'}
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        </div>
-      </motion.aside>
+      {/* Sidebar: outer animates clipped width; inner stays fixed?width ? no squished/reflow typography */}
+      <ChatSidebar 
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        sidebarPanelWidth={sidebarPanelWidth}
+        handleNewChat={handleNewChat}
+        sidebarScrollRef={sidebarScrollRef}
+        handleScrollToTopVisible={handleScrollToTopVisible}
+        setShowSidebarBackToTop={setShowSidebarBackToTop}
+        showSidebarBackToTop={showSidebarBackToTop}
+        sortedCampaigns={sortedCampaigns}
+        campaignId={campaignId}
+        editingCampaignId={editingCampaignId}
+        editingName={editingName}
+        activeCampaignMenu={activeCampaignMenu}
+        navigate={navigate}
+        setActiveCampaignMenu={setActiveCampaignMenu}
+        setEditingCampaignId={setEditingCampaignId}
+        setEditingName={setEditingName}
+        handleRenameCampaign={handleRenameCampaign}
+        openDeleteModal={openDeleteModal}
+        handleToggleFavorite={handleToggleFavorite}
+        scrollToTop={scrollToTop}
+        userMenuRef={userMenuRef}
+        userMenuOpen={userMenuOpen}
+        setUserMenuOpen={setUserMenuOpen}
+        user={user}
+        handleLogout={handleLogout}
+        setBrandProfileModalOpen={setBrandProfileModalOpen}
+        setIntegrationsModalOpen={setIntegrationsModalOpen}
+      />
 
       {/* Main Chat Area */}
       <div className="chat-main">
         {/* Header */}
-        <header className="chat-header">
-          <div className="chat-header-left">
-            {!sidebarOpen && (
-              <button
-                className="sidebar-toggle-open"
-                onClick={() => setSidebarOpen(true)}
-                aria-label={'Show sidebar'}
-              >
-                <ChevronRight size={18} />
-              </button>
-            )}
-
-            <div className="chat-title-wrap">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <h1 className="chat-title" style={{ margin: 0 }}>
-                  {currentCampaign?.name || ('General Marketing Chat')}
-                </h1>
-                {currentCampaign && (
-                  <button 
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditQuizModalOpen(true);
-                    }}
-                    title="Edit Quiz Responses"
-                    style={{ 
-                      width: 28, 
-                      height: 28, 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      background: 'var(--bg-secondary)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 'var(--radius-sm)',
-                      color: 'var(--text-secondary)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.color = 'var(--accent)';
-                      e.currentTarget.style.borderColor = 'var(--border-hover)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.color = 'var(--text-secondary)';
-                      e.currentTarget.style.borderColor = 'var(--border)';
-                    }}
-                  >
-                    <Edit2 size={14} />
-                  </button>
-                )}
-              </div>
-              <p className="chat-subtitle">
-                {`${messages.length} message${messages.length === 1 ? '' : 's'}`}
-              </p>
-            </div>
-          </div>
-
-          <div className="chat-header-right">
-            {currentCampaign && (
-              <div className="chat-stage-timeline" role="list" aria-label={'Campaign stages'}>
-                {([0, 1, 2, 3] as const).map(stage => (
-                  <button
-                    key={stage}
-                    type="button"
-                    role="listitem"
-                    className={`stage-step ${currentStage > stage ? 'completed' : ''} ${currentStage === stage ? 'current' : ''} ${stage < currentStage ? 'clickable' : ''}`}
-                    disabled={stage > currentStage || stageTransitionPending}
-                    onClick={() => stage < currentStage && handleResetToStage(stage)}
-                    aria-current={currentStage === stage ? 'step' : undefined}
-                    title={stage < currentStage
-                      ? `Return to Stage ${stage} (Warning: Progress after this stage will be reset)`
-                      : STAGE_DESCRIPTORS[stage].title}
-                  >
-                    <div className="stage-dot">
-                      {currentStage > stage ? <Check size={12} /> : stage}
-                    </div>
-                    <span className="stage-label">{STAGE_DESCRIPTORS[stage].title}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div className="chat-header-actions">
-              {currentCampaign && (
-                <button
-                  className={`chat-action-btn ${insightsOpen ? 'active' : ''}`}
-                  onClick={() => setInsightsOpen(true)}
-                >
-                  <BarChart3 size={16} />
-                  <span>{'Insights'}</span>
-                </button>
-              )}
-              <button
-                className={`chat-action-btn ${guidePopupOpen ? 'active' : ''}`}
-                onClick={() => setGuidePopupOpen(true)}
-              >
-                <HelpCircle size={16} />
-                <span>{'Guide'}</span>
-              </button>
-              <button
-                className={`chat-action-btn ${glossaryOpen ? 'active' : ''}`}
-                onClick={() => setGlossaryOpen(!glossaryOpen)}
-              >
-                <BookOpen size={16} />
-              </button>
-              <button
-                className="chat-action-btn"
-                onClick={() => setClearModalOpen(true)}
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          </div>
-        </header>
+        <ChatHeader
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+          currentCampaign={currentCampaign}
+          handleResetToStage={handleResetToStage}
+          stageTransitionPending={stageTransitionPending}
+          currentStage={currentStage}
+          STAGE_DESCRIPTORS={STAGE_DESCRIPTORS as any}
+          guidePopupOpen={guidePopupOpen}
+          setGuidePopupOpen={setGuidePopupOpen}
+          glossaryOpen={glossaryOpen}
+          setGlossaryOpen={setGlossaryOpen}
+          insightsOpen={insightsOpen}
+          setInsightsOpen={setInsightsOpen}
+          setClearModalOpen={setClearModalOpen}
+          setEditQuizModalOpen={setEditQuizModalOpen}
+          messages={messages}
+        />
 
         {/* Stage banner: always visible when a campaign is open. Tells the user
             where they are and what the next action should be. */}
@@ -2740,8 +2435,8 @@ const TACTIC_SUGGESTIONS = [
           {/* Strategy Pane */}
           <div className="chat-pane strategy-pane" style={{ width: showContentPane ? `${strategyWidth}%` : '100%', flex: showContentPane ? '0 1 auto' : 1 }}>
             <div className="chat-pane-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Sparkles size={16} style={{ color: 'var(--accent)' }} />
+              <div className="chat-ext-20">
+                <Sparkles size={16} className="chat-ext-21" />
                 <h3>{'Strategy Analyst'}</h3>
               </div>
             </div>
@@ -2917,7 +2612,7 @@ const TACTIC_SUGGESTIONS = [
                               {/* Content Assistant offer - after plan selected, before Stage 2 */}
                               {i === analystMessages.length - 1 && currentCampaign?.quizData?.selectedPlan && currentStage === 1 && !hasStageTransition(msg.content) && (
                                 <div className="content-assist-offer">
-                                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                                  <p className="chat-ext-22">
                                     {'Want AI to draft some content for your campaign before moving on?'}
                                   </p>
                                   <div className="content-assist-buttons">
@@ -2947,10 +2642,10 @@ const TACTIC_SUGGESTIONS = [
                                     </button>
                                   </div>
                                   <button
-                                    className="btn btn-primary btn-sm"
+                                    className="btn btn-primary btn-sm chat-ext-23"
                                     onClick={() => handleAdvanceStage(2)}
                                     disabled={loading}
-                                    style={{ marginTop: '0.75rem' }}
+                                    
                                   >
                                     <ArrowRight size={16} />
                                     {'Skip to Stage 2'}
@@ -2975,13 +2670,13 @@ const TACTIC_SUGGESTIONS = [
                                 </div>
                               )}
                             </>
-                          ) : msg.content.startsWith('# 📊 Campaign Performance Report') ? (
+                          ) : msg.content.startsWith('# ?? Campaign Performance Report') ? (
                             <div style={{ background: 'rgba(255,255,255,0.04)', padding: '0.75rem 1rem', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.08)' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
-                                <BarChart3 size={16} style={{ color: '#34d399' }} />
-                                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Campaign Data Provided to AI</span>
+                              <div className="chat-ext-24">
+                                <BarChart3 size={16} className="chat-ext-25" />
+                                <span className="chat-ext-26">Campaign Data Provided to AI</span>
                               </div>
-                              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
+                              <p className="chat-ext-27">
                                 Includes current stage, quiz answers, KPI targets, and latest metrics snapshots.
                               </p>
                             </div>
@@ -3002,7 +2697,7 @@ const TACTIC_SUGGESTIONS = [
                           )}
                           {msg.role === 'ASSISTANT' && showContentPane && (
                             <button
-                              className="message-copy-btn"
+                              className="message-copy-btn chat-ext-28"
                               onClick={() => {
                                 setContentInput(`Please write marketing content based on the strategy from the left pane...`);
                                 
@@ -3017,17 +2712,17 @@ const TACTIC_SUGGESTIONS = [
                                 }, 100);
                               }}
                               title={'Send to Content Writer'}
-                              style={{ color: '#34d399' }}
+                              
                             >
                               <ArrowRight size={14} />
                             </button>
                           )}
                           {msg.role === 'ASSISTANT' && hasTargetKeywords(msg.content) && (
                             <button
-                              className="message-copy-btn"
+                              className="message-copy-btn chat-ext-29"
                               onClick={() => handleExtractTargets(msg.content)}
                               title={'Extract & Apply Targets'}
-                              style={{ color: '#3b82f6' }}
+                              
                             >
                               <Target size={14} />
                             </button>
@@ -3044,7 +2739,7 @@ const TACTIC_SUGGESTIONS = [
 
                       {msg.role === 'USER' && (
                         user?.avatar ? (
-                          <img src={user.avatar} alt={user.name || 'User'} className="message-avatar user-avatar" style={{ objectFit: 'cover' }} />
+                          <img src={user.avatar} alt={user.name || 'User'} className="message-avatar user-avatar chat-ext-30" />
                         ) : (
                           <div className="message-avatar user-avatar">
                             {user?.name?.charAt(0) || 'U'}
@@ -3127,17 +2822,17 @@ const TACTIC_SUGGESTIONS = [
           {showContentPane && (
             <div className="chat-pane content-pane">
               <div className="chat-pane-header" style={{ background: 'rgba(16, 185, 129, 0.05)', flexDirection: 'column', alignItems: 'stretch', padding: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', width: '100%' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <FileText size={16} style={{ color: '#34d399' }} />
-                    <h3 style={{ color: '#34d399', margin: 0 }}>{'Content Writer'}</h3>
+                <div className="chat-ext-31">
+                  <div className="chat-ext-32">
+                    <FileText size={16} className="chat-ext-33" />
+                    <h3 className="chat-ext-34">{'Content Writer'}</h3>
                   </div>
                   <button
                     type="button"
                     onClick={() => setContentPaneCollapsed(true)}
-                    className="btn-ghost"
+                    className="btn-ghost chat-ext-35"
                     title="Hide Content Writer"
-                    style={{ width: '28px', height: '28px' }}
+                    
                   >
                     <X size={14} />
                   </button>
@@ -3152,13 +2847,13 @@ const TACTIC_SUGGESTIONS = [
                       <button 
                         type="button"
                         onClick={() => setActiveTactics(prev => prev.filter((_, i) => i !== idx))} 
-                        style={{ background: 'transparent', border: 'none', color: 'inherit', marginLeft: '0.4rem', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', opacity: 0.7 }}
+                        className="chat-ext-36"
                       >
                         <X size={10} />
                       </button>
                     </div>
                   ))}
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <div className="chat-ext-37">
                     <input 
                       type="text" 
                       value={newTactic}
@@ -3239,28 +2934,28 @@ const TACTIC_SUGGESTIONS = [
                 onScroll={(e) => handlePaneScroll(e, setShowContentScrollDown)}
               >
                 {contentMessages.length === 0 ? (
-                  <div className="chat-welcome" style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', padding: '0 1rem' }}>
+                  <div className="chat-welcome chat-ext-38">
                     <div className="welcome-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#34d399', marginBottom: 0 }}>
                       <FileText size={40} />
                     </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{contentPaneMode.emptyTitle}</h2>
+                    <div className="chat-ext-39">
+                      <h2 className="chat-ext-40">{contentPaneMode.emptyTitle}</h2>
                       <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)' }}>{contentPaneMode.emptyHint}</p>
                     </div>
 
                     {currentCampaign?.quizData && Object.keys(currentCampaign.quizData).length > 0 && (
                       <div style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.1)', borderRadius: '12px', padding: '1rem', width: '100%', maxWidth: '500px', textAlign: 'left' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: '#34d399' }}>
+                        <div className="chat-ext-41">
                           <CheckCircle2 size={16} />
-                          <h4 style={{ margin: 0, fontSize: '0.85rem' }}>Quiz Context Imported</h4>
+                          <h4 className="chat-ext-42">Quiz Context Imported</h4>
                         </div>
                         <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                           {Object.entries(currentCampaign.quizData)
                             .filter(([k,v]) => v && v !== 'not_sure' && k !== 'selectedPlan' && k !== 'phase')
                             .slice(0, 4)
                             .map(([k,v]) => (
-                              <div key={k} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                <span style={{ opacity: 0.5, textTransform: 'capitalize' }}>{k.replace(/_/g, ' ')}:</span> <span style={{ color: 'white' }}>{String(v)}</span>
+                              <div key={k} className="chat-ext-43">
+                                <span className="chat-ext-44">{k.replace(/_/g, ' ')}:</span> <span className="chat-ext-45">{String(v)}</span>
                               </div>
                             ))
                           }
@@ -3388,7 +3083,7 @@ const TACTIC_SUGGESTIONS = [
                     placeholder={contentPaneMode.placeholder}
                     rows={1}
                     disabled={assistLoading || !contentPaneMode.enabled}
-                    style={{ padding: '0.8rem 1rem', fontSize: '0.85rem' }}
+                    className="chat-ext-46"
                   />
                   <button
                     className="send-btn"
@@ -3418,272 +3113,25 @@ const TACTIC_SUGGESTIONS = [
       </AnimatePresence>
 
       {/* Clear Chat Modal */}
-      <AnimatePresence>
-        {clearModalOpen && (
-          <motion.div
-            className="modal-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setClearModalOpen(false)}
-          >
-            <motion.div
-              className="modal-content"
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="modal-icon">
-                <Trash2 size={32} />
-              </div>
-              <h3>{'Clear All Messages?'}</h3>
-              <p>{'This will permanently delete all messages in this conversation. This action cannot be undone.'}</p>
-              <div className="modal-actions">
-                <button className="btn btn-secondary" onClick={() => setClearModalOpen(false)}>
-                  {'Cancel'}
-                </button>
-                <button className="btn btn-danger" onClick={handleClear}>
-                  {'Clear All'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <ClearChatModal isOpen={clearModalOpen} onClose={() => setClearModalOpen(false)} onConfirm={handleClear} />
 
       {/* Delete Campaign Modal */}
-      <AnimatePresence>
-        {deleteModalOpen && (
-          <motion.div
-            className="modal-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setDeleteModalOpen(false)}
-          >
-            <motion.div
-              className="modal-content"
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="modal-icon delete-icon">
-                <Trash2 size={32} />
-              </div>
-              <h3>{'Delete Campaign?'}</h3>
-              <p>{'This will permanently delete this campaign and all its messages. This action cannot be undone.'}</p>
-              <div className="modal-actions">
-                <button className="btn btn-secondary" onClick={() => setDeleteModalOpen(false)}>
-                  {'Cancel'}
-                </button>
-                <button className="btn btn-danger" onClick={handleDeleteCampaign}>
-                  {'Delete'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <DeleteCampaignModal isOpen={deleteModalOpen} onClose={() => setDeleteModalOpen(false)} onConfirm={handleDeleteCampaign} />
 
       {/* Guide Popup Modal -- multi-tab walkthrough. Auto-shows the first
           time a user lands on the chat page (gated by localStorage). */}
-      <AnimatePresence>
-        {guidePopupOpen && (
-          <motion.div
-            className="modal-overlay guide-modal-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setGuidePopupOpen(false)}
-            style={{ zIndex: 1200 }}
-          >
-            <motion.div
-              className="guide-modal"
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="guide-modal-header">
-                <div className="guide-modal-title">
-                  <div className="guide-modal-icon"><HelpCircle size={20} /></div>
-                  <h3>{'How AdVisor Works'}</h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setGuidePopupOpen(false)}
-                  className="guide-modal-close"
-                  aria-label={'Close'}
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="guide-modal-tabs" role="tablist">
-                {([
-                  { id: 'overview', label: 'Overview' },
-                  { id: 'stages', label: '4 Stages' },
-                  { id: 'panes', label: 'Two Panes' },
-                  { id: 'metrics', label: 'Metrics' },
-                  { id: 'faq', label: 'FAQ' }
-                ] as const).map(tab => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={guideActiveTab === tab.id}
-                    className={`guide-modal-tab ${guideActiveTab === tab.id ? 'active' : ''}`}
-                    onClick={() => setGuideActiveTab(tab.id)}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="guide-modal-body" data-lenis-prevent="true">
-                {guideActiveTab === 'overview' && (
-                  <div className="guide-section">
-                    <p>
-                      {'AdVisor is a staged workflow: Discovery captures your situation, Strategy produces comparable plans you can pick from, Refinement locks targets the AI will measure against, and Optimisation turns live metrics into concrete next steps.'}
-                    </p>
-                    <p>
-                      {'Use the left sidebar to switch campaigns; the header shows which stage you are in. The Insights panel aggregates your quiz answers, plan choice, Stage 2 targets, and every metrics snapshot so nothing is scattered across threads.'}
-                    </p>
-                    <ul className="guide-list">
-                      <li>{'Stage 0 – Discovery: Full or partial quiz; some questions allow multiple selections so the model sees the real mix of audiences, goals, and channels.'}</li>
-                      <li>{'Stage 1 – Strategy: The assistant may return several plan cards. You must tap one plan to continue; optional content drafts can follow before you advance.'}</li>
-                      <li>{'Stage 2 – Refinement: Deadline and KPI targets (e.g. CTR, conversion rate, ROAS). You can skip straight to Stage 3 if you prefer; targets still help the AI benchmark later.'}</li>
-                      <li>{'Stage 3 – Optimisation: Enter metrics snapshots (or CSV import). Compare period over period and ask the strategist for remediation when trends slip.'}</li>
-                      <li>{'Rolling back via the timeline clears later stages but keeps chat history visible for context.'}</li>
-                    </ul>
-                    <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(124, 58, 237, 0.1)', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-border)' }}>
-                      <p style={{ fontSize: '0.85rem', fontWeight: '500', color: 'var(--accent)', marginBottom: '0.25rem' }}>
-                        {'Pro tip'}
-                      </p>
-                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        {'Collapse the sidebar when you need horizontal room; the strip animates by clipping a fixed inner panel so labels do not jitter. Reopen it from the chevron in the header.'}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {guideActiveTab === 'stages' && (
-                  <div className="guide-stages-grid">
-                    {([0, 1, 2, 3] as const).map(stage => {
-                      const desc = STAGE_DESCRIPTORS[stage];
-                      return (
-                        <div key={stage} className={`guide-stage-card guide-stage-card--${stage}`}>
-                          <div className="guide-stage-card-head">
-                            <div className="guide-stage-num">{stage}</div>
-                            <h4>{desc.title}</h4>
-                          </div>
-                          <p className="guide-stage-subtitle">{desc.subtitle}</p>
-                          <p className="guide-stage-next">{desc.nextAction}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {guideActiveTab === 'panes' && (
-                  <div className="guide-section">
-                    <h4>{'Campaign sidebar'}</h4>
-                    <p>
-                      {'Start a new thread, open saved campaigns, and access your account menu. Favorites float to the top; row actions rename, delete, or star a campaign. On small screens the drawer sits above the chat and uses the same smooth width animation as desktop.'}
-                    </p>
-                    <h4>{'Strategy Analyst (left pane)'}</h4>
-                    <p>
-                      {'This is where plans are generated, compared, and selected. System messages mark stage advances. After you pick a plan you may see shortcuts to draft content or jump to Stage 2.'}
-                    </p>
-                    <h4>{'Content Writer (right pane)'}</h4>
-                    <p>
-                      {'Drafts channel-specific copy once a plan exists so the model can align tone and offer with your chosen direction. If the pane is empty, finish Discovery or open the split view from the resizer.'}
-                    </p>
-                    <h4>{'Send to Content Writer'}</h4>
-                    <p>
-                      {'Use the arrow on a strategy message to copy that block into the writer’s input. Edit the prompt before sending if you need a tighter brief.'}
-                    </p>
-                    <h4>{'Resizable split'}</h4>
-                    <p>
-                      {'Drag the vertical handle between panes to rebalance reading space. Both columns stay scrollable independently.'}
-                    </p>
-                  </div>
-                )}
-
-                {guideActiveTab === 'metrics' && (
-                  <div className="guide-section">
-                    <p>
-                      {'Campaign Insights is the single place to review structured inputs and outputs: the Quiz Answers card wraps long multi-select values across lines, Stage 2 targets sit beside your latest snapshot, and the activity log lists chronologically—with Profile rows for Discovery answers, Targets rows for deadline and KPIs, plus plans, stages, content, metrics, and any extra campaign fields.'}
-                    </p>
-                    <p>
-                      {'Use Ask AI to review to send quiz answers, Stage 2 targets, and your latest (and previous) metrics snapshot to the strategist in one chat message. Section headers use + / − so you can hide quiz blocks, the snapshot form, performance trends, or the activity log when you want a calmer view.'}
-                    </p>
-                    <p>
-                      {'Metric labels spell out acronyms in parentheses (for example CPC (Cost Per Click), ROAS (Return on Ad Spend)). Hover labels or chart bars for the same hints. The snapshot mini chart plots the first six core fields with a grid and gradient bars; Performance trends compares each field to the prior snapshot when one exists.'}
-                    </p>
-                    <ul className="guide-list">
-                      <li>{'Each snapshot is stored per campaign with its label and timestamp for easy audits.'}</li>
-                      <li>{'CSV import helps backfill historical rows; download a template from your analytics stack and map headers consistently.'}</li>
-                      <li>{'At Stage 3, mention the newest snapshot when you ask for optimisations so the AI can contrast targets vs actuals.'}</li>
-                      <li>{'KPI bands (on track / close / behind) compare the latest reading to the Stage 2 targets you entered.'}</li>
-                    </ul>
-                  </div>
-                )}
-
-                {guideActiveTab === 'faq' && (
-                  <div className="guide-section">
-                    <h4>{'How do I advance to the next stage?'}</h4>
-                    <p>
-                      {'Use the in-chat controls: select a plan card in Stage 1, confirm Stage 2 questions (or skip where offered), then use the stage transition prompt when the assistant finishes a milestone summary.'}
-                    </p>
-                    <h4>{'Can I choose multiple answers in Discovery?'}</h4>
-                    <p>
-                      {'Yes. Where you see multi-select, tap every option that applies, then Continue. Values are stored as a combined list and shown with wrapping in Insights so long channel or audience mixes stay readable.'}
-                    </p>
-                    <h4>{'Why does “B2B & B2C” sometimes hide extra B2B/B2C chips?'}</h4>
-                    <p>
-                      {'Choosing the combined audience preset already implies both sides, so redundant individual B2B/B2C tokens are dropped when we render the profile to avoid duplicate labels.'}
-                    </p>
-                    <h4>{'Can I redo a stage?'}</h4>
-                    <p>
-                      {'Yes. Click a completed stage in the header timeline. Anything after that stage is reset so the AI does not mix obsolete plans with new answers.'}
-                    </p>
-                    <h4>{'Why is the Content Writer disabled?'}</h4>
-                    <p>
-                      {'It unlocks after Stage 1 because copy drafts need your selected plan and positioning context.'}
-                    </p>
-                    <h4>{'Where do I see historical answers?'}</h4>
-                    <p>
-                      {'Open Insights (bar chart icon). Quiz Answers summarises the latest profile; the activity log prefixes rows as Profile vs Targets vs Campaign so timestamps stay easy to scan.'}
-                    </p>
-                    <h4>{'How are Stage 2 KPIs used?'}</h4>
-                    <p>
-                      {'Targets appear beside your latest metrics and feed the status chips (on track / close / behind). Mention them when asking for tactical fixes in Stage 3.'}
-                    </p>
-                    <h4>{'The sidebar animation looks odd on slow devices.'}</h4>
-                    <p>
-                      {'We animate the outer rail width while keeping the interior layout fixed width, then clip overflow. If you still notice hitches, try closing the sidebar before resizing the browser drastically.'}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <GuidePopupModal isOpen={guidePopupOpen} onClose={() => setGuidePopupOpen(false)} activeTab={guideActiveTab} setActiveTab={setGuideActiveTab} />
 
       {/* Campaign Insights Modal */}
       <AnimatePresence>
         {insightsOpen && currentCampaign && (
           <motion.div
-            className="modal-overlay insights-modal-overlay"
+            className="modal-overlay insights-modal-overlay chat-ext-47"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setInsightsOpen(false)}
-            style={{ zIndex: 1100 }}
+            
           >
             <motion.div
               className="insights-modal-content"
@@ -3711,7 +3159,7 @@ const TACTIC_SUGGESTIONS = [
 
               <div className="insights-modal-toolbar">
                 <p className="insights-modal-toolbar-hint">
-                  {'Send this panel’s quiz answers, targets, and latest snapshots to the strategist in one message.'}
+                  {'Send this panel�fs quiz answers, targets, and latest snapshots to the strategist in one message.'}
                 </p>
                 <button
                   type="button"
@@ -3734,11 +3182,11 @@ const TACTIC_SUGGESTIONS = [
                   {/* Left Column - Quiz Progress */}
                   <div className="insights-card">
                     <div className="insights-card-header" style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(236,72,153,0.08))' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <ListChecks size={16} style={{ color: 'var(--accent)' }} />
+                      <div className="chat-ext-48">
+                        <ListChecks size={16} className="chat-ext-49" />
                         <h3>{'Quiz Progress'}</h3>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div className="chat-ext-50">
                         <span className="insights-pill">{progressPercent}%</span>
                       </div>
                     </div>
@@ -3762,7 +3210,7 @@ const TACTIC_SUGGESTIONS = [
                                 {`${completedStages} / ${totalStages || '-'} stages`}
                               </span>
                               {currentCampaign.quizProgress?.lastUpdated && (
-                                <span style={{ fontSize: '0.72rem' }}>
+                                <span className="chat-ext-51">
                                   {new Date(currentCampaign.quizProgress.lastUpdated).toLocaleDateString('en-US')}
                                 </span>
                               )}
@@ -3771,7 +3219,7 @@ const TACTIC_SUGGESTIONS = [
                         )}
 
                         <div className="insights-stage-compare insights-stage-compare--tight">
-                          <div className="insights-section-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div className="insights-section-head chat-ext-52">
                             <button
                               type="button"
                               className="insights-section-toggle"
@@ -3779,23 +3227,12 @@ const TACTIC_SUGGESTIONS = [
                               onClick={() => setInsightSections((s) => ({ ...s, quizAnswers: !s.quizAnswers }))}
                             >
                               {insightSections.quizAnswers ? <Minus size={14} /> : <Plus size={14} />}
-                              <BookOpen size={14} style={{ color: 'var(--accent)' }} />
+                              <BookOpen size={14} className="chat-ext-53" />
                               <span>{'Quiz Answers'}</span>
                             </button>
                             <button
                               type="button"
-                              style={{ 
-                                background: 'transparent', 
-                                border: 'none', 
-                                color: 'var(--text-muted)', 
-                                padding: '0.2rem 0.5rem', 
-                                fontSize: '0.75rem', 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: '0.3rem',
-                                cursor: 'pointer',
-                                transition: 'color 0.2s'
-                              }}
+                              className="chat-ext-54"
                               onMouseOver={(e) => e.currentTarget.style.color = 'var(--accent)'}
                               onMouseOut={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
                               onClick={(e) => {
@@ -3811,7 +3248,7 @@ const TACTIC_SUGGESTIONS = [
                           {insightSections.quizAnswers && (
                             <div className="insights-stage-list">
                               {fullQuizProfile.length === 0 ? (
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                                <p className="chat-ext-55">
                                   {'No data yet.'}
                                 </p>
                               ) : (
@@ -3819,20 +3256,19 @@ const TACTIC_SUGGESTIONS = [
                                   const qh = INSIGHT_QUIZ_HINTS[item.key];
                                   return (
                                     <div key={idx} className="insights-stage-item">
-                                      <span className="insights-stage-key" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.4rem' }}>
+                                      <span className="insights-stage-key chat-ext-56">
                                         {item.icon}
                                         <span>
                                           {item.label}
                                           {qh && <span className="insights-field-hint">{` (${qh})`}</span>}
                                         </span>
                                       </span>
-                                      <span className="insights-stage-value" style={{ flex: 1, textAlign: 'right' }}>
+                                      <span className="insights-stage-value chat-ext-57">
                                         {editingQuizField === item.key ? (
-                                          <div style={{ display: 'flex', gap: '0.3rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                          <div className="chat-ext-58">
                                             <input
                                               type="text"
-                                              className="form-input"
-                                              style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem', height: '24px', width: '120px' }}
+                                              className="form-input chat-ext-59"
                                               autoFocus
                                               value={editingQuizValue}
                                               onChange={(e) => setEditingQuizValue(e.target.value)}
@@ -3843,7 +3279,7 @@ const TACTIC_SUGGESTIONS = [
                                             />
                                             <button
                                               type="button"
-                                              style={{ background: 'var(--accent)', border: 'none', color: '#fff', padding: '0 0.4rem', borderRadius: '4px', fontSize: '0.7rem', height: '24px', cursor: 'pointer' }}
+                                              className="chat-ext-60"
                                               onClick={() => handleSaveQuizField(item.key)}
                                             >
                                               Save
@@ -3862,7 +3298,7 @@ const TACTIC_SUGGESTIONS = [
                                             {item.isMissing && (
                                               <button
                                                 type="button"
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', padding: 0, display: 'flex' }}
+                                                className="chat-ext-61"
                                                 onClick={() => {
                                                   setEditingQuizField(item.key);
                                                   setEditingQuizValue('');
@@ -3893,7 +3329,7 @@ const TACTIC_SUGGESTIONS = [
                               onClick={() => setInsightSections((s) => ({ ...s, stage2Targets: !s.stage2Targets }))}
                             >
                               {insightSections.stage2Targets ? <Minus size={14} /> : <Plus size={14} />}
-                              <Target size={14} style={{ color: '#34d399' }} />
+                              <Target size={14} className="chat-ext-62" />
                               <span>{'Active Targets & Milestones'}</span>
                             </button>
                           </div>
@@ -3935,17 +3371,17 @@ const TACTIC_SUGGESTIONS = [
                   {/* Right Column - Metrics */}
                   <div className="insights-card">
                     <div className="insights-card-header" style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(59,130,246,0.08))' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <BarChart3 size={16} style={{ color: '#34d399' }} />
+                      <div className="chat-ext-63">
+                        <BarChart3 size={16} className="chat-ext-64" />
                         <h3>{'Metrics Snapshots'}</h3>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div className="chat-ext-65">
                         <span className="insights-pill" style={{ background: 'rgba(16,185,129,0.15)', color: '#34d399' }}>{metricsSnapshots.length}</span>
                         <input
                           ref={csvInputRef}
                           type="file"
                           accept=".csv"
-                          style={{ display: 'none' }}
+                          className="chat-ext-66"
                           onChange={handleCsvUpload}
                         />
                         <button
@@ -3972,13 +3408,13 @@ const TACTIC_SUGGESTIONS = [
                         onClick={() => setInsightSections((s) => ({ ...s, metricsSnapshot: !s.metricsSnapshot }))}
                       >
                         {insightSections.metricsSnapshot ? <Minus size={14} /> : <Plus size={14} />}
-                        <BarChart3 size={14} style={{ color: '#34d399' }} />
+                        <BarChart3 size={14} className="chat-ext-67" />
                         <span>{'Snapshot chart & entry form'}</span>
                       </button>
                       {insightSections.metricsSnapshot && (
                         <>
                           {metricsSnapshots.length > 0 && (
-                            <div className="insights-chart-panel" style={{ padding: '0.5rem 0' }}>
+                            <div className="insights-chart-panel chat-ext-68">
                               <TrendLineCharts snapshots={metricsSnapshots} />
                             </div>
                           )}
@@ -4020,7 +3456,7 @@ const TACTIC_SUGGESTIONS = [
                                   <label key={field.key}>
                                     <span className="metrics-label-with-hint" title={field.hint}>
                                       {metricLabelWithHint(field)}
-                                      {targetVal && <span style={{ color: '#60a5fa', marginLeft: '6px', fontSize: '0.75rem' }}>(Target: {targetVal})</span>}
+                                      {targetVal && <span className="chat-ext-69">(Target: {targetVal})</span>}
                                     </span>
                                     <input
                                       type="text"
@@ -4047,7 +3483,7 @@ const TACTIC_SUGGESTIONS = [
                           onClick={() => setInsightSections((s) => ({ ...s, trends: !s.trends }))}
                         >
                           {insightSections.trends ? <Minus size={14} /> : <Plus size={14} />}
-                          <TrendingUp size={14} style={{ color: '#34d399' }} />
+                          <TrendingUp size={14} className="chat-ext-70" />
                           <span>{'Performance trends'}</span>
                         </button>
                         {insightSections.trends && (
@@ -4080,7 +3516,7 @@ const TACTIC_SUGGESTIONS = [
                                 })}
                               </div>
                             ) : (
-                              <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0.35rem 0 0' }}>
+                              <p className="chat-ext-71">
                                 {'Add a snapshot to see trends.'}
                               </p>
                             )}
@@ -4103,7 +3539,7 @@ const TACTIC_SUGGESTIONS = [
                       onClick={() => setInsightSections((s) => ({ ...s, activity: !s.activity }))}
                     >
                       {insightSections.activity ? <Minus size={14} /> : <Plus size={14} />}
-                      <BookOpen size={16} style={{ color: 'var(--accent)' }} />
+                      <BookOpen size={16} className="chat-ext-72" />
                       <h3>{'Activity Log'}</h3>
                     </button>
                   </div>
@@ -4114,7 +3550,7 @@ const TACTIC_SUGGESTIONS = [
                           <p>
                             {'No activity yet. Complete the Discovery Quiz to get started.'}
                           </p>
-                          <button type="button" className="btn btn-secondary btn-sm" style={{ marginTop: '0.75rem' }} onClick={handleOpenFullQuiz}>
+                          <button type="button" className="btn btn-secondary btn-sm chat-ext-73" onClick={handleOpenFullQuiz}>
                             {'Open quiz'}
                           </button>
                         </div>
@@ -4172,393 +3608,13 @@ const TACTIC_SUGGESTIONS = [
         />
 
 
-      <AnimatePresence>
-        {brandProfileModalOpen && (
-          <div className="modal-overlay">
-            <motion.div 
-              className="modal-content"
-              style={{ width: '450px', maxWidth: '90%' }}
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-            >
-              <div className="modal-header">
-                <h2>Brand Profile</h2>
-                <button className="modal-close" onClick={() => setBrandProfileModalOpen(false)}>
-                  <X size={20} />
-                </button>
-              </div>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                  Define your brand's core tone and guidelines. AI will use this context for all campaigns.
-                </p>
-                <div>
-                  <label className="form-label">Brand Tone</label>
-                  <input type="text" className="form-input" placeholder="e.g. Professional, Friendly, Witty" />
-                </div>
-                <div>
-                  <label className="form-label">Target Audience Baseline</label>
-                  <input type="text" className="form-input" placeholder="e.g. Millennials, B2B Founders" />
-                </div>
-                <div>
-                  <label className="form-label">Restricted Words (Comma separated)</label>
-                  <textarea className="form-input" rows={2} placeholder="e.g. cheap, guarantee, best"></textarea>
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button className="btn-secondary" onClick={() => setBrandProfileModalOpen(false)}>Cancel</button>
-                <button className="btn-primary" onClick={() => setBrandProfileModalOpen(false)}>Save Profile</button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {integrationsModalOpen && (
-          <div className="modal-overlay">
-            <motion.div 
-              className="modal-content"
-              style={{ width: '450px', maxWidth: '90%' }}
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-            >
-              <div className="modal-header">
-                <h2>Data Integrations</h2>
-                <button className="modal-close" onClick={() => setIntegrationsModalOpen(false)}>
-                  <X size={20} />
-                </button>
-              </div>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ padding: '1rem', background: 'rgba(255,193,7,0.1)', border: '1px solid rgba(255,193,7,0.3)', borderRadius: '8px' }}>
-                  <p style={{ color: '#ffc107', fontSize: '0.85rem', margin: 0, fontWeight: 500, lineHeight: 1.5 }}>
-                    <span style={{ fontWeight: 'bold' }}>Transparency Note:</span> To ensure 100% data accuracy, direct API integrations are currently in the verification process with Meta and Google. For now, please use the <strong>Upload CSV</strong> feature in the Insights panel to sync your real campaign data.
-                  </p>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ width: 32, height: 32, background: '#1877F2', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold' }}>f</div>
-                    <span style={{ fontWeight: 600 }}>Meta Ads API</span>
-                  </div>
-                  <button className="btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', opacity: 0.5, cursor: 'not-allowed' }} disabled>Coming Soon</button>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ width: 32, height: 32, background: '#EA4335', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 'bold' }}>G</div>
-                    <span style={{ fontWeight: 600 }}>Google Ads API</span>
-                  </div>
-                  <button className="btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', opacity: 0.5, cursor: 'not-allowed' }} disabled>Coming Soon</button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
+      <BrandProfileModal isOpen={brandProfileModalOpen} onClose={() => setBrandProfileModalOpen(false)} />
+      <IntegrationsModal isOpen={integrationsModalOpen} onClose={() => setIntegrationsModalOpen(false)} />
       {/* Phase 2 Quiz Popup */}
-      <AnimatePresence>
-        {phase2PopupOpen && (
-          <motion.div
-            className="modal-overlay quiz-popup-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setPhase2PopupOpen(false)}
-          >
-            <motion.div
-              className="quiz-popup"
-              initial={{ opacity: 0, scale: 0.9, y: 30 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 30 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="quiz-popup-header">
-                <div className="quiz-popup-header-left">
-                  <div className="quiz-popup-icon" style={{ background: 'linear-gradient(135deg, #10b981, #3b82f6)' }}>
-                    <Check size={20} />
-                  </div>
-                  <div>
-                    <h3>{'Finalize Plan'}</h3>
-                    <p>{`Phase 2 - Question ${phase2Step + 1} of ${phase2Questions.length}`}</p>
-                  </div>
-                </div>
-                <div className="quiz-popup-header-right">
-                  <button className="quiz-popup-close" onClick={() => setPhase2PopupOpen(false)}>
-                    <X size={18} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="quiz-popup-progress">
-                <motion.div
-                  className="quiz-popup-progress-fill"
-                  style={{ background: 'linear-gradient(90deg, #10b981, #3b82f6)' }}
-                  animate={{ width: `${((phase2Step + 1) / phase2Questions.length) * 100}%` }}
-                  transition={{ duration: 0.3 }}
-                />
-              </div>
-
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={phase2Step}
-                  className="quiz-popup-body"
-                  data-lenis-prevent="true"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {(() => {
-                    const q = phase2Questions[phase2Step];
-                    const QIcon = q.icon;
-                    const isTextQuestion = q.type === 'text';
-                    return (
-                      <>
-                        <div className="quiz-popup-question" style={{ color: '#10b981' }}>
-                          <QIcon size={22} />
-                          <span>{q.question}</span>
-                        </div>
-
-                        <div className="quiz-popup-options">
-                          {isTextQuestion ? (
-                            <div className="quiz-popup-text-area">
-                              <input
-                                type="text"
-                                placeholder={q.placeholder || 'Type your answer...'}
-                                value={phase2TextInput}
-                                onChange={(e) => setPhase2TextInput(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && phase2TextInput.trim() && handlePhase2Answer(phase2TextInput.trim())}
-                                className="quiz-popup-input"
-                                autoFocus
-                              />
-                              <div className="quiz-popup-text-actions">
-                                <button
-                                  className="quiz-popup-submit"
-                                  onClick={() => phase2TextInput.trim() && handlePhase2Answer(phase2TextInput.trim())}
-                                  disabled={!phase2TextInput.trim()}
-                                >
-                                  {'Continue'}
-                                  <ChevronRight size={16} />
-                                </button>
-                              </div>
-                            </div>
-                          ) : q.options?.map((opt, idx) => (
-                            <motion.button
-                              key={opt.value}
-                              className={`quiz-popup-option ${phase2Answers[q.id] === opt.value ? 'selected' : ''}`}
-                              onClick={() => { handlePhase2Answer(opt.value); setPhase2CustomOpen(false); setPhase2TextInput(''); }}
-                              initial={{ opacity: 0, y: 8 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: idx * 0.04 }}
-                              whileHover={{ scale: 1.02, y: -2 }}
-                              whileTap={{ scale: 0.98 }}
-                            >
-                              {opt.label}
-                            </motion.button>
-                          ))}
-
-                          <button
-                            className={`quiz-popup-skip-inline ${phase2CustomOpen ? 'active' : ''}`}
-                            onClick={() => { setPhase2CustomOpen(!phase2CustomOpen); setPhase2CustomInput(''); }}
-                          >
-                            <Pencil size={14} />
-                            {'Type my own answer'}
-                          </button>
-
-                          <AnimatePresence>
-                            {phase2CustomOpen && (
-                              <motion.div
-                                className="quiz-popup-custom-input"
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                style={{ gridColumn: '1 / -1' }}
-                              >
-                                <input
-                                  type="text"
-                                  placeholder={'Type your answer...'}
-                                  value={phase2CustomInput}
-                                  onChange={(e) => setPhase2CustomInput(e.target.value)}
-                                  onKeyDown={(e) => e.key === 'Enter' && handlePhase2CustomSubmit()}
-                                  autoFocus
-                                  className="quiz-popup-input"
-                                />
-                                <div className="quiz-popup-text-actions">
-                                  <button className="quiz-popup-submit" onClick={handlePhase2CustomSubmit}>
-                                    {'Submit'}
-                                    <ChevronRight size={16} />
-                                  </button>
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-
-                          <button className="quiz-popup-skip-inline" onClick={() => { handlePhase2SkipQuestion(); setPhase2TextInput(''); }}>
-                            <HelpCircle size={14} />
-                            {'Skip this question'}
-                          </button>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </motion.div>
-              </AnimatePresence>
-              <div className="quiz-popup-footer">
-                <button className="quiz-popup-skip-all" onClick={handleSkipToStage3}>
-                  {'Skip Stage 2 and continue to Stage 3'}
-                </button>
-                <span className="quiz-popup-hint">
-                  {'Tip: Targets in Stage 2 are used in Insights for KPI comparison.'}
-                </span>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
+      <Phase2QuizPopup isOpen={phase2PopupOpen} onClose={() => setPhase2PopupOpen(false)} phase2Step={phase2Step} phase2Questions={phase2Questions as any} phase2Answers={phase2Answers} phase2TextInput={phase2TextInput} setPhase2TextInput={setPhase2TextInput} phase2CustomOpen={phase2CustomOpen} setPhase2CustomOpen={setPhase2CustomOpen} phase2CustomInput={phase2CustomInput} setPhase2CustomInput={setPhase2CustomInput} handlePhase2Answer={handlePhase2Answer} handlePhase2CustomSubmit={handlePhase2CustomSubmit} handlePhase2SkipQuestion={handlePhase2SkipQuestion} handleSkipToStage3={handleSkipToStage3} />
       {/* Glossary Panel */}
-      <AnimatePresence>
-        {glossaryOpen && (
-          <motion.aside
-            className="quiz-summary-panel glossary-panel"
-            initial={{ x: '100%', opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: '100%', opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            style={{ position: 'absolute', right: 0, top: 0, bottom: 0, zIndex: 1000, background: 'var(--bg-secondary)', borderLeft: '1px solid var(--border)', width: '320px', display: 'flex', flexDirection: 'column' }}
-          >
-            <div className="summary-header" style={{ padding: '1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{'Marketing Glossary'}</h3>
-                <p className="summary-subtitle" style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{'Key terms used by marketers'}</p>
-              </div>
-              <button className="summary-close" onClick={() => setGlossaryOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                <X size={20} />
-              </button>
-            </div>
-            <div className="summary-list" style={{ flex: 1, overflowY: 'auto', padding: '1.25rem' }} data-lenis-prevent="true">
-              {glossaryMatches.length > 0 && (
-                <div className="glossary-section" style={{ marginBottom: '1.5rem' }}>
-                  <span className="glossary-section-title" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>{'Suggested for you'}</span>
-                  {glossaryMatches.map((entry) => (
-                    <div key={entry.id} className="glossary-item" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '0.875rem', marginBottom: '0.75rem' }}>
-                      <div className="glossary-term" style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.25rem' }}>{entry.term}</div>
-                      <div className="glossary-name" style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>{entry.name}</div>
-                      <p className="glossary-definition" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>{entry.definition}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {glossaryGroups.map((group) => (
-                <div key={group.id} className="glossary-section" style={{ marginBottom: '1.5rem' }}>
-                  <span className="glossary-section-title" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>{group.label}</span>
-                  {getGlossaryByGroup(group.id).map((entry) => (
-                    <div key={entry.id} className="glossary-item" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '0.75rem', padding: '0.875rem', marginBottom: '0.75rem' }}>
-                      <div className="glossary-term" style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.25rem' }}>{entry.term}</div>
-                      <div className="glossary-name" style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>{entry.name}</div>
-                      <p className="glossary-definition" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>{entry.definition}</p>
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </motion.aside>
-        )}
-      </AnimatePresence>
+      <GlossaryPanel isOpen={glossaryOpen} onClose={() => setGlossaryOpen(false)} glossaryMatches={glossaryMatches} />
     </div>
   );
 }
 
-// Campaign item component with actions
-interface CampaignItemProps {
-  campaign: Campaign;
-  isActive: boolean;
-  isEditing: boolean;
-  editingName: string;
-  menuOpen: boolean;
-  onNavigate: () => void;
-  onMenuToggle: () => void;
-  onStartEdit: () => void;
-  onEditChange: (name: string) => void;
-  onEditSubmit: () => void;
-  onEditCancel: () => void;
-  onDelete: () => void;
-  onToggleFavorite: () => void;
-}
-
-function CampaignItem({
-  campaign, isActive, isEditing, editingName, menuOpen,
-  onNavigate, onMenuToggle, onStartEdit, onEditChange, onEditSubmit, onEditCancel, onDelete, onToggleFavorite
-}: CampaignItemProps) {
-  if (isEditing) {
-    return (
-      <div className="campaign-item editing">
-        <input
-          type="text"
-          value={editingName}
-          onChange={(e) => onEditChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') onEditSubmit();
-            if (e.key === 'Escape') onEditCancel();
-          }}
-          autoFocus
-        />
-      </div>
-    );
-  }
-
-  return (
-    <motion.div 
-      layout
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
-      className={`campaign-item ${isActive ? 'active' : ''} ${campaign.isFavorite ? 'favorited' : ''}`}
-    >
-      <button className="campaign-link" onClick={onNavigate}>
-        <motion.div whileHover={{ rotate: 15 }}>
-          <MessageSquare size={16} className={campaign.isFavorite ? 'favorite-icon' : ''} />
-        </motion.div>
-        <span>{campaign.name}</span>
-      </button>
-
-      <div className="campaign-actions">
-        <motion.button 
-          whileHover={{ scale: 1.15 }}
-          whileTap={{ scale: 0.9 }}
-          className="campaign-action-btn" 
-          onClick={onMenuToggle}
-        >
-          <MoreHorizontal size={14} />
-        </motion.button>
-
-        <AnimatePresence>
-          {menuOpen && (
-            <motion.div
-              className="campaign-menu"
-              initial={{ opacity: 0, scale: 0.95, y: -5 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -5 }}
-              transition={{ duration: 0.1 }}
-            >
-              <button onClick={onStartEdit}>
-                <Pencil size={14} />
-                {'Rename'}
-              </button>
-              <button onClick={onToggleFavorite}>
-                <Star size={14} fill={campaign.isFavorite ? 'currentColor' : 'none'} />
-                {campaign.isFavorite
-                  ? ('Unfavorite')
-                  : ('Favorite')}
-              </button>
-              <button className="danger" onClick={onDelete}>
-                <Trash2 size={14} />
-                {'Delete'}
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </motion.div>
-  );
-}

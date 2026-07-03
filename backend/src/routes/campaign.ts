@@ -11,8 +11,8 @@ router.use(authMiddleware);
 const createCampaignSchema = z.object({
   name: z.string().trim().min(1).max(120),
   description: z.string().trim().max(600).optional(),
-  quizData: z.record(z.any()).optional().refine(val => !val || JSON.stringify(val).length <= 50000, "quizData too large"),
-  quizProgress: z.record(z.any()).optional().refine(val => !val || JSON.stringify(val).length <= 50000, "quizProgress too large")
+  quizData: z.record(z.unknown()).optional().refine(val => !val || JSON.stringify(val).length <= 50000, "quizData too large"),
+  quizProgress: z.record(z.unknown()).optional().refine(val => !val || JSON.stringify(val).length <= 50000, "quizProgress too large")
 });
 
 const updateCampaignSchema = z
@@ -20,9 +20,9 @@ const updateCampaignSchema = z
     name: z.string().trim().min(1).max(120).optional(),
     description: z.string().trim().max(600).nullable().optional(),
     status: z.enum(['DRAFT', 'ACTIVE', 'COMPLETED', 'ARCHIVED']).optional(),
-    quizData: z.record(z.any()).optional().refine(val => !val || JSON.stringify(val).length <= 50000, "quizData too large"),
-    quizProgress: z.record(z.any()).optional().refine(val => !val || JSON.stringify(val).length <= 50000, "quizProgress too large"),
-    strategy: z.record(z.any()).optional().refine(val => !val || JSON.stringify(val).length <= 200000, "strategy too large"),
+    quizData: z.record(z.unknown()).optional().refine(val => !val || JSON.stringify(val).length <= 50000, "quizData too large"),
+    quizProgress: z.record(z.unknown()).optional().refine(val => !val || JSON.stringify(val).length <= 50000, "quizProgress too large"),
+    strategy: z.record(z.unknown()).optional().refine(val => !val || JSON.stringify(val).length <= 200000, "strategy too large"),
     isFavorite: z.boolean().optional()
   })
   .strict()

@@ -2,11 +2,35 @@ import { Router } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { z } from 'zod';
+import { rateLimit } from 'express-rate-limit';
 import {
   normalizePlanContent,
   appendPlanOptionsIfMissing,
   detectStrategyKind
 } from '../utils/plan-marker-parser-and-normalization-utils';
+
+function truncateDeep(obj: any, maxStringLength: number = 2000, maxArrayLength: number = 20): any {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'string') {
+    return obj.length > maxStringLength ? obj.substring(0, maxStringLength) + '...[TRUNCATED]' : obj;
+  }
+  if (Array.isArray(obj)) {
+    let arr = obj;
+    if (arr.length > maxArrayLength) {
+      arr = arr.slice(0, maxArrayLength);
+      arr.push('[TRUNCATED_ARRAY_ELEMENTS]');
+    }
+    return arr.map(item => truncateDeep(item, maxStringLength, maxArrayLength));
+  }
+  if (typeof obj === 'object') {
+    const newObj: any = {};
+    for (const [k, v] of Object.entries(obj)) {
+      newObj[k] = truncateDeep(v, maxStringLength, maxArrayLength);
+    }
+    return newObj;
+  }
+  return obj;
+}
 
 const router = Router();
 
@@ -47,8 +71,16 @@ const campaignQuerySchema = z.object({
   campaignId: z.string().trim().min(1).optional()
 });
 
+const chatLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 50, // 50 messages per hour per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many messages sent. Please try again later.' }
+});
+
 // Send message to AI
-router.post('/message', async (req: AuthRequest, res) => {
+router.post('/message', chatLimiter, async (req: AuthRequest, res) => {
   try {
     const { message, campaignId, context } = sendMessageSchema.parse(req.body);
 
@@ -120,6 +152,9 @@ router.post('/message', async (req: AuthRequest, res) => {
     const quizDataObj = aiContext.quizData && typeof aiContext.quizData === 'object' ? aiContext.quizData as Record<string, unknown> : {};
     const effectivePhase = typeof quizDataObj.phase === 'string' ? quizDataObj.phase : '1';
 
+    // Truncate aiContext to prevent Payload Too Large or Token Limit errors
+    const safeAiContext = truncateDeep(aiContext, 5000, 50);
+
     // Call AI service with timeout and graceful fallback
     let aiText = '';
     let usedFallback = false;
@@ -129,12 +164,10 @@ router.post('/message', async (req: AuthRequest, res) => {
         `${AI_SERVICE_URL}/chat`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message,
-            context: aiContext
+            context: safeAiContext
           })
         },
         AI_TIMEOUT_MS

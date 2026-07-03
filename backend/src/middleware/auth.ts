@@ -20,6 +20,17 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
     return res.status(401).json({ error: 'No token provided' });
   }
 
+  // Simple CSRF protection for state-changing requests
+  if (req.method !== 'GET' && req.method !== 'OPTIONS') {
+    const origin = req.headers.origin || req.headers.referer;
+    if (!origin) {
+      // Allow API clients like curl/postman if they use Bearer token instead of cookie
+      if (!req.headers.authorization?.startsWith('Bearer ')) {
+         return res.status(403).json({ error: 'Missing Origin/Referer header' });
+      }
+    }
+  }
+
   try {
     const JWT_SECRET = process.env.JWT_SECRET;
     if (!JWT_SECRET) {
@@ -33,7 +44,7 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
       where: { id: decoded.userId }
     });
     
-    if (!user || (decoded.version !== undefined && user.tokenVersion !== decoded.version)) {
+    if (!user || user.tokenVersion !== decoded.version) {
       return res.status(401).json({ error: 'Session expired or invalid' });
     }
 

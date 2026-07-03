@@ -4,7 +4,7 @@ def get_stage_instructions(phase: str) -> str:
     """Get stage-specific instructions for the AI prompt."""
     if phase == "1":
         return """You are currently in Stage 1 (Strategy Formulation). 
-MANDATORY: You MUST provide exactly 3 or 4 selectable plan options using the [PLAN_A], [PLAN_B], etc. tags.
+MANDATORY: You MUST provide 2 to 4 selectable plan options depending on what fits best using the [PLAN_A], [PLAN_B], etc. tags.
 
 CRITICAL FORMATTING RULES:
 1. Start with 2-3 paragraphs of analysis.

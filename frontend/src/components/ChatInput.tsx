@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, ListChecks, X, RefreshCw, Sparkles } from 'lucide-react';
+import { Send, ListChecks, X, RefreshCw, Sparkles, Upload } from 'lucide-react';
 interface ChatInputProps {
   onSend: (message: string) => void;
   loading: boolean;
@@ -8,16 +8,16 @@ interface ChatInputProps {
 }
 
 const PREDEFINED_PROMPTS = [
-  "Phân tích đối thủ cạnh tranh chính",
-  "Lên kế hoạch ra mắt sản phẩm mới",
-  "Gợi ý chiến dịch Marketing đa kênh",
-  "Cách tối ưu hóa chi phí quảng cáo",
-  "Đề xuất content cho dịp lễ sắp tới",
-  "Lập ngân sách Marketing cơ bản",
-  "Chiến lược định giá sản phẩm",
-  "Tìm hiểu tệp khách hàng Gen Z",
-  "Cách tăng tỷ lệ chuyển đổi (CR)",
-  "Phân tích SWOT cho dự án",
+  "Analyze main competitors",
+  "Plan a new product launch",
+  "Suggest a multi-channel marketing campaign",
+  "How to optimize advertising costs",
+  "Content proposals for the upcoming holidays",
+  "Create a basic marketing budget",
+  "Product pricing strategy",
+  "Understand the Gen Z customer segment",
+  "How to increase conversion rate (CR)",
+  "SWOT analysis for the project",
 ];
 
 export default function ChatInput({ onSend, loading, currentCampaign, onOpenFullQuiz }: ChatInputProps) {
@@ -46,6 +46,39 @@ export default function ChatInput({ onSend, loading, currentCampaign, onOpenFull
     setInput('');
   };
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = evt.target?.result as string;
+      const lines = text.split('\n').filter(l => l.trim().length > 0);
+      if (lines.length === 0) return;
+      const headers = lines[0].split(',').map(h => h.trim());
+      let data = lines.slice(1).map(line => {
+        const values = line.split(',');
+        const obj: any = {};
+        headers.forEach((h, i) => {
+          obj[h] = values[i] ? values[i].trim() : '';
+        });
+        return obj;
+      });
+      
+      let truncationNote = '';
+      if (data.length > 50) {
+        data = data.slice(0, 50);
+        truncationNote = '\n[Note: Data truncated to 50 rows to fit AI memory limits]';
+      }
+      
+      setInput(prev => prev + (prev ? '\n\n' : '') + 'Data Import:\n' + JSON.stringify(data, null, 2) + truncationNote);
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const handleShuffleSuggestions = () => {
     setSuggestionOffset((prev) => (prev + 3) % PREDEFINED_PROMPTS.length);
   };
@@ -70,7 +103,7 @@ export default function ChatInput({ onSend, loading, currentCampaign, onOpenFull
         <div style={{ padding: '0.5rem 0', display: 'flex', flexDirection: 'column', gap: '0.5rem', maxWidth: '860px', margin: '0 auto', width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <Sparkles size={12} /> Gợi ý từ AI
+              <Sparkles size={12} /> AI Suggestions
             </span>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button type="button" onClick={handleShuffleSuggestions} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', padding: 0 }} title="Load thêm gợi ý">
@@ -111,7 +144,24 @@ export default function ChatInput({ onSend, loading, currentCampaign, onOpenFull
         </div>
       )}
 
-      <div className="chat-input">
+      <div className="chat-input" style={{ display: 'flex', alignItems: 'center' }}>
+        <button
+          type="button"
+          className="upload-btn"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={loading}
+          style={{ background: 'transparent', border: 'none', color: '#94a3b8', padding: '0 10px', cursor: 'pointer' }}
+          title="Import CSV"
+        >
+          <Upload size={18} />
+        </button>
+        <input 
+          type="file" 
+          accept=".csv" 
+          ref={fileInputRef} 
+          style={{ display: 'none' }} 
+          onChange={handleFileUpload} 
+        />
         <textarea
           ref={textareaRef}
           value={input}

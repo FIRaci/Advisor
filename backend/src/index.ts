@@ -25,12 +25,12 @@ app.use(cors({
     const allowedOrigins = [FRONTEND_URL, 'http://localhost:3000', 'https://advisorai-eight.vercel.app'];
     
     // In test environment or same-origin requests, origin may be undefined
-    if (!origin && process.env.NODE_ENV === 'test') {
+    if (!origin) {
       return callback(null, true);
     }
     
-    // Allow strict origins or any Vercel preview deployment
-    if (origin && (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app'))) {
+    // Allow strict origins or any Vercel URL
+    if (origin === FRONTEND_URL || origin === 'http://localhost:3000' || origin.endsWith('.vercel.app')) {
       callback(null, true);
     } else {
       callback(new Error(`Not allowed by CORS: ${origin}`));
