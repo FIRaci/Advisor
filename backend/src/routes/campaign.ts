@@ -116,7 +116,7 @@ router.post('/', async (req: AuthRequest, res) => {
     
     const campaign = await prisma.campaign.create({
       data: {
-        ...data,
+        ...(data as any),
         userId: req.userId!
       }
     });
@@ -137,7 +137,7 @@ router.patch('/:id', async (req: AuthRequest, res) => {
 
     const campaign = await prisma.campaign.updateMany({
       where: { id: req.params.id, userId: req.userId },
-      data
+      data: data as any
     });
 
     if (campaign.count === 0) {

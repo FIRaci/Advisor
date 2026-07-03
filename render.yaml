@@ -3,12 +3,14 @@ databases:
     databaseName: ai_marketing
     user: admin
     plan: free
+    region: singapore
 
 services:
   - type: web
     name: ai-service
     env: python
     plan: free
+    region: singapore
     rootDir: ai_service
     buildCommand: "pip install -r requirements.txt"
     startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
@@ -22,6 +24,7 @@ services:
     name: advisor-backend
     env: node
     plan: free
+    region: singapore
     rootDir: backend
     buildCommand: "npm install --include=dev && npm run build"
     startCommand: "npm start"
