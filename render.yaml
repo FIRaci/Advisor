@@ -28,11 +28,11 @@ services:
         fromDatabase:
           name: advisor-db
           property: connectionString
-      - key: AI_SERVICE_URL
+      - key: AI_SERVICE_HOSTPORT
         fromService:
           type: web
           name: ai-service
-          property: url
+          property: hostport
       - key: JWT_SECRET
         generateValue: true
       - key: GEMINI_API_KEY

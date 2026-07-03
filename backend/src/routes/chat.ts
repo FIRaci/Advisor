@@ -36,7 +36,7 @@ const router = Router();
 
 router.use(authMiddleware);
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://ai_service:8000';
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || (process.env.AI_SERVICE_HOSTPORT ? `http://${process.env.AI_SERVICE_HOSTPORT}` : 'http://ai_service:8000');
 const AI_TIMEOUT_MS = 12_000;
 
 async function fetchWithTimeout(url: string, options: RequestInit, ms: number): Promise<Response> {
