@@ -66,10 +66,10 @@ class GeminiService:
             logger.error(f"Gemini initialization failed: {e}")
             logger.info("Falling back to mock mode")
     
-    async def generate(self, prompt: str) -> str:
+    async def generate(self, prompt: str, phase: str = "1") -> str:
         """Generate AI response asynchronously with fallback"""
         if self.use_mock:
-            return self._get_mock_response(prompt)
+            return self._get_mock_response(prompt, phase)
         
         try:
             response = await self.client.aio.models.generate_content(
@@ -82,100 +82,60 @@ class GeminiService:
             raise Exception(f"Gemini API error: {str(e)}")
     
     @staticmethod
-    def _get_mock_response(message: str) -> str:
+    def _get_mock_response(message: str, phase: str = "1") -> str:
         """Smart mock responses for demo mode"""
-        msg_lower = message.lower()
+        if phase == "1":
+            return """# Kế hoạch Marketing Đề xuất từ AdVisor
+
+Dựa trên dữ liệu khảo sát của bạn, tôi đã phân tích kỹ lưỡng thị trường mục tiêu và bối cảnh cạnh tranh. Khách hàng của bạn chủ yếu là nhóm người dùng thích trải nghiệm mua sắm nhanh chóng, do đó, các kênh Digital Marketing kết hợp xây dựng nội dung ngắn sẽ mang lại hiệu quả cao nhất.
+
+Tuy nhiên, để tối ưu hóa ngân sách ban đầu, chúng ta cần phân bổ chi phí quảng cáo hợp lý và tận dụng các nội dung có tính viral.
+
+Dưới đây là 3 phương án chiến lược (Plans) đã được cá nhân hóa để bạn lựa chọn:"""
         
-        if any(word in msg_lower for word in ['strategy', 'chiến lược', 'quiz', 'business']):
-            return """# Your Personalized Marketing Strategy
+        elif phase == "2":
+            return """# Kế hoạch Thực thi Chi tiết (Stage 2)
 
-## Target Audience Analysis
-Based on your profile, your ideal customers are:
-- **Demographics**: Age 25-45, mid to high income
-- **Behavior**: Active on social media, values quality and convenience
-- **Pain Points**: Looking for trusted, efficient solutions
+Dựa trên chiến lược bạn đã chọn ở Stage 1, tôi đã vạch ra lộ trình thực thi theo tuần để tối ưu hoá ngân sách và đạt được KPIs mục tiêu nhanh nhất.
 
-## Recommended Marketing Channels
-1. **Social Media Marketing** (Priority: High)
-    - Focus on Instagram & Facebook
-    - Budget: 40% of marketing spend
-    - Expected ROI: 3-5x
+## Lộ trình Thực thi 4 Tuần
+| Tuần | Mục tiêu | Kênh triển khai | Ngân sách |
+| :--- | :--- | :--- | :--- |
+| Tuần 1 | Xây dựng nhận diện & Thu thập Lead | Facebook Ads, Email | 30% |
+| Tuần 2 | Tăng tốc & Remarketing | Facebook Ads, TikTok | 40% |
+| Tuần 3 | Tối ưu hoá Tỷ lệ chuyển đổi | Email, Website | 15% |
+| Tuần 4 | Đánh giá & Scale-up | Tất cả các kênh | 15% |
 
-2. **Search Engine Marketing**
-    - Google Ads + SEO
-    - Budget: 30%
-    - Expected ROI: 4-6x
+## Bảng Benchmarks Mục tiêu
+| Chỉ số | Target Đề xuất | Trạng thái |
+| :--- | :--- | :--- |
+| **CTR** | > 3.5% | Chưa đo lường |
+| **CVR** | > 2.0% | Chưa đo lường |
+| **ROAS** | > 3.0x | N/A |
 
-3. **Email Marketing**
-    - Budget: 15%
-    - Expected ROI: 8-10x
+### Content Draft: Facebook Ad
+**Headline:** Đừng bỏ lỡ giải pháp tối ưu doanh thu cho doanh nghiệp của bạn! 🚀
+**Body:** Bạn đang đau đầu vì ngân sách quảng cáo không hiệu quả? Hãy để chúng tôi giúp bạn tối ưu từng đồng chi phí với chiến lược marketing đột phá. Tham gia ngay hôm nay để nhận tư vấn!
+**Call-to-Action:** Đăng ký nhận tư vấn ngay!
 
-4. **Content Marketing**
-## 90-Day Action Plan
+### Content Draft: Email Newsletter
+**Subject:** Khám phá bí quyết tăng x3 doanh thu trong 30 ngày 💥
+**Body:** Chào bạn, chúng tôi vừa ra mắt một phương pháp độc quyền giúp tối ưu hóa tỷ lệ chuyển đổi. Bạn có muốn trở thành người đầu tiên áp dụng? Hãy click vào nút bên dưới nhé!
 
-### Month 1: Foundation
-- Set up tracking (Google Analytics, Facebook Pixel)
-- Create content calendar
-- Launch initial campaigns
-- A/B test ad creatives
+**[STAGE_TRANSITION]** You have completed Stage 2! You can now move to **Stage 3: Ongoing Optimization**.
+"""
+        elif phase == "3":
+            return """# Báo cáo Tối ưu hoá (Stage 3)
 
-### Month 2: Optimization
-- Analyze performance data
-- Scale winning campaigns
-- Expand to new audiences
-- Launch email automation
+Dựa trên các chỉ số hiệu suất gần nhất, chiến dịch đang gặp một số nút thắt ở tỷ lệ chuyển đổi (CVR).
 
-### Month 3: Growth
-- Launch retargeting campaigns
-- Expand to additional channels
-- Optimize conversion funnel
-- Build brand authority
+## Đề xuất Tối ưu:
+1. **Tắt các nhóm quảng cáo kém hiệu quả**: Các ads có CTR < 1.5% đang tiêu tốn ngân sách vô ích. Hãy dồn 20% ngân sách này sang nhóm Lookalike mới.
+2. **Cập nhật Content**: Content hiện tại đang bị "Ad Fatigue". Bạn nên test thêm định dạng Video ngắn trên TikTok hoặc Reels.
 
-## Quick Wins
-1. Create a lead magnet (free guide/checklist)
-2. Set up Facebook pixel for retargeting
-3. Start collecting customer testimonials
-4. Launch a limited-time offer
+Hãy thử áp dụng các thay đổi này, cập nhật lại metrics và chúng ta sẽ đo lường lại vào tuần sau nhé!"""
 
----
-**Note**: This is a demo response. Connect a valid Gemini API key for personalized AI-powered strategies!
-
-How can I help you refine this strategy?"""
-        
-        elif any(word in msg_lower for word in ['social', 'facebook', 'instagram']):
-            return """## Social Media Strategy
-
-### Platform Priorities
-1. **Instagram** - Visual storytelling, Reels, Stories
-2. **Facebook** - Community building, Ads
-3. **TikTok** - Short-form video content (if target audience is younger)
-
-### Content Strategy
-- Post 5-7 times per week
-- Mix: 40% educational, 30% promotional, 30% engagement
-- Use trending audio and hashtags
-- Engage with comments within 2 hours
-
-### Ad Strategy
-- Budget: $20-50/day to start
-- Focus on conversions, not just reach
-- A/B test different creatives
-- Use lookalike audiences
-
-Would you like specific content ideas for your business?"""
-        
-        return """Thank you for your question! As an AI marketing advisor, I'm here to help with:
-
-    - Marketing strategy development
-    - Social media planning
-    - Ad campaign optimization
-    - Content creation ideas
-    - Budget allocation
-    - Performance tracking
-
-    **Note**: I'm currently running in demo mode. For full AI-powered responses, please configure a valid Gemini API key.
-
-    What specific marketing challenge can I help you with?"""
+        return "Cảm ơn bạn! AdVisor đang chạy ở chế độ Demo. Bạn có muốn thử làm quiz lại không?"
 
 
 # Global service instance
@@ -340,7 +300,7 @@ async def chat_endpoint(request: ChatRequest):
         
         prompt = f"{SYSTEM_PROMPT}\n\n{stage_instructions}\n\n{few_shot_context}{context_str}User Request: <user_input>{safe_message}</user_input>"
         
-        response_text = await gemini_service.generate(prompt)
+        response_text = await gemini_service.generate(prompt, phase)
         response_text = append_fallback_tags_if_missing(response_text, phase)
         
         return ChatResponse(response=response_text)
