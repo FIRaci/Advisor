@@ -103,11 +103,11 @@ export default function ChatHeader({
                 key={stage}
                 type="button"
                 role="listitem"
-                className={`stage-step ${currentStage > stage ? 'completed' : ''} ${currentStage === stage ? 'current' : ''} ${stage < currentStage ? 'clickable' : ''}`}
-                disabled={stage > currentStage || stageTransitionPending}
-                onClick={() => stage < currentStage && handleResetToStage(stage)}
+                className={`stage-step ${currentStage > stage ? 'completed' : ''} ${currentStage === stage ? 'current' : ''} ${stage > 0 && stage < currentStage ? 'clickable' : ''}`}
+                disabled={stage > currentStage || stageTransitionPending || stage === 0}
+                onClick={() => stage > 0 && stage < currentStage && handleResetToStage(stage)}
                 aria-current={currentStage === stage ? 'step' : undefined}
-                title={stage < currentStage
+                title={stage > 0 && stage < currentStage
                   ? `Return to Stage ${stage} (Warning: Progress after this stage will be reset)`
                   : STAGE_DESCRIPTORS[stage].title}
               >

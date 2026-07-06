@@ -9,6 +9,7 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Optional
 import json
+import random
 
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,6 +31,7 @@ logger = logging.getLogger(__name__)
 class Settings(BaseSettings):
     """Application settings with validation"""
     gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
+    gemini_api_keys: str = Field(default="", alias="GEMINI_API_KEYS") # Comma-separated keys
     port: int = Field(default=8000, alias="PORT")
     model_name: str = "gemini-3-flash-preview"
     backend_url: str = Field(default="http://backend:3000", alias="BACKEND_URL")
@@ -37,9 +39,13 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     
     @property
-    def is_api_key_valid(self) -> bool:
-        return len(self.gemini_api_key) > 30
-
+    def get_keys(self) -> list[str]:
+        keys = []
+        if self.gemini_api_keys:
+            keys.extend([k.strip() for k in self.gemini_api_keys.split(",") if len(k.strip()) > 30])
+        if self.gemini_api_key and len(self.gemini_api_key) > 30:
+            keys.append(self.gemini_api_key)
+        return list(set(keys))
 
 settings = Settings()
 
@@ -48,94 +54,135 @@ class GeminiService:
     """Modern Gemini AI service with proper error handling"""
     
     def __init__(self):
-        self.client: Optional[genai.Client] = None
-        self.use_mock = True
-        self._initialize()
+        self.keys = settings.get_keys
+        self.use_mock = len(self.keys) == 0
+        if not self.use_mock:
+            logger.info(f"Initialized with {len(self.keys)} API keys for rotation.")
+        else:
+            logger.warning("No valid API keys found - using mock mode.")
     
-    def _initialize(self) -> None:
-        """Initialize Gemini client without blocking network calls"""
-        if not settings.is_api_key_valid:
-            logger.warning("No valid API key - using mock mode")
-            return
-        
-        try:
-            self.client = genai.Client(api_key=settings.gemini_api_key)
-            self.use_mock = False
-            logger.info("Gemini AI client initialized successfully")
-        except Exception as e:
-            logger.error(f"Gemini initialization failed: {e}")
-            logger.info("Falling back to mock mode")
-    
+    def _get_client(self) -> genai.Client:
+        key = random.choice(self.keys)
+        return genai.Client(api_key=key)
+
     async def generate(self, prompt: str, phase: str = "1", quiz_data: dict = None) -> str:
         """Generate AI response asynchronously with fallback"""
         if self.use_mock:
             return self._get_mock_response(prompt, phase, quiz_data)
         
         try:
-            response = await self.client.aio.models.generate_content(
+            client = self._get_client()
+            response = await client.aio.models.generate_content(
                 model=settings.model_name,
                 contents=prompt
             )
             return response.text
         except Exception as e:
-            logger.error(f"Generation error: {e}")
+            logger.error(f"Generation error with primary key: {e}. Falling back to mock if all fail.")
+            if len(self.keys) > 1:
+                try:
+                    # Retry with another random key
+                    client = self._get_client()
+                    response = await client.aio.models.generate_content(
+                        model=settings.model_name,
+                        contents=prompt
+                    )
+                    return response.text
+                except Exception as retry_e:
+                    logger.error(f"Generation error on retry: {retry_e}")
             raise Exception(f"Gemini API error: {str(e)}")
     
     @staticmethod
     def _get_mock_response(message: str, phase: str = "1", quiz_data: dict = None) -> str:
         """Smart mock responses for demo mode"""
         quiz_data = quiz_data or {}
-        product_name = quiz_data.get("productName", "your product")
+        product_name = quiz_data.get("productName", "your brand")
         goal = quiz_data.get("goal", "growth")
+        target_audience = quiz_data.get("targetAudience", "broad demographics")
+        usp = quiz_data.get("usp", "great quality and service")
+        budget = quiz_data.get("budget", "standard budget")
         
         if phase == "1":
             return f"""# Marketing Strategy Proposal for {product_name.title()}
 
-Based on your quiz data, I have thoroughly analyzed your target market and competitive landscape. Since your main goal is {goal}, and your audience prefers quick shopping experiences, a combination of short-form content and targeted paid acquisition will yield the best results.
+Based on your quiz data, I have thoroughly analyzed your target market and competitive landscape. Since your main goal is **{goal}**, and your audience is primarily **{target_audience}**, we will leverage your unique selling proposition: "{usp}". 
 
-To optimize your initial budget, we need to allocate ad spend efficiently while leveraging viral organic content.
+Given your budget of {budget}, a combination of highly targeted content and paid acquisition will yield the best results.
 
-Here are 3 personalized strategic plans for you to choose from:"""
+Here are 3 personalized strategic plans for you to choose from:
+
+<plan>
+<id>A</id>
+<content>
+**Plan A: High-Velocity Acquisition**
+Focuses on rapid user growth through aggressive paid media.
+- **Primary Channels:** Paid Social (Meta/TikTok Ads), SEM
+- **Budget Allocation:** 70% Ads, 30% Content
+- **Expected Outcome:** High volume of leads quickly, suitable for the "{goal}" goal.
+</content>
+</plan>
+
+<plan>
+<id>B</id>
+<content>
+**Plan B: Organic Authority & SEO**
+Focuses on sustainable, long-term traffic by building trust with {target_audience}.
+- **Primary Channels:** SEO Content, Email Newsletters, Organic Social
+- **Budget Allocation:** 80% Content Creation, 20% Distribution
+- **Expected Outcome:** Lower CAC over time, establishing your brand's "{usp}".
+</content>
+</plan>
+
+<plan>
+<id>C</id>
+<content>
+**Plan C: Hybrid Community Driven**
+Blends influencer partnerships with targeted ads to maximize social proof.
+- **Primary Channels:** Influencer Marketing, Meta Retargeting
+- **Budget Allocation:** 50% Influencers, 50% Ads
+- **Expected Outcome:** High engagement and brand loyalty within the {target_audience} segment.
+</content>
+</plan>"""
         
         elif phase == "2":
+            channels = quiz_data.get("channels", "Multi-channel")
+            target_ctr = quiz_data.get("target_ctr", "3.0")
+            target_roas = quiz_data.get("target_roas", "2.5")
+            
             return f"""# Detailed Execution Plan (Stage 2)
 
-Based on the strategy you selected in Stage 1 for {product_name.title()}, I have outlined a week-by-week execution roadmap to optimize your budget and achieve your KPIs as quickly as possible.
+Based on the strategy you selected in Stage 1 for {product_name.title()}, I have outlined a week-by-week execution roadmap tailored to your choice of **{channels}**.
 
 ## 4-Week Execution Roadmap
-| Week | Objective | Channels | Budget |
+| Week | Objective | Action Items for {goal} | Budget |
 | :--- | :--- | :--- | :--- |
-| Week 1 | Brand Awareness & Lead Gen | Facebook Ads, Email | 30% |
-| Week 2 | Acceleration & Remarketing | Facebook Ads, TikTok | 40% |
-| Week 3 | Conversion Rate Optimization | Email, Website | 15% |
-| Week 4 | Evaluation & Scale-up | All Channels | 15% |
+| Week 1 | Brand Setup & Asset Creation | Design creatives highlighting "{usp}" | 20% |
+| Week 2 | Campaign Launch | Deploy ads targeting {target_audience} | 30% |
+| Week 3 | A/B Testing & Tweaks | Test ad copies and landing pages | 25% |
+| Week 4 | Scale Winners | Increase spend on top performing ads | 25% |
 
 ## Target KPI Benchmarks
-| Metric | Suggested Target | Current Status |
-| :--- | :--- | :--- |
-| **CTR** | > 3.5% | Not measured |
-| **CVR** | > 2.0% | Not measured |
-| **ROAS** | > 3.0x | N/A |
+| Metric | Suggested Target |
+| :--- | :--- |
+| **CTR** | > {target_ctr}% |
+| **CVR** | > 2.0% |
+| **ROAS** | > {target_roas}x |
 
-### Content Draft: Facebook Ad
-**Headline:** Don't miss the ultimate solution for {product_name}! 🚀
-**Body:** Are you struggling with inefficient ad spend? Let us help you optimize every dollar with a breakthrough marketing strategy tailored for {goal}. Join us today for a free consultation!
-**Call-to-Action:** Sign up now!
-
-### Content Draft: Email Newsletter
-**Subject:** Discover the secret to 3x revenue in 30 days 💥
-**Body:** Hi there, we just launched an exclusive method to optimize conversion rates for {product_name}. Do you want to be the first to apply it? Click the button below!
+### Content Draft: Lead Generation Ad
+**Headline:** Unlock the power of {product_name}! 🚀
+**Body:** Are you a part of {target_audience}? Discover why everyone is talking about our {usp}. Start achieving {goal} today.
+**Call-to-Action:** Learn More
 
 **[STAGE_TRANSITION]** You have completed Stage 2! You can now move to **Stage 3: Ongoing Optimization**.
 """
         elif phase == "3":
             return f"""# Optimization Report (Stage 3)
 
-Based on the latest performance metrics for {product_name.title()}, the campaign is experiencing a bottleneck in conversion rate (CVR).
+Based on the latest performance metrics for {product_name.title()}, the campaign targeting {target_audience} is experiencing a bottleneck in conversion rate (CVR).
 
 ## Optimization Proposals:
-1. **Pause underperforming ad sets**: Ads with CTR < 1.5% are wasting budget. Reallocate this 20% budget to a new Lookalike audience.
-2. **Refresh Content**: Current content is experiencing "Ad Fatigue". You should test short-form video formats like TikTok or Reels.
+1. **Pause underperforming ad sets**: Ads with CTR < 1.5% are wasting budget.
+2. **Refresh Content**: Current content highlighting "{usp}" needs a new angle. Consider short-form video formats.
 
 Try implementing these changes, update the metrics, and we will measure the results again next week!"""
 

@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+
+const remarkPluginsArray = [remarkGfm];
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import { useChatStore } from '../store/chatStore';
@@ -2622,7 +2624,7 @@ const TACTIC_SUGGESTIONS = [
                                 return (
                                   <>
                                     {hasText ? (
-                                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={reactMarkdownComponents}>{introMd}</ReactMarkdown>
+                                      <ReactMarkdown remarkPlugins={remarkPluginsArray} components={reactMarkdownComponents}>{introMd}</ReactMarkdown>
                                     ) : null}
                                   </>
                                 );
@@ -2670,7 +2672,7 @@ const TACTIC_SUGGESTIONS = [
                                       )}
                                     </div>
                                     <div className="plan-card-content">
-                                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={reactMarkdownComponents}>
+                                      <ReactMarkdown remarkPlugins={remarkPluginsArray} components={reactMarkdownComponents}>
                                         {plan.content.split('**').join('')}
                                       </ReactMarkdown>
                                     </div>
@@ -3082,7 +3084,7 @@ const TACTIC_SUGGESTIONS = [
                           ) : null}
                         </div>
                         <div className="message-content">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={reactMarkdownComponents}>
+                          <ReactMarkdown remarkPlugins={remarkPluginsArray} components={reactMarkdownComponents}>
                             {msg.content.replace(/^\[Content Prompt\] |^\[Content Assistant - [^\]]+\]\n\n/, '')}
                           </ReactMarkdown>
                         </div>
