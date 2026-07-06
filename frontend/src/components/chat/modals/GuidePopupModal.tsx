@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { HelpCircle, X, MessageSquare, ListChecks, PenTool, LayoutDashboard } from 'lucide-react';
+import { HelpCircle, X, MessageSquare, ListChecks, PenTool, LayoutDashboard, TrendingUp, MessageCircle } from 'lucide-react';
 
 interface GuidePopupModalProps {
   isOpen: boolean;
@@ -59,7 +59,19 @@ export default function GuidePopupModal({ isOpen, onClose, activeTab, setActiveT
                 className={`guide-modal-tab ${activeTab === 'panes' ? 'active' : ''}`}
                 onClick={() => setActiveTab('panes')}
               >
-                <PenTool size={16} /> Strategy & Content
+                <PenTool size={16} /> Strategy
+              </button>
+              <button 
+                className={`guide-modal-tab ${activeTab === 'metrics' ? 'active' : ''}`}
+                onClick={() => setActiveTab('metrics')}
+              >
+                <TrendingUp size={16} /> Metrics
+              </button>
+              <button 
+                className={`guide-modal-tab ${activeTab === 'faq' ? 'active' : ''}`}
+                onClick={() => setActiveTab('faq')}
+              >
+                <MessageCircle size={16} /> FAQ
               </button>
             </div>
 
@@ -74,6 +86,9 @@ export default function GuidePopupModal({ isOpen, onClose, activeTab, setActiveT
                     </li>
                     <li>
                       <strong>Content Generation:</strong> Let the AI draft posts based on your plan.
+                    </li>
+                    <li>
+                      <strong>Campaign Tracking:</strong> Monitor key performance indicators (KPIs).
                     </li>
                   </ul>
                 </div>
@@ -119,14 +134,43 @@ export default function GuidePopupModal({ isOpen, onClose, activeTab, setActiveT
                   <p>At Stage 3, the interface splits into two panes:</p>
                   <ul className="guide-list">
                     <li>
-                      <strong>Strategy Analyst (Left):</strong> Your ongoing chat and campaign context.
+                      <strong>Strategy Analyst (Left):</strong> Your ongoing chat and campaign context. Chat here to update your strategy or report metrics.
                     </li>
                     <li>
-                      <strong>Content Writer (Right):</strong> The drafted assets and copy.
+                      <strong>Content Writer (Right):</strong> The drafted assets and copy. Click buttons in the chat to auto-generate marketing materials here.
                     </li>
                   </ul>
                 </div>
               )}
+              {activeTab === 'metrics' && (
+                <div className="guide-section">
+                  <h4>Understanding Metrics</h4>
+                  <p>In Stage 3, you can report metrics to the AI for diagnosis. Keep these acronyms in mind:</p>
+                  <ul className="guide-list">
+                    <li><strong>CTR (Click-Through Rate):</strong> % of people who clicked your ad. High CTR means good creative/hook.</li>
+                    <li><strong>CVR (Conversion Rate):</strong> % of people who bought/signed up after clicking. High CVR means good landing page/offer.</li>
+                    <li><strong>CPA (Cost Per Acquisition):</strong> How much it costs to get one customer.</li>
+                    <li><strong>ROAS (Return On Ad Spend):</strong> For every $1 spent, how much revenue was generated.</li>
+                  </ul>
+                </div>
+              )}
+              {activeTab === 'faq' && (
+                <div className="guide-section">
+                  <h4>Frequently Asked Questions</h4>
+                  <ul className="guide-list">
+                    <li>
+                      <strong>Can I skip stages?</strong> No, AdVisor requires the context from previous stages to provide accurate advice.
+                    </li>
+                    <li>
+                      <strong>How do I change my initial quiz answers?</strong> You can rewind to Stage 1 at any time using the Header buttons, but this resets your current plan.
+                    </li>
+                    <li>
+                      <strong>What if the content drafted is too generic?</strong> Make sure to provide detailed context in your chat before hitting the "Draft" buttons.
+                    </li>
+                  </ul>
+                </div>
+              )}
+            </div>
             </div>
             
             <div className="guide-modal-footer">
