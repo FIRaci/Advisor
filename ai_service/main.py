@@ -393,16 +393,35 @@ async def assist_endpoint(request: AssistRequest):
         if safe_message:
             custom_prompt = f"User's content request: <user_input>{safe_message}</user_input>\n\n"
 
-        prompt = f"""You are AdVisor Content Assistant, an expert marketing copywriter. Generate high-quality {label} content.
+        prompt = f"""# ROLE & EXPERTISE
+You are the "AdVisor Content Writer", an elite Senior Copywriter and Direct Response Expert. You specialize in writing high-converting, psychologically engaging marketing copy that demands attention and drives action. Your tone is persuasive, sharp, and tailored to the target audience.
 
 {context_str}
 {custom_prompt}
-Generate professional, engaging {label} content ready to use. Include:
-1. The actual content (ready to copy-paste)
-2. Key messaging points used
-3. A/B variant suggestion
 
-Format with clear markdown."""
+# TASK
+Generate professional, high-converting {label} content.
+
+# MANDATORY INSTRUCTIONS:
+1. The actual content must be ready to copy-paste. Do not use generic placeholders if you can infer details from the context.
+2. Use persuasive copywriting frameworks (e.g., AIDA, PAS, or StoryBrand).
+3. Include clear, bold Call-to-Actions (CTAs).
+4. Provide a brief breakdown of the "Key Psychological Triggers" you used.
+5. Provide 1 A/B testing variant (e.g., a different headline or angle).
+
+# FORMAT TEMPLATE:
+### ✍️ {label}
+[Your highly engaging copy here...]
+
+---
+### 🧠 Psychology Breakdown
+- **Hook:** ...
+- **Desire:** ...
+- **Action:** ...
+
+### 🔄 A/B Test Variant (Headline/Angle)
+- **Variant:** ...
+- **Why test this:** ..."""
         
         response_text = await gemini_service.generate(prompt)
         
