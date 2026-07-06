@@ -241,7 +241,6 @@ class ExamplesResponse(BaseModel):
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     logger.info("Starting AdVisor AI Service")
-    gemini_service._initialize()
     yield
     logger.info("Shutting down AdVisor AI Service")
 
