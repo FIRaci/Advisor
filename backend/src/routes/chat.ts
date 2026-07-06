@@ -481,75 +481,84 @@ Format the response clearly using Markdown headings (e.g. ### Variant A: Pain Po
       usedFallback = true;
 
       if (type === 'email') {
-        assistText = `### Variant A: Pain Point Focus
-**Subject Line:** Stop losing time with manual tasks
+        assistText = `### ✍️ Marketing Email
+**Subject:** The secret to achieving ${goal} 3x faster 🤫
+**Hi [Name],**
 
-Hi [First Name],
-Are you tired of struggling with [pain point]? **${productName}** automates the heavy lifting so you can focus on what matters.
+I noticed you're exploring ways to scale your success in the ${audience} space. But let's be honest: relying on outdated methods is draining your time and budget.
+
+What if you could bypass the trial-and-error? 
+
+With **${productName}**, you get the exact blueprint to unlock explosive growth without the usual headaches. It's built specifically for ambitious teams like yours.
+
+Don't let your competitors grab your market share. 
+
+**[Click here to start your free 14-day trial of ${productName}]**
+
+Talk soon,
+The ${productName} Team
 
 ---
+### 🧠 Psychology Breakdown
+- **Hook:** Uses curiosity and an emoji to increase open rates.
+- **Desire:** Hits their core pain point ("draining your time") and paints a picture of a better future ("bypass trial-and-error").
+- **Action:** Clear, risk-free CTA (Free Trial) with embedded FOMO ("competitors grab your market share").
 
-### Variant B: Logical Benefits Focus
-**Subject Line:** Discover the smarter way to grow
-
-Hi [First Name],
-**${productName}** helps you save 50% of your time while increasing ROI by 2x. Join 10,000+ satisfied ${audience} who trust us.
-
----
-
-### Variant C: FOMO / Urgency Focus
-**Subject Line:** Last chance: Get 20% off ${productName}
-
-Hi [First Name],
-Don't get left behind! Offer ends tonight. Start your free trial today and secure your 20% lifetime discount.`;
+### 🔄 A/B Test Variant (Headline/Angle)
+- **Variant Subject Line:** How ${audience} leaders are securing ${goal} (Case Study)
+- **Why test this:** Tests "Authority & Social Proof" against the original "Curiosity & Urgency" angle.`;
       } else if (type === 'ad_copy') {
-        assistText = `### Variant A: Pain Point Focus
-**Headline:** Struggling with [pain point]?
-**Body:** Say goodbye to wasted hours. ${productName} automates your workflow effortlessly.
+        assistText = `### ✍️ Ad Copy
+**Headline:** Stop Wasting Budget. Start Scaling. 🚀
+**Body:** Are you tired of inconsistent results? Top ${audience} professionals are switching to **${productName}** to achieve ${goal} on autopilot. No more guesswork. Just proven, scalable results. Join 10,000+ smart marketers today.
 **CTA:** Learn More
 
 ---
+### 🧠 Psychology Breakdown
+- **Hook:** Agitates a universal pain point immediately ("wasting budget").
+- **Desire:** Leverages the "Bandwagon Effect" ("Top professionals are switching... 10,000+ smart marketers").
+- **Action:** Low-friction "Learn More" to drive high click-through rates.
 
-### Variant B: Logical Benefits Focus
-**Headline:** Save 50% Time & Double ROI
-**Body:** Join top ${audience} using ${productName} to scale up fast. 
-**CTA:** Get Started Free
-
----
-
-### Variant C: FOMO Focus
-**Headline:** Don't miss out - 20% Off Ends Soon!
-**Body:** 10,000+ users already upgraded. Secure your spot before the deal is gone.
-**CTA:** Claim Offer`;
+### 🔄 A/B Test Variant (Headline/Angle)
+- **Variant Headline:** The #1 Tool for ${audience} in 2026.
+- **Why test this:** Tests a pure "Authority/Status" angle vs the "Pain Point" angle.`;
       } else if (type === 'social_post') {
-        assistText = `### Variant A: Pain Point Focus
-**Hook:** Struggling with [pain point]?
-**Post:** Here is how ${productName} can solve it for you today!
-**Call to Action:** Link in bio.
+        assistText = `### ✍️ Social Media Post
+The hardest part about hitting ${goal}? Figuring out where to start. 🤯
+
+If you're part of the ${audience} community, you know the struggle. That's why we built **${productName}**—to give you a totally unfair advantage.  
+
+✅ Save 15+ hours a week
+✅ Cut your CAC in half
+✅ Scale without breaking things
+
+Ready to level up? Drop a 🚀 in the comments or click the link in our bio to see how it works!
 
 ---
+### 🧠 Psychology Breakdown
+- **Hook:** Relatable statement that makes the reader nod in agreement.
+- **Desire:** Clear, scannable bullet points highlighting tangible benefits ("unfair advantage").
+- **Action:** Engagement-focused CTA ("Drop a 🚀") to boost algorithmic reach before asking for the click.
 
-### Variant B: Logical Benefits Focus
-**Hook:** Why 10k+ users chose ${productName}.
-**Post:** Fast, reliable, and affordable for ${audience}. 
-**Call to Action:** Try it for free today!
-
----
-
-### Variant C: FOMO Focus
-**Hook:** Last chance to save 20%!
-**Post:** The biggest deal for ${productName} ends tonight. Don't let your competitors get ahead.
-**Call to Action:** Grab the offer now!`;
+### 🔄 A/B Test Variant (Headline/Angle)
+- **Variant Hook:** "Unpopular opinion: Achieving ${goal} shouldn't cost a fortune."
+- **Why test this:** "Unpopular opinion" hooks disrupt scrolling patterns and invite debate in the comments.`;
       } else {
-        assistText = `## Generated Content for ${productName}
+        const customContext = customPrompt ? `\n\n*Based on your request: "${customPrompt.substring(0, 50)}..."*` : '';
+        assistText = `### ✍️ Custom Content Draft
+**Headline:** Unlock Your True Potential with ${productName} ✨
+**Body:** Achieving ${goal} is no longer a luxury for the top 1%; it's a necessity for everyone in the ${audience} demographic. With **${productName}**, you get instant access to the tools, strategies, and frameworks that actually move the needle. 
+**CTA:** Try It Now${customContext}
 
-### Key Message
-${productName} helps ${audience} achieve ${goal} faster and more efficiently.
+---
+### 🧠 Psychology Breakdown
+- **Hook:** Aspirational framing ("Unlock Your True Potential").
+- **Desire:** Democratizes success ("no longer a luxury").
+- **Action:** Direct, urgent CTA.
 
-### Draft Content
-${customPrompt ? `Here is a drafted response based on: "${customPrompt}"\n\n[This is a generated placeholder. Please configure a valid Gemini API key to get fully personalized content.]` : `Get started with ${productName} today.`}
-
-*Configure your Gemini API key for AI-generated personalized content.*`;
+### 🔄 A/B Test Variant (Headline/Angle)
+- **Variant Headline:** The lazy way to achieve ${goal}.
+- **Why test this:** The "lazy/effortless" angle often outperforms purely aspirational copy in B2C or beginner-focused B2B.`;
       }
     }
 
