@@ -66,10 +66,10 @@ class GeminiService:
             logger.error(f"Gemini initialization failed: {e}")
             logger.info("Falling back to mock mode")
     
-    async def generate(self, prompt: str, phase: str = "1") -> str:
+    async def generate(self, prompt: str, phase: str = "1", quiz_data: dict = None) -> str:
         """Generate AI response asynchronously with fallback"""
         if self.use_mock:
-            return self._get_mock_response(prompt, phase)
+            return self._get_mock_response(prompt, phase, quiz_data)
         
         try:
             response = await self.client.aio.models.generate_content(
@@ -82,60 +82,64 @@ class GeminiService:
             raise Exception(f"Gemini API error: {str(e)}")
     
     @staticmethod
-    def _get_mock_response(message: str, phase: str = "1") -> str:
+    def _get_mock_response(message: str, phase: str = "1", quiz_data: dict = None) -> str:
         """Smart mock responses for demo mode"""
+        quiz_data = quiz_data or {}
+        product_name = quiz_data.get("productName", "your product")
+        goal = quiz_data.get("goal", "growth")
+        
         if phase == "1":
-            return """# Kế hoạch Marketing Đề xuất từ AdVisor
+            return f"""# Marketing Strategy Proposal for {product_name.title()}
 
-Dựa trên dữ liệu khảo sát của bạn, tôi đã phân tích kỹ lưỡng thị trường mục tiêu và bối cảnh cạnh tranh. Khách hàng của bạn chủ yếu là nhóm người dùng thích trải nghiệm mua sắm nhanh chóng, do đó, các kênh Digital Marketing kết hợp xây dựng nội dung ngắn sẽ mang lại hiệu quả cao nhất.
+Based on your quiz data, I have thoroughly analyzed your target market and competitive landscape. Since your main goal is {goal}, and your audience prefers quick shopping experiences, a combination of short-form content and targeted paid acquisition will yield the best results.
 
-Tuy nhiên, để tối ưu hóa ngân sách ban đầu, chúng ta cần phân bổ chi phí quảng cáo hợp lý và tận dụng các nội dung có tính viral.
+To optimize your initial budget, we need to allocate ad spend efficiently while leveraging viral organic content.
 
-Dưới đây là 3 phương án chiến lược (Plans) đã được cá nhân hóa để bạn lựa chọn:"""
+Here are 3 personalized strategic plans for you to choose from:"""
         
         elif phase == "2":
-            return """# Kế hoạch Thực thi Chi tiết (Stage 2)
+            return f"""# Detailed Execution Plan (Stage 2)
 
-Dựa trên chiến lược bạn đã chọn ở Stage 1, tôi đã vạch ra lộ trình thực thi theo tuần để tối ưu hoá ngân sách và đạt được KPIs mục tiêu nhanh nhất.
+Based on the strategy you selected in Stage 1 for {product_name.title()}, I have outlined a week-by-week execution roadmap to optimize your budget and achieve your KPIs as quickly as possible.
 
-## Lộ trình Thực thi 4 Tuần
-| Tuần | Mục tiêu | Kênh triển khai | Ngân sách |
+## 4-Week Execution Roadmap
+| Week | Objective | Channels | Budget |
 | :--- | :--- | :--- | :--- |
-| Tuần 1 | Xây dựng nhận diện & Thu thập Lead | Facebook Ads, Email | 30% |
-| Tuần 2 | Tăng tốc & Remarketing | Facebook Ads, TikTok | 40% |
-| Tuần 3 | Tối ưu hoá Tỷ lệ chuyển đổi | Email, Website | 15% |
-| Tuần 4 | Đánh giá & Scale-up | Tất cả các kênh | 15% |
+| Week 1 | Brand Awareness & Lead Gen | Facebook Ads, Email | 30% |
+| Week 2 | Acceleration & Remarketing | Facebook Ads, TikTok | 40% |
+| Week 3 | Conversion Rate Optimization | Email, Website | 15% |
+| Week 4 | Evaluation & Scale-up | All Channels | 15% |
 
-## Bảng Benchmarks Mục tiêu
-| Chỉ số | Target Đề xuất | Trạng thái |
+## Target KPI Benchmarks
+| Metric | Suggested Target | Current Status |
 | :--- | :--- | :--- |
-| **CTR** | > 3.5% | Chưa đo lường |
-| **CVR** | > 2.0% | Chưa đo lường |
+| **CTR** | > 3.5% | Not measured |
+| **CVR** | > 2.0% | Not measured |
 | **ROAS** | > 3.0x | N/A |
 
 ### Content Draft: Facebook Ad
-**Headline:** Đừng bỏ lỡ giải pháp tối ưu doanh thu cho doanh nghiệp của bạn! 🚀
-**Body:** Bạn đang đau đầu vì ngân sách quảng cáo không hiệu quả? Hãy để chúng tôi giúp bạn tối ưu từng đồng chi phí với chiến lược marketing đột phá. Tham gia ngay hôm nay để nhận tư vấn!
-**Call-to-Action:** Đăng ký nhận tư vấn ngay!
+**Headline:** Don't miss the ultimate solution for {product_name}! 🚀
+**Body:** Are you struggling with inefficient ad spend? Let us help you optimize every dollar with a breakthrough marketing strategy tailored for {goal}. Join us today for a free consultation!
+**Call-to-Action:** Sign up now!
 
 ### Content Draft: Email Newsletter
-**Subject:** Khám phá bí quyết tăng x3 doanh thu trong 30 ngày 💥
-**Body:** Chào bạn, chúng tôi vừa ra mắt một phương pháp độc quyền giúp tối ưu hóa tỷ lệ chuyển đổi. Bạn có muốn trở thành người đầu tiên áp dụng? Hãy click vào nút bên dưới nhé!
+**Subject:** Discover the secret to 3x revenue in 30 days 💥
+**Body:** Hi there, we just launched an exclusive method to optimize conversion rates for {product_name}. Do you want to be the first to apply it? Click the button below!
 
 **[STAGE_TRANSITION]** You have completed Stage 2! You can now move to **Stage 3: Ongoing Optimization**.
 """
         elif phase == "3":
-            return """# Báo cáo Tối ưu hoá (Stage 3)
+            return f"""# Optimization Report (Stage 3)
 
-Dựa trên các chỉ số hiệu suất gần nhất, chiến dịch đang gặp một số nút thắt ở tỷ lệ chuyển đổi (CVR).
+Based on the latest performance metrics for {product_name.title()}, the campaign is experiencing a bottleneck in conversion rate (CVR).
 
-## Đề xuất Tối ưu:
-1. **Tắt các nhóm quảng cáo kém hiệu quả**: Các ads có CTR < 1.5% đang tiêu tốn ngân sách vô ích. Hãy dồn 20% ngân sách này sang nhóm Lookalike mới.
-2. **Cập nhật Content**: Content hiện tại đang bị "Ad Fatigue". Bạn nên test thêm định dạng Video ngắn trên TikTok hoặc Reels.
+## Optimization Proposals:
+1. **Pause underperforming ad sets**: Ads with CTR < 1.5% are wasting budget. Reallocate this 20% budget to a new Lookalike audience.
+2. **Refresh Content**: Current content is experiencing "Ad Fatigue". You should test short-form video formats like TikTok or Reels.
 
-Hãy thử áp dụng các thay đổi này, cập nhật lại metrics và chúng ta sẽ đo lường lại vào tuần sau nhé!"""
+Try implementing these changes, update the metrics, and we will measure the results again next week!"""
 
-        return "Cảm ơn bạn! AdVisor đang chạy ở chế độ Demo. Bạn có muốn thử làm quiz lại không?"
+        return "Thank you! AdVisor is currently running in Demo Mode. Would you like to retake the quiz?"
 
 
 # Global service instance
@@ -278,8 +282,9 @@ async def chat_endpoint(request: ChatRequest):
     try:
         few_shot_context = build_few_shot_examples(limit=3)
 
-        # Extract phase from context
+        # Extract phase and quiz_data from context
         phase = "1"
+        quiz_data = {}
         if request.context and "quizData" in request.context:
             quiz_data = request.context.get("quizData", {})
             if isinstance(quiz_data, dict) and "phase" in quiz_data:
@@ -300,7 +305,7 @@ async def chat_endpoint(request: ChatRequest):
         
         prompt = f"{SYSTEM_PROMPT}\n\n{stage_instructions}\n\n{few_shot_context}{context_str}User Request: <user_input>{safe_message}</user_input>"
         
-        response_text = await gemini_service.generate(prompt, phase)
+        response_text = await gemini_service.generate(prompt, phase, quiz_data)
         response_text = append_fallback_tags_if_missing(response_text, phase)
         
         return ChatResponse(response=response_text)
