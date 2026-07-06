@@ -7,13 +7,15 @@ def get_stage_instructions(phase: str) -> str:
 MANDATORY: You MUST provide 2 to 4 selectable plan options depending on what fits best using the [PLAN_A], [PLAN_B], etc. tags.
 
 CRITICAL FORMATTING RULES:
-1. Start with 2-3 paragraphs of analysis.
-2. Then, you MUST provide the plans inside exactly ONE [PLAN_OPTIONS] block.
+1. FIRST, write a comprehensive 2-3 paragraph analysis of the user's business based on their quiz inputs. Evaluate their market, audience, and potential challenges.
+2. SECOND, you MUST provide the plans inside exactly ONE [PLAN_OPTIONS] block.
 3. EACH PLAN MUST BE WRAPPED IN [PLAN_X] AND [/PLAN_X] TAGS.
 4. DO NOT USE "Plan 1", "Plan 2". USE "[PLAN_A]", "[PLAN_B]", "[PLAN_C]".
-5. Never repeat plan blocks or duplicate the same plan ID.
+5. Make sure the plans are distinct (e.g., Aggressive Paid Ads vs Organic Content vs Balanced).
 6. When showing structured comparisons, use valid markdown tables (| col | col |), not plain-text pseudo tables.
 7. Example of required format:
+Here is my analysis of your business...
+
 **[PLAN_OPTIONS]**
 [PLAN_A]
 **Plan A: <Title>**
@@ -31,11 +33,13 @@ If you do not include these tags, the user CANNOT select a plan and CANNOT move 
     elif phase == "2":
         return """You are currently in Stage 2 (Execution Plan).
 IMPORTANT INSTRUCTIONS:
-1. Provide a highly detailed execution plan based on the user's chosen plan from Stage 1. Break down the channel strategy, timeline, milestones, and budget. Explain why this execution plan will work.
-2. Use proper markdown tables for timeline, KPIs, and budget split where useful.
-3. If quizData includes Stage 2 targets (deadline, target_ctr, target_cvr, target_roas), include a "Target KPI Benchmarks" table and explicitly reference these targets in your recommendations.
-4. If latestMetrics are available, include a concise "Target vs Actual" table comparing actual values to target benchmarks.
-5. At the very end of your response, you MUST include this exact string to allow the user to transition to Stage 3:
+1. Provide a HIGHLY DETAILED execution plan based on the user's chosen strategy. You are a top-tier Marketing Director. Break down the channel strategy, week-by-week timeline, milestones, and budget allocation.
+2. CONTENT GENERATION: You MUST generate at least 2 specific pieces of content (e.g., a Facebook Ad copy, an Email Newsletter draft, or a TikTok video script) based on the strategy. Label them clearly with headings like "### Content Draft: Facebook Ad". This is critical for the AI Content Writer to process.
+3. Use proper markdown tables for timeline, KPIs, and budget split where useful.
+4. Explain the psychological triggers and why this strategy will convert.
+5. If quizData includes Stage 2 targets (deadline, target_ctr, target_cvr, target_roas), include a "Target KPI Benchmarks" table and explicitly reference these targets in your recommendations.
+6. If latestMetrics are available, include a concise "Target vs Actual" table comparing actual values to target benchmarks.
+7. At the very end of your response, you MUST include this exact string to allow the user to transition to Stage 3:
 **[STAGE_TRANSITION]** You have completed Stage 2! You can now move to **Stage 3: Ongoing Optimization**."""
 
     elif phase == "3":

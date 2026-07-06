@@ -2597,108 +2597,13 @@ const TACTIC_SUGGESTIONS = [
                                     {hasText ? (
                                       <ReactMarkdown remarkPlugins={[remarkGfm]} components={reactMarkdownComponents}>{introMd}</ReactMarkdown>
                                     ) : null}
-                                    {hasPlans ? (
-                                      <div className="plan-cards">
-                                        {parsedPlans.map((plan) => (
-                                          <motion.button
-                                            key={plan.id}
-                                            className={`plan-card ${selectedPlanInChat === plan.id || currentCampaign?.quizData?.selectedPlan === plan.id ? 'selected' : ''}`}
-                                            onClick={() => handleSelectPlan(plan.id, plan.content)}
-                                            disabled={loading || !!currentCampaign?.quizData?.selectedPlan}
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
-                                          >
-                                            <div className="plan-card-badge">
-                                              {plan.id === 'A' || plan.id === '1' ? (
-                                                <Zap size={16} />
-                                              ) : plan.id === 'B' || plan.id === '2' ? (
-                                                <Target size={16} />
-                                              ) : plan.id === 'C' || plan.id === '3' ? (
-                                                <Award size={16} />
-                                              ) : (
-                                                <Sparkles size={16} />
-                                              )}
-                                            </div>
-                                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={reactMarkdownComponents}>{plan.content}</ReactMarkdown>
-                                            {(selectedPlanInChat === plan.id ||
-                                              currentCampaign?.quizData?.selectedPlan === plan.id) && (
-                                              <div className="plan-card-check">
-                                                <Check size={16} />
-                                              </div>
-                                            )}
-                                          </motion.button>
-                                        ))}
-                                      </div>
-                                    ) : null}
                                   </>
                                 );
                               })()}
-
-                              {/* Content Assistant offer - after plan selected, before Stage 2 */}
-                              {i === analystMessages.length - 1 && currentCampaign?.quizData?.selectedPlan && currentStage === 1 && !hasStageTransition(msg.content) && (
-                                <div className="content-assist-offer">
-                                  <p className="chat-ext-22">
-                                    {'Want AI to draft some content for your campaign before moving on?'}
-                                  </p>
-                                  <div className="content-assist-buttons">
-                                    <button
-                                      className="content-assist-btn"
-                                      onClick={() => handleAssistContent('email')}
-                                      disabled={assistLoading}
-                                    >
-                                      <Mail size={14} />
-                                      <span>{'Draft Email'}</span>
-                                    </button>
-                                    <button
-                                      className="content-assist-btn"
-                                      onClick={() => handleAssistContent('ad_copy')}
-                                      disabled={assistLoading}
-                                    >
-                                      <FileText size={14} />
-                                      <span>{'Ad Copy'}</span>
-                                    </button>
-                                    <button
-                                      className="content-assist-btn"
-                                      onClick={() => handleAssistContent('social_post')}
-                                      disabled={assistLoading}
-                                    >
-                                      <Palette size={14} />
-                                      <span>{'Social Post'}</span>
-                                    </button>
-                                  </div>
-                                  <button
-                                    className="btn btn-primary btn-sm chat-ext-23"
-                                    onClick={() => handleAdvanceStage(2)}
-                                    disabled={loading}
-                                    
-                                  >
-                                    <ArrowRight size={16} />
-                                    {'Skip to Stage 2'}
-                                  </button>
-                                </div>
-                              )}
-
-                              {/* Stage transition prompt */}
-                              {hasStageTransition(msg.content) && i === analystMessages.length - 1 && (
-                                <div className="stage-transition-prompt">
-                                  <p>{'Ready to move to the next stage?'}</p>
-                                  <button
-                                    className="btn btn-primary btn-sm"
-                                    onClick={() => handleAdvanceStage(currentStage + 1)}
-                                    disabled={loading}
-                                  >
-                                    <ArrowRight size={16} />
-                                    {currentStage < 3
-                                      ? `Go to Stage ${currentStage + 1}`
-                                      : ('Continue Optimizing')}
-                                  </button>
-                                </div>
-                              )}
                             </>
-                          ) : msg.content.startsWith('# ?? Campaign Performance Report') ? (
+                          ) : msg.content.startsWith('# 📈 Campaign Performance Report') ? (
                             <div style={{ background: 'rgba(255,255,255,0.04)', padding: '0.75rem 1rem', borderRadius: '0.5rem', border: '1px solid rgba(255,255,255,0.08)' }}>
                               <div className="chat-ext-24">
-                                <BarChart3 size={16} className="chat-ext-25" />
                                 <span className="chat-ext-26">Campaign Data Provided to AI</span>
                               </div>
                               <p className="chat-ext-27">
@@ -2709,6 +2614,108 @@ const TACTIC_SUGGESTIONS = [
                             <p>{msg.content}</p>
                           )}
                         </div>
+
+                        {/* Rendering Plan Cards OUTSIDE the message bubble */}
+                        {msg.role === 'ASSISTANT' && (() => {
+                          const parsedPlans = parsePlanOptions(msg.content);
+                          if (parsedPlans.length === 0) return null;
+                          return (
+                            <div className="plan-cards-container" style={{ marginTop: '1.5rem', marginBottom: '1rem', width: '100%' }}>
+                              <div className="plan-cards">
+                                {parsedPlans.map((plan) => (
+                                  <motion.button
+                                    key={plan.id}
+                                    className={`plan-card ${selectedPlanInChat === plan.id || currentCampaign?.quizData?.selectedPlan === plan.id ? 'selected' : ''}`}
+                                    onClick={() => handleSelectPlan(plan.id, plan.content)}
+                                    disabled={loading || !!currentCampaign?.quizData?.selectedPlan}
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                  >
+                                    <div className="plan-card-badge">
+                                      {plan.id === 'A' || plan.id === '1' ? (
+                                        <Zap size={16} />
+                                      ) : plan.id === 'B' || plan.id === '2' ? (
+                                        <Target size={16} />
+                                      ) : plan.id === 'C' || plan.id === '3' ? (
+                                        <Award size={16} />
+                                      ) : (
+                                        <Sparkles size={16} />
+                                      )}
+                                    </div>
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={reactMarkdownComponents}>{plan.content}</ReactMarkdown>
+                                    {(selectedPlanInChat === plan.id ||
+                                      currentCampaign?.quizData?.selectedPlan === plan.id) && (
+                                      <div className="plan-card-check">
+                                        <Check size={16} />
+                                      </div>
+                                    )}
+                                  </motion.button>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Content Assistant offer - after plan selected, before Stage 2 */}
+                        {msg.role === 'ASSISTANT' && i === analystMessages.length - 1 && currentCampaign?.quizData?.selectedPlan && currentStage === 1 && !hasStageTransition(msg.content) && (
+                          <div className="content-assist-offer" style={{ marginTop: '1rem', width: '100%' }}>
+                            <p className="chat-ext-22">
+                              {'Want AI to draft some content for your campaign before moving on?'}
+                            </p>
+                            <div className="content-assist-buttons">
+                              <button
+                                className="content-assist-btn"
+                                onClick={() => handleAssistContent('email')}
+                                disabled={assistLoading}
+                              >
+                                <Mail size={14} />
+                                <span>{'Draft Email'}</span>
+                              </button>
+                              <button
+                                className="content-assist-btn"
+                                onClick={() => handleAssistContent('ad_copy')}
+                                disabled={assistLoading}
+                              >
+                                <FileText size={14} />
+                                <span>{'Ad Copy'}</span>
+                              </button>
+                              <button
+                                className="content-assist-btn"
+                                onClick={() => handleAssistContent('social_post')}
+                                disabled={assistLoading}
+                              >
+                                <Palette size={14} />
+                                <span>{'Social Post'}</span>
+                              </button>
+                            </div>
+                            <button
+                              className="btn btn-primary btn-sm chat-ext-23"
+                              onClick={() => handleAdvanceStage(2)}
+                              disabled={loading}
+                              
+                            >
+                              <ArrowRight size={16} />
+                              {'Skip to Stage 2'}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Stage transition prompt */}
+                        {msg.role === 'ASSISTANT' && hasStageTransition(msg.content) && i === analystMessages.length - 1 && (
+                          <div className="stage-transition-prompt" style={{ marginTop: '1rem', width: '100%' }}>
+                            <p>{'Ready to move to the next stage?'}</p>
+                            <button
+                              className="btn btn-primary btn-sm"
+                              onClick={() => handleAdvanceStage(currentStage + 1)}
+                              disabled={loading}
+                            >
+                              <ArrowRight size={16} />
+                              {currentStage < 3
+                                ? `Go to Stage ${currentStage + 1}`
+                                : ('Continue Optimizing')}
+                            </button>
+                          </div>
+                        )}
 
                         <div className="message-tools">
                           {msg.role === 'ASSISTANT' && i === analystMessages.length - 1 && (
