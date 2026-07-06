@@ -7,7 +7,7 @@ import {
   BarChart3, BookOpen, Package, Building, Users, RefreshCw, Zap, ArrowRight, ArrowDown, ArrowUp, Award,
   Target, Megaphone, DollarSign, Globe, Clock, Briefcase, Plug, X, HelpCircle,
   Mail, FileText, Palette, Upload, TrendingUp, TrendingDown, Heart, Smartphone, ShoppingBag, CheckCircle2,
-  Edit2
+  Edit2, AlertTriangle
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -255,7 +255,32 @@ export default function Chat() {
     editingQuizField, setEditingQuizField,
     editingQuizValue, setEditingQuizValue
   } = useChatStore();
-  // ���� Local-only UI state (not shared, stays in Chat component) ����
+  // ���� Local-only UI state (not shared, stays in Chat component) ����
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   const [confirmModalData, setConfirmModalData] = useState<{
     title: string;
     message: string;
@@ -269,7 +294,8 @@ export default function Chat() {
   const insightsScrollRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const autostartTriggeredRef = useRef(false);
+  const autostartTriggeredRef = useRef(false);
+
 
 const TACTIC_SUGGESTIONS = [
   "Social Media Post (Facebook/Insta)",
@@ -280,8 +306,14 @@ const TACTIC_SUGGESTIONS = [
   "Advertising Copy (Google/Meta)",
   "Landing Page Copy",
   "Product Description"
-];
-  const [phase2Answers, setPhase2Answers] = useState<Record<string, string>>({});
+];
+
+
+
+  const [phase2Answers, setPhase2Answers] = useState<Record<string, string>>({});
+
+
+
   useEffect(() => {
     if (!phase2PopupOpen) return;
     setPhase2TextInput('');
@@ -2405,25 +2437,20 @@ const TACTIC_SUGGESTIONS = [
         {currentCampaign && quizDataIssue && (
           <div className="stage-recovery-banner" role="alert">
             <div className="stage-recovery-text">
-              <strong>{'Campaign data needs recovery'}</strong>
-              <p>{quizDataIssue.message}</p>
+              <AlertTriangle size={18} className="recovery-icon" />
+              <div>
+                <strong>{'Campaign data needs recovery'}</strong>
+                <p>{quizDataIssue.message}</p>
+              </div>
             </div>
             <div className="stage-recovery-actions">
               <button
                 type="button"
-                className="btn-secondary"
+                className="btn btn-primary btn-sm"
                 onClick={() => handleResetToStage(1)}
                 disabled={stageTransitionPending}
               >
-                {'Reselect plan'}
-              </button>
-              <button
-                type="button"
-                className="btn-tertiary"
-                onClick={() => handleResetToStage(0)}
-                disabled={stageTransitionPending}
-              >
-                {'Restart quiz'}
+                {'Reselect Plan (Rewind to Stage 1)'}
               </button>
             </div>
           </div>
@@ -2633,20 +2660,24 @@ const TACTIC_SUGGESTIONS = [
                                   >
                                     <div className="plan-card-badge">
                                       {plan.id === 'A' || plan.id === '1' ? (
-                                        <Zap size={16} />
+                                        <Zap size={18} />
                                       ) : plan.id === 'B' || plan.id === '2' ? (
-                                        <Target size={16} />
+                                        <Target size={18} />
                                       ) : plan.id === 'C' || plan.id === '3' ? (
-                                        <Award size={16} />
+                                        <Award size={18} />
                                       ) : (
-                                        <Sparkles size={16} />
+                                        <Sparkles size={18} />
                                       )}
                                     </div>
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={reactMarkdownComponents}>{plan.content}</ReactMarkdown>
+                                    <div className="plan-card-content">
+                                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={reactMarkdownComponents}>
+                                        {plan.content.split('**').join('')}
+                                      </ReactMarkdown>
+                                    </div>
                                     {(selectedPlanInChat === plan.id ||
                                       currentCampaign?.quizData?.selectedPlan === plan.id) && (
                                       <div className="plan-card-check">
-                                        <Check size={16} />
+                                        <Check size={14} strokeWidth={3} />
                                       </div>
                                     )}
                                   </motion.button>
