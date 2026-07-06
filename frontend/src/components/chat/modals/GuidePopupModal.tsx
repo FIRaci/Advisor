@@ -42,21 +42,21 @@ export default function GuidePopupModal({ isOpen, onClose, activeTab, setActiveT
               </button>
             </div>
             
-            <div className="guide-tabs">
+            <div className="guide-modal-tabs">
               <button 
-                className={`guide-tab ${activeTab === 'overview' ? 'active' : ''}`}
+                className={`guide-modal-tab ${activeTab === 'overview' ? 'active' : ''}`}
                 onClick={() => setActiveTab('overview')}
               >
                 <LayoutDashboard size={16} /> Overview
               </button>
               <button 
-                className={`guide-tab ${activeTab === 'stages' ? 'active' : ''}`}
+                className={`guide-modal-tab ${activeTab === 'stages' ? 'active' : ''}`}
                 onClick={() => setActiveTab('stages')}
               >
                 <ListChecks size={16} /> Stages
               </button>
               <button 
-                className={`guide-tab ${activeTab === 'panes' ? 'active' : ''}`}
+                className={`guide-modal-tab ${activeTab === 'panes' ? 'active' : ''}`}
                 onClick={() => setActiveTab('panes')}
               >
                 <PenTool size={16} /> Strategy & Content
@@ -68,18 +68,12 @@ export default function GuidePopupModal({ isOpen, onClose, activeTab, setActiveT
                 <div className="guide-section">
                   <h4>Welcome to your AI Marketing Co-Pilot</h4>
                   <p>AdVisor uses a structured, multi-stage process to help you build campaigns. You don't have to start from a blank page.</p>
-                  <ul className="guide-feature-list">
+                  <ul className="guide-list">
                     <li>
-                      <div className="feature-icon"><MessageSquare size={16}/></div>
-                      <div>
-                        <strong>Interactive Planning:</strong> Answer questions to build a strategy.
-                      </div>
+                      <strong>Interactive Planning:</strong> Answer questions to build a strategy.
                     </li>
                     <li>
-                      <div className="feature-icon"><PenTool size={16}/></div>
-                      <div>
-                        <strong>Content Generation:</strong> Let the AI draft posts based on your plan.
-                      </div>
+                      <strong>Content Generation:</strong> Let the AI draft posts based on your plan.
                     </li>
                   </ul>
                 </div>
@@ -87,24 +81,34 @@ export default function GuidePopupModal({ isOpen, onClose, activeTab, setActiveT
               {activeTab === 'stages' && (
                 <div className="guide-section">
                   <h4>The 4-Stage Process</h4>
-                  <div className="stage-explanation-list">
-                    <div className="stage-explanation">
-                      <div className="stage-badge stage-badge-1">1</div>
-                      <div className="stage-text">
-                        <strong>Discovery:</strong> Gather basic info about your product and audience.
+                  <div className="guide-stages-grid">
+                    <div className="guide-stage-card guide-stage-card--0">
+                      <div className="guide-stage-card-head">
+                        <div className="guide-stage-num">0</div>
+                        <h4>Discovery</h4>
                       </div>
+                      <p className="guide-stage-subtitle">Gather basic info about your product and audience.</p>
                     </div>
-                    <div className="stage-explanation">
-                      <div className="stage-badge stage-badge-2">2</div>
-                      <div className="stage-text">
-                        <strong>Strategy:</strong> Define specific channels, formats, and messages.
+                    <div className="guide-stage-card guide-stage-card--1">
+                      <div className="guide-stage-card-head">
+                        <div className="guide-stage-num">1</div>
+                        <h4>Strategy</h4>
                       </div>
+                      <p className="guide-stage-subtitle">Define specific channels, formats, and messages.</p>
                     </div>
-                    <div className="stage-explanation">
-                      <div className="stage-badge stage-badge-3">3</div>
-                      <div className="stage-text">
-                        <strong>Execution:</strong> Draft the actual content for your campaign.
+                    <div className="guide-stage-card guide-stage-card--2">
+                      <div className="guide-stage-card-head">
+                        <div className="guide-stage-num">2</div>
+                        <h4>Execution</h4>
                       </div>
+                      <p className="guide-stage-subtitle">Draft the actual content for your campaign.</p>
+                    </div>
+                    <div className="guide-stage-card guide-stage-card--3">
+                      <div className="guide-stage-card-head">
+                        <div className="guide-stage-num">3</div>
+                        <h4>Optimization</h4>
+                      </div>
+                      <p className="guide-stage-subtitle">Analyze metrics and improve performance.</p>
                     </div>
                   </div>
                 </div>
@@ -113,20 +117,14 @@ export default function GuidePopupModal({ isOpen, onClose, activeTab, setActiveT
                 <div className="guide-section">
                   <h4>Dual-Pane Interface</h4>
                   <p>At Stage 3, the interface splits into two panes:</p>
-                  <div className="pane-explanation-list">
-                    <div className="pane-explanation">
-                      <div className="pane-icon" style={{color: 'var(--accent)'}}><HelpCircle size={16}/></div>
-                      <div className="pane-text">
-                        <strong>Strategy Analyst (Left):</strong> Your ongoing chat and campaign context.
-                      </div>
-                    </div>
-                    <div className="pane-explanation">
-                      <div className="pane-icon" style={{color: '#34d399'}}><PenTool size={16}/></div>
-                      <div className="pane-text">
-                        <strong>Content Writer (Right):</strong> The drafted assets and copy.
-                      </div>
-                    </div>
-                  </div>
+                  <ul className="guide-list">
+                    <li>
+                      <strong>Strategy Analyst (Left):</strong> Your ongoing chat and campaign context.
+                    </li>
+                    <li>
+                      <strong>Content Writer (Right):</strong> The drafted assets and copy.
+                    </li>
+                  </ul>
                 </div>
               )}
             </div>
