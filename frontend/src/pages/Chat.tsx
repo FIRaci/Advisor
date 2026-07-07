@@ -1851,9 +1851,9 @@ const TACTIC_SUGGESTIONS = [
       if (typeof child === 'string') {
         return parseGlossaryText(child);
       }
-      if (React.isValidElement(child) && child.props && child.props.children) {
+      if (React.isValidElement(child) && (child as any).props && (child as any).props.children) {
          return React.cloneElement(child as React.ReactElement<any>, {
-           children: processChildren(child.props.children)
+           children: processChildren((child as any).props.children)
          });
       }
       return child;
