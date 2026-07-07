@@ -3812,12 +3812,11 @@ body.chat-page-active {
   background-color: rgba(59, 130, 246, 0.1);
 }
 
-.glossary-tooltip-trigger::after {
-  content: attr(data-tooltip);
+.glossary-tooltip-box {
   position: absolute;
   bottom: 100%;
   left: 50%;
-  transform: translateX(-50%) translateY(10px);
+  transform: translateX(-50%) translateY(-5px);
   width: max-content;
   max-width: 250px;
   background: #1e293b;
@@ -3829,15 +3828,13 @@ body.chat-page-active {
   line-height: 1.4;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.2s ease;
   z-index: 1000;
   pointer-events: none;
+  text-align: left;
+  animation: tooltipFadeIn 0.15s ease-out forwards;
 }
 
-.glossary-tooltip-trigger:hover::after {
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(-50%) translateY(-5px);
+@keyframes tooltipFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

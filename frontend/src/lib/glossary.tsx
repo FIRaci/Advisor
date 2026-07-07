@@ -19,6 +19,46 @@ export const GLOSSARY_TERMS: Record<string, string> = {
 // Create a regex to match any of the terms (case-insensitive, whole word)
 const termsRegex = new RegExp(`\\b(${Object.keys(GLOSSARY_TERMS).join('|')})\\b`, 'gi');
 
+const GlossaryWord = ({ term, definition }: { term: string, definition: string }) => {
+  const [show, setShow] = React.useState(false);
+  const tooltipRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (show && tooltipRef.current) {
+      const rect = tooltipRef.current.getBoundingClientRect();
+      const parentRect = tooltipRef.current.parentElement?.getBoundingClientRect();
+      
+      // If tooltip overflows right side of screen/pane
+      if (rect.right > window.innerWidth - 20) {
+        tooltipRef.current.style.left = 'auto';
+        tooltipRef.current.style.right = '0';
+        tooltipRef.current.style.transform = 'translateY(-5px)';
+      } 
+      // If tooltip overflows left side
+      else if (rect.left < 20) {
+        tooltipRef.current.style.left = '0';
+        tooltipRef.current.style.right = 'auto';
+        tooltipRef.current.style.transform = 'translateY(-5px)';
+      }
+    }
+  }, [show]);
+
+  return (
+    <span 
+      className="glossary-tooltip-trigger" 
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      {term}
+      {show && (
+        <div ref={tooltipRef} className="glossary-tooltip-box">
+          {definition}
+        </div>
+      )}
+    </span>
+  );
+};
+
 /**
  * Parses a string and replaces glossary terms with interactive tooltips.
  * Returns an array of strings and React nodes.
@@ -40,9 +80,7 @@ export function parseGlossaryText(text: string): React.ReactNode[] {
       
       if (definition) {
         result.push(
-          <span key={`${part}-${i}`} className="glossary-tooltip-trigger" data-tooltip={definition}>
-            {part}
-          </span>
+          <GlossaryWord key={`${part}-${i}`} term={part} definition={definition} />
         );
       } else {
         result.push(part);
