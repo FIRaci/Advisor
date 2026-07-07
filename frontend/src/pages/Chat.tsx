@@ -2882,6 +2882,7 @@ const TACTIC_SUGGESTIONS = [
               loading={loading} 
               currentCampaign={currentCampaign} 
               onOpenFullQuiz={handleOpenFullQuiz} 
+              stage={currentStage}
             />
           </div>
 

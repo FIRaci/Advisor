@@ -5,22 +5,37 @@ interface ChatInputProps {
   loading: boolean;
   currentCampaign: { quizData?: any } | null;
   onOpenFullQuiz: () => void;
+  stage?: number;
 }
 
-const PREDEFINED_PROMPTS = [
+const STAGE_1_PROMPTS = [
   "Analyze main competitors",
-  "Plan a new product launch",
-  "Suggest a multi-channel marketing campaign",
-  "How to optimize advertising costs",
-  "Content proposals for the upcoming holidays",
-  "Create a basic marketing budget",
-  "Product pricing strategy",
   "Understand the Gen Z customer segment",
-  "How to increase conversion rate (CR)",
+  "Product pricing strategy",
   "SWOT analysis for the project",
+  "Define our unique selling proposition (USP)",
+  "Research emerging market trends",
 ];
 
-export default function ChatInput({ onSend, loading, currentCampaign, onOpenFullQuiz }: ChatInputProps) {
+const STAGE_2_PROMPTS = [
+  "Plan a new product launch",
+  "Suggest a multi-channel marketing campaign",
+  "Create a basic marketing budget",
+  "Content proposals for the upcoming holidays",
+  "Draft an email sequence for abandoned carts",
+  "Outline a 30-day social media calendar",
+];
+
+const STAGE_3_PROMPTS = [
+  "How to optimize advertising costs",
+  "How to increase conversion rate (CR)",
+  "Analyze our current ROAS and CPC",
+  "A/B testing ideas for our landing page",
+  "Strategies to reduce customer churn",
+  "Scale our best performing ads",
+];
+
+export default function ChatInput({ onSend, loading, currentCampaign, onOpenFullQuiz, stage = 1 }: ChatInputProps) {
   const [input, setInput] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [suggestionOffset, setSuggestionOffset] = useState(0);
@@ -80,12 +95,15 @@ export default function ChatInput({ onSend, loading, currentCampaign, onOpenFull
   };
 
   const handleShuffleSuggestions = () => {
-    setSuggestionOffset((prev) => (prev + 3) % PREDEFINED_PROMPTS.length);
+    setSuggestionOffset((prev) => prev + 3);
   };
 
-  const visibleSuggestions = PREDEFINED_PROMPTS.slice(suggestionOffset, suggestionOffset + 3);
+  const activePrompts = stage === 1 ? STAGE_1_PROMPTS : stage === 2 ? STAGE_2_PROMPTS : STAGE_3_PROMPTS;
+  const currentOffset = suggestionOffset % activePrompts.length;
+  
+  const visibleSuggestions = activePrompts.slice(currentOffset, currentOffset + 3);
   if (visibleSuggestions.length < 3) {
-    visibleSuggestions.push(...PREDEFINED_PROMPTS.slice(0, 3 - visibleSuggestions.length));
+    visibleSuggestions.push(...activePrompts.slice(0, 3 - visibleSuggestions.length));
   }
 
   return (
@@ -106,10 +124,10 @@ export default function ChatInput({ onSend, loading, currentCampaign, onOpenFull
               <Sparkles size={12} /> AI Suggestions
             </span>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button type="button" onClick={handleShuffleSuggestions} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', padding: 0 }} title="Load thêm gợi ý">
+              <button type="button" onClick={handleShuffleSuggestions} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', padding: 0 }} title="Refresh suggestions">
                 <RefreshCw size={12} />
               </button>
-              <button type="button" onClick={() => setShowSuggestions(false)} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', padding: 0 }} title="Đóng">
+              <button type="button" onClick={() => setShowSuggestions(false)} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', padding: 0 }} title="Close">
                 <X size={14} />
               </button>
             </div>
