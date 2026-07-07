@@ -202,7 +202,6 @@ export default function GuidePopupModal({ isOpen, onClose, activeTab, setActiveT
                 </div>
               )}
             </div>
-            </div>
             
             <div className="guide-modal-footer">
               <button className="btn btn-primary" onClick={onClose}>
