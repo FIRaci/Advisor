@@ -6,7 +6,7 @@ export const GLOSSARY_TERMS: Record<string, string> = {
   'LTV': 'Lifetime Value. The total revenue a business can expect from a single customer account.',
   'CPC': 'Cost Per Click. The amount you pay for each click on your ad.',
   'CPA': 'Cost Per Action. The average cost paid for a specific conversion or action.',
-  'CPL': 'Cost Per Lead. The amount you pay to acquire a potential customer\\'s contact information.',
+  'CPL': "Cost Per Lead. The amount you pay to acquire a potential customer's contact information.",
   'CTR': 'Click-Through Rate. The percentage of people who click on your ad after seeing it. High CTR indicates engaging content.',
   'CPM': 'Cost Per Mille. The cost you pay per 1,000 views or impressions of an advertisement.',
   'AIDA': 'Marketing funnel model: Attention, Interest, Desire, Action.',
