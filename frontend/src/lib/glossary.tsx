@@ -1,19 +1,19 @@
 import React from 'react';
 
 export const GLOSSARY_TERMS: Record<string, string> = {
-  'ROAS': 'Tỷ suất lợi nhuận trên chi phí quảng cáo (Return on Ad Spend). Ví dụ ROAS 3 nghĩa là bỏ 1 đồng thu 3 đồng.',
-  'CAC': 'Chi phí thu hút 1 khách hàng mới (Customer Acquisition Cost). Phải nhỏ hơn LTV thì mới có lãi.',
-  'LTV': 'Giá trị vòng đời khách hàng (Lifetime Value). Tổng lợi nhuận một khách hàng mang lại.',
-  'CPC': 'Chi phí cho mỗi lượt nhấp chuột (Cost Per Click).',
-  'CPA': 'Chi phí cho mỗi hành động/chuyển đổi (Cost Per Action).',
-  'CPL': 'Chi phí để có một thông tin khách hàng tiềm năng (Cost Per Lead).',
-  'CTR': 'Tỷ lệ nhấp chuột (Click-Through Rate). Tỷ lệ càng cao chứng tỏ nội dung càng hấp dẫn.',
-  'CPM': 'Chi phí cho 1000 lượt hiển thị (Cost Per Mille).',
-  'AIDA': 'Mô hình phễu marketing: Attention (Chú ý) - Interest (Thích thú) - Desire (Khao khát) - Action (Hành động).',
-  'PAS': 'Mô hình viết content: Problem (Nêu vấn đề) - Agitation (Xoáy sâu nỗi đau) - Solution (Đưa giải pháp).',
-  'USP': 'Lợi điểm bán hàng độc nhất (Unique Selling Proposition) - Yếu tố làm bạn khác biệt với đối thủ.',
-  'STP': 'Mô hình chiến lược cốt lõi: Segmentation (Phân khúc) - Targeting (Mục tiêu) - Positioning (Định vị).',
-  'KPI': 'Chỉ số đánh giá hiệu suất trọng yếu (Key Performance Indicator).',
+  'ROAS': 'Return on Ad Spend. The amount of revenue earned for every dollar spent on a campaign.',
+  'CAC': 'Customer Acquisition Cost. The total cost of acquiring a new customer. Must be lower than LTV to be profitable.',
+  'LTV': 'Lifetime Value. The total revenue a business can expect from a single customer account.',
+  'CPC': 'Cost Per Click. The amount you pay for each click on your ad.',
+  'CPA': 'Cost Per Action. The average cost paid for a specific conversion or action.',
+  'CPL': 'Cost Per Lead. The amount you pay to acquire a potential customer\\'s contact information.',
+  'CTR': 'Click-Through Rate. The percentage of people who click on your ad after seeing it. High CTR indicates engaging content.',
+  'CPM': 'Cost Per Mille. The cost you pay per 1,000 views or impressions of an advertisement.',
+  'AIDA': 'Marketing funnel model: Attention, Interest, Desire, Action.',
+  'PAS': 'Copywriting framework: Problem, Agitation, Solution.',
+  'USP': 'Unique Selling Proposition. The essence of what makes your product or service better than competitors.',
+  'STP': 'Core strategic model: Segmentation, Targeting, Positioning.',
+  'KPI': 'Key Performance Indicator. A quantifiable measure of performance over time for a specific objective.',
 };
 
 // Create a regex to match any of the terms (case-insensitive, whole word)
