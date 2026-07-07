@@ -3797,3 +3797,47 @@ body.chat-page-active {
 .chat-ext-73 {
   margin-top: 0.75rem;
 }
+
+/* Interactive Glossary Tooltip */
+.glossary-tooltip-trigger {
+  border-bottom: 1px dashed var(--accent);
+  color: var(--accent);
+  cursor: help;
+  position: relative;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.glossary-tooltip-trigger:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.glossary-tooltip-trigger::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  width: max-content;
+  max-width: 250px;
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.4;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.glossary-tooltip-trigger:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(-5px);
+}

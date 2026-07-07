@@ -27,6 +27,7 @@ import {
   canAdvance,
   getContentPaneMode
 } from '../lib/stageMachine';
+import { parseGlossaryText } from '../lib/glossary';
 import { cleanStrategyIntroMarkdown as cleanContent, parsePlanOptions } from '../lib/planMarkers';
 import {
   formatQuizAnswerForDisplay,
@@ -1845,7 +1846,33 @@ const TACTIC_SUGGESTIONS = [
   };
 
 
+  const processChildren = (children: ReactNode): ReactNode => {
+    return React.Children.map(children, child => {
+      if (typeof child === 'string') {
+        return parseGlossaryText(child);
+      }
+      if (React.isValidElement(child) && child.props && child.props.children) {
+         return React.cloneElement(child as React.ReactElement<any>, {
+           children: processChildren(child.props.children)
+         });
+      }
+      return child;
+    });
+  };
+
   const reactMarkdownComponents = useMemo(() => ({
+    p({ children, ...props }: any) {
+      return <p {...props}>{processChildren(children)}</p>;
+    },
+    li({ children, ...props }: any) {
+      return <li {...props}>{processChildren(children)}</li>;
+    },
+    td({ children, ...props }: any) {
+      return <td {...props}>{processChildren(children)}</td>;
+    },
+    th({ children, ...props }: any) {
+      return <th {...props}>{processChildren(children)}</th>;
+    },
     code({ node, inline, className, children, ...props }: any) {
       const match = /language-(\w+)/.exec(className || '');
       if (!inline && match && match[1] === 'json') {
@@ -2480,7 +2507,7 @@ const TACTIC_SUGGESTIONS = [
                 <div className="chat-loading">
                   <div className="spinner" />
                 </div>
-              ) : analystMessages.length === 0 ? (
+              ) : analystMessages.length === 0 && !loading ? (
                 <div className="chat-welcome">
                   <div className="welcome-icon">
                     <Sparkles size={40} />
