@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 export const GLOSSARY_TERMS: Record<string, string> = {
   'ROAS': 'Return on Ad Spend. The amount of revenue earned for every dollar spent on a campaign.',
@@ -20,42 +21,51 @@ export const GLOSSARY_TERMS: Record<string, string> = {
 const termsRegex = new RegExp(`\\b(${Object.keys(GLOSSARY_TERMS).join('|')})\\b`, 'gi');
 
 const GlossaryWord = ({ term, definition }: { term: string, definition: string }) => {
-  const [show, setShow] = React.useState(false);
-  const tooltipRef = React.useRef<HTMLDivElement>(null);
+  const [show, setShow] = useState(false);
+  const triggerRef = useRef<HTMLSpanElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
 
-  React.useEffect(() => {
-    if (show && tooltipRef.current) {
-      const rect = tooltipRef.current.getBoundingClientRect();
-      const parentRect = tooltipRef.current.parentElement?.getBoundingClientRect();
+  const handleMouseEnter = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
       
-      // If tooltip overflows right side of screen/pane
-      if (rect.right > window.innerWidth - 20) {
-        tooltipRef.current.style.left = 'auto';
-        tooltipRef.current.style.right = '0';
-        tooltipRef.current.style.transform = 'translateY(-5px)';
-      } 
-      // If tooltip overflows left side
-      else if (rect.left < 20) {
-        tooltipRef.current.style.left = '0';
-        tooltipRef.current.style.right = 'auto';
-        tooltipRef.current.style.transform = 'translateY(-5px)';
-      }
+      let idealLeft = rect.left + (rect.width / 2);
+      
+      // Prevent bleeding off left or right edges (assuming 250px max width)
+      if (idealLeft < 135) idealLeft = 135;
+      if (idealLeft > window.innerWidth - 135) idealLeft = window.innerWidth - 135;
+
+      setPos({
+        top: rect.top,
+        left: idealLeft,
+      });
     }
-  }, [show]);
+    setShow(true);
+  };
 
   return (
-    <span 
-      className="glossary-tooltip-trigger" 
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
-    >
-      {term}
-      {show && (
-        <div ref={tooltipRef} className="glossary-tooltip-box">
+    <>
+      <span 
+        ref={triggerRef}
+        className="glossary-tooltip-trigger" 
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={() => setShow(false)}
+      >
+        {term}
+      </span>
+      {show && createPortal(
+        <div 
+          className="glossary-tooltip-box"
+          style={{
+            top: `${pos.top}px`,
+            left: `${pos.left}px`,
+          }}
+        >
           {definition}
-        </div>
+        </div>,
+        document.body
       )}
-    </span>
+    </>
   );
 };
 
