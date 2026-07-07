@@ -1798,10 +1798,8 @@ const TACTIC_SUGGESTIONS = [
     const newQuizData = { ...currentCampaign.quizData };
     let hasChanges = false;
     for (const [key, val] of Object.entries(targets)) {
-      if (metricsFields.some(f => f.key === key.toLowerCase())) {
-        newQuizData[`target_${key.toLowerCase()}`] = String(val);
-        hasChanges = true;
-      }
+      newQuizData[`target_${key.toLowerCase()}`] = String(val);
+      hasChanges = true;
     }
     
     if (hasChanges) {
@@ -1824,7 +1822,7 @@ const TACTIC_SUGGESTIONS = [
       const res = await api.assistContent(
         'custom',
         campaignId,
-        `Extract the KPI/metric targets from the following text. Return ONLY a JSON object exactly like {"targets": {"cpa": 1.2, "retentionRate": 15}}. Map metric names to these exact keys: cpc, cpm, cpa, cpl, cac, ctr, conversionRate, roas, churnRate, bounceRate, retentionRate, engagementRate. Text: ${content}`
+        `Extract ALL KPI, metric targets, or performance benchmarks from the following text. Return ONLY a JSON object exactly like {"targets": {"cpa": 1.2, "retentionRate": 15, "hookRate": 25}}. Map standard metrics to common keys (cpc, cpm, cpa, roas, etc.), and create descriptive camelCase keys for any custom metrics found (e.g. "averageWatchTime"). Text: ${content}`
       );
       toast.dismiss(loadingToast);
       
