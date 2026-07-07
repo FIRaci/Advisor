@@ -3995,16 +3995,17 @@ body.chat-page-active {
 
 /* Interactive Glossary Tooltip */
 .glossary-tooltip-trigger {
-  border-bottom: 1px dashed var(--accent);
-  color: var(--accent);
+  border-bottom: 1px dashed #fbbf24;
+  color: #fbbf24;
   cursor: help;
   position: relative;
   transition: all 0.2s ease;
-  font-weight: 500;
+  font-weight: 600;
+  padding: 0 2px;
 }
 
 .glossary-tooltip-trigger:hover {
-  background-color: rgba(59, 130, 246, 0.1);
+  background-color: rgba(251, 191, 36, 0.15);
 }
 
 .glossary-tooltip-box {
